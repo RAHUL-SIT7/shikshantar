@@ -1,6 +1,16 @@
 import { Info, Target, Eye, Heart, History, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function About() {
+  const [aboutText, setAboutText] = useState('Located in the heart of Bastipur-5, Siraha, Madhesh Province, Nepal, Shikshantar Academy is a premier educational institution dedicated to providing quality education from Playgroup to Class Ten (10). We foster an environment where academic excellence meets character building.');
+
+  useEffect(() => {
+    const storedAbout = localStorage.getItem('school_about');
+    if (storedAbout) {
+      setAboutText(storedAbout);
+    }
+  }, []);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       {/* Header / Motto - span 3 */}
@@ -16,8 +26,8 @@ export default function About() {
           <p className="text-sm font-bold text-[#f97316] uppercase tracking-wider mb-4">
             "Empowering Minds, Shaping Futures"
           </p>
-          <p className="text-sm text-[#6b7280] max-w-3xl leading-relaxed">
-            Located in the heart of Bastipur-5, Siraha, Madhesh Province, Nepal, Shikshantar Academy is a premier educational institution dedicated to providing quality education from Playgroup to Class Ten (10). We foster an environment where academic excellence meets character building.
+          <p className="text-sm text-[#6b7280] max-w-3xl leading-relaxed whitespace-pre-wrap">
+            {aboutText}
           </p>
         </div>
       </section>

@@ -1,31 +1,70 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Bell, DollarSign, Search, History } from 'lucide-react';
+import { CheckCircle2, Bell, DollarSign, Search, History, X, CreditCard, User, GraduationCap, Building2 } from 'lucide-react';
 
 export default function AccountAdmin() {
   const [showNotification, setShowNotification] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null); // For Payment Modal
 
-  const students = [
+  const [students, setStudents] = useState([
     { id: 'S101', name: 'Aarav Sharma', class: '10', due: 20000, paid: 30000 },
     { id: 'S102', name: 'Bina Thapa', class: '10', due: 0, paid: 50000 },
     { id: 'S103', name: 'Chirag Yadav', class: '9', due: 15000, paid: 35000 },
     { id: 'S104', name: 'Diya Rai', class: '8', due: 5000, paid: 40000 },
-  ];
+  ]);
 
-  const paymentHistory = [
+  const [paymentHistory, setPaymentHistory] = useState([
     { id: 'TXN001', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-04-15', amount: 10000, method: 'eSewa' },
     { id: 'TXN002', studentId: 'S102', studentName: 'Bina Thapa', date: '2024-04-14', amount: 50000, method: 'Bank Transfer (Nabil)' },
     { id: 'TXN003', studentId: 'S103', studentName: 'Chirag Yadav', date: '2024-04-10', amount: 15000, method: 'Khalti' },
     { id: 'TXN004', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-03-05', amount: 20000, method: 'Cash' },
-  ];
+  ]);
+
+  // Modal State
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
 
   const handleNotify = () => {
     setShowNotification(true);
     setTimeout(() => setShowNotification(false), 3000);
   };
 
-  const handleUpdatePayment = (id: string) => {
-    alert(`Payment update dialog for student ${id} would open here.`);
+  const handleUpdatePayment = (student: any) => {
+    setSelectedStudent(student);
+    setPaymentAmount('');
+    setPaymentMethod('Cash');
+  };
+
+  const submitPayment = () => {
+    if (!paymentAmount || isNaN(Number(paymentAmount))) return;
+    const amountNum = Number(paymentAmount);
+    
+    // Update student balances
+    setStudents(students.map(s => {
+      if (s.id === selectedStudent.id) {
+        return {
+          ...s,
+          paid: s.paid + amountNum,
+          due: Math.max(0, s.due - amountNum)
+        };
+      }
+      return s;
+    }));
+
+    // Add to history
+    setPaymentHistory([
+      {
+        id: `TXN00${paymentHistory.length + 1}`,
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.name,
+        date: new Date().toISOString().split('T')[0],
+        amount: amountNum,
+        method: paymentMethod
+      },
+      ...paymentHistory
+    ]);
+
+    setSelectedStudent(null);
   };
 
   const filteredStudents = students.filter(s => 
@@ -34,65 +73,140 @@ export default function AccountAdmin() {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-5">
+    <div className="grid grid-cols-1 gap-6 relative">
+      {/* Payment Modal */}
+      {selectedStudent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            <div className="bg-[#1e3a8a] text-white p-4 flex justify-between items-center relative overflow-hidden">
+              <Building2 className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10" />
+              <div className="relative z-10 text-left">
+                <h3 className="font-bold text-lg">Record Payment</h3>
+                <p className="text-white/80 text-xs">Update account balance for {selectedStudent.id}</p>
+              </div>
+              <button onClick={() => setSelectedStudent(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors relative z-10"><X className="w-5 h-5"/></button>
+            </div>
+            
+            <div className="p-5 flex flex-col gap-4">
+              <div className="bg-[#f3f4f6] p-4 rounded-lg flex items-center gap-3 border border-[#e5e7eb]">
+                <div className="w-10 h-10 rounded-full bg-[#1e3a8a]/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-[#1e3a8a]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-[#1f2937] text-sm">{selectedStudent.name}</h4>
+                  <div className="flex gap-2 text-xs text-[#6b7280]">
+                    <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Class {selectedStudent.class}</span>
+                    <span>•</span>
+                    <span className="text-[#b91c1c] font-semibold">Due: NRs. {selectedStudent.due.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#4b5563] mb-1">Payment Amount (NRs.)</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                  <input 
+                    type="number" 
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    placeholder="Enter amount..."
+                    className="w-full pl-9 pr-3 py-2 border border-[#d1d5db] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:border-[#1e3a8a]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#4b5563] mb-1">Payment Method</label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                  <select 
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-[#d1d5db] rounded-lg text-sm appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="eSewa">eSewa</option>
+                    <option value="Khalti">Khalti</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-[#f3f4f6]">
+                <button onClick={() => setSelectedStudent(null)} className="px-4 py-2 text-sm font-semibold text-[#4b5563] hover:bg-[#f3f4f6] rounded-lg transition-colors">Cancel</button>
+                <button onClick={submitPayment} className="px-4 py-2 text-sm font-semibold bg-[#1e3a8a] text-white hover:bg-[#1e40af] rounded-lg transition-colors shadow-sm">Confirm Payment</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showNotification && (
-        <div className="bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] p-3 rounded-lg text-sm flex items-center gap-2">
+        <div className="bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] p-3 rounded-lg text-sm flex items-center gap-2 shadow-sm">
           <CheckCircle2 className="w-4 h-4" />
           Fee reminder notification sent successfully.
         </div>
       )}
 
-      <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
-        <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex justify-between items-center">
-          <span>Manage Student Accounts</span>
-        </div>
-
-        <div className="mb-4 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-[#6b7280]" />
+      {/* Main Content Sections */}
+      <section className="bg-[#ffffff] rounded-xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] border border-[#e5e7eb] overflow-hidden">
+        <div className="p-5 border-b border-[#f3f4f6] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#f8fafc]">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-[#1e3a8a]" />
+            <h2 className="text-[#1e293b] font-bold text-lg">Manage Student Accounts</h2>
           </div>
-          <input
-            type="text"
-            placeholder="Search by Student ID or Name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-9 pr-3 py-2 border border-[#e5e7eb] rounded-lg bg-[#f9fafb] text-sm focus:outline-none focus:border-[#1e3a8a]"
-          />
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-[#94a3b8]" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search ID or Name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-9 pr-3 py-2 border border-[#cbd5e1] rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a] transition-all shadow-sm"
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[0.85rem]">
             <thead>
-              <tr className="bg-[#f9fafb]">
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Student ID</th>
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Name</th>
-                <th className="text-center p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Class</th>
-                <th className="text-right p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Paid Amount</th>
-                <th className="text-right p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Due Amount</th>
-                <th className="text-center p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Actions</th>
+              <tr className="bg-[#f1f5f9]">
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Student ID</th>
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Name</th>
+                <th className="text-center p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Class</th>
+                <th className="text-right p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Paid Amount</th>
+                <th className="text-right p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Due Amount</th>
+                <th className="text-center p-3 border-b border-[#e2e8f0] text-[#475569] font-bold">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#f1f5f9]">
               {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-[#f9fafb] transition-colors">
-                  <td className="p-3 border-b border-[#f3f4f6] font-medium">{student.id}</td>
-                  <td className="p-3 border-b border-[#f3f4f6]">{student.name}</td>
-                  <td className="p-3 border-b border-[#f3f4f6] text-center">{student.class}</td>
-                  <td className="p-3 border-b border-[#f3f4f6] text-right text-[#10b981]">NRs. {student.paid.toLocaleString()}</td>
-                  <td className="p-3 border-b border-[#f3f4f6] text-right text-[#b91c1c]">NRs. {student.due.toLocaleString()}</td>
-                  <td className="p-3 border-b border-[#f3f4f6]">
-                    <div className="flex justify-center gap-2">
+                <tr key={student.id} className="hover:bg-[#f8fafc] transition-colors group">
+                  <td className="p-3 font-semibold text-[#334155]">{student.id}</td>
+                  <td className="p-3 font-medium text-[#0f172a]">{student.name}</td>
+                  <td className="p-3 text-center">
+                    <span className="bg-[#e2e8f0] text-[#475569] px-2 py-0.5 rounded text-xs font-semibold">Class {student.class}</span>
+                  </td>
+                  <td className="p-3 text-right text-[#059669] font-semibold">NRs. {student.paid.toLocaleString()}</td>
+                  <td className={`p-3 text-right font-semibold ${student.due > 0 ? 'text-[#dc2626]' : 'text-[#64748b]'}`}>
+                    NRs. {student.due.toLocaleString()}
+                  </td>
+                  <td className="p-3">
+                    <div className="flex justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button 
-                        onClick={() => handleUpdatePayment(student.id)}
-                        className="p-1.5 bg-[#e0f2fe] text-[#0369a1] rounded hover:bg-[#bae6fd] transition-colors"
-                        title="Update Payment"
+                        onClick={() => handleUpdatePayment(student)}
+                        className="p-1.5 bg-[#e0f2fe] text-[#0284c7] rounded hover:bg-[#bae6fd] hover:text-[#0369a1] transition-colors shadow-sm"
+                        title="Record Payment"
                       >
                         <DollarSign className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={handleNotify}
                         disabled={student.due === 0}
-                        className={`p-1.5 rounded transition-colors ${student.due > 0 ? 'bg-[#fee2e2] text-[#b91c1c] hover:bg-[#fecaca]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                        className={`p-1.5 rounded transition-colors shadow-sm ${student.due > 0 ? 'bg-[#fee2e2] text-[#dc2626] hover:bg-[#fecaca]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                         title="Send Fee Reminder"
                       >
                         <Bell className="w-4 h-4" />
@@ -103,7 +217,7 @@ export default function AccountAdmin() {
               ))}
               {filteredStudents.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-4 text-center text-[#6b7280]">No students found matching your search.</td>
+                  <td colSpan={6} className="p-8 text-center text-[#64748b] bg-[#f8fafc]">No students found matching "{searchTerm}".</td>
                 </tr>
               )}
             </tbody>
@@ -112,38 +226,38 @@ export default function AccountAdmin() {
       </section>
 
       {/* Payment History Section */}
-      <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
-        <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex items-center gap-2">
-          <History className="w-4 h-4" />
-          <span>Recent Payment History</span>
+      <section className="bg-[#ffffff] rounded-xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] border border-[#e5e7eb] overflow-hidden">
+        <div className="p-4 border-b border-[#f3f4f6] bg-[#f8fafc] flex items-center gap-2">
+          <History className="w-5 h-5 text-[#475569]" />
+          <h2 className="text-[#1e293b] font-bold text-base">Recent Payment Transactions</h2>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[0.85rem]">
             <thead>
-              <tr className="bg-[#f9fafb]">
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Date</th>
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Transaction ID</th>
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Student</th>
-                <th className="text-left p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Method</th>
-                <th className="text-right p-3 border-b border-[#e5e7eb] text-[#6b7280] font-medium">Amount</th>
+              <tr className="bg-[#ffffff]">
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#64748b] font-medium text-xs uppercase tracking-wider">Date</th>
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#64748b] font-medium text-xs uppercase tracking-wider">Txn ID</th>
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#64748b] font-medium text-xs uppercase tracking-wider">Student</th>
+                <th className="text-left p-3 border-b border-[#e2e8f0] text-[#64748b] font-medium text-xs uppercase tracking-wider">Method</th>
+                <th className="text-right p-3 border-b border-[#e2e8f0] text-[#64748b] font-medium text-xs uppercase tracking-wider">Amount</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#f1f5f9]">
               {paymentHistory.map((payment) => (
-                <tr key={payment.id} className="hover:bg-[#f9fafb] transition-colors">
-                  <td className="p-3 border-b border-[#f3f4f6]">{payment.date}</td>
-                  <td className="p-3 border-b border-[#f3f4f6] font-mono text-xs">{payment.id}</td>
-                  <td className="p-3 border-b border-[#f3f4f6]">
-                    <span className="font-medium">{payment.studentName}</span>
-                    <span className="text-[#6b7280] ml-1">({payment.studentId})</span>
+                <tr key={payment.id} className="hover:bg-[#f8fafc] transition-colors">
+                  <td className="p-3 text-[#475569]">{payment.date}</td>
+                  <td className="p-3 font-mono text-xs text-[#64748b]">{payment.id}</td>
+                  <td className="p-3">
+                    <span className="font-semibold text-[#334155]">{payment.studentName}</span>
+                    <span className="text-[#94a3b8] ml-1 text-xs">({payment.studentId})</span>
                   </td>
-                  <td className="p-3 border-b border-[#f3f4f6]">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#f3f4f6] text-[#4b5563]">
+                  <td className="p-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.65rem] font-bold bg-[#f1f5f9] text-[#475569] border border-[#e2e8f0]">
                       {payment.method}
                     </span>
                   </td>
-                  <td className="p-3 border-b border-[#f3f4f6] text-right font-medium text-[#10b981]">
+                  <td className="p-3 text-right font-bold text-[#059669]">
                     + NRs. {payment.amount.toLocaleString()}
                   </td>
                 </tr>

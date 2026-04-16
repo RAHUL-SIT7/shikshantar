@@ -1,6 +1,14 @@
 import { Monitor, BookOpen, Camera, Leaf, FlaskConical, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function Facilities() {
+  const [facilitiesText, setFacilitiesText] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('school_facilities');
+    if (stored) setFacilitiesText(stored);
+  }, []);
+
   const facilities = [
     {
       id: 'classroom',
@@ -51,6 +59,12 @@ export default function Facilities() {
       <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex justify-between">
         <span>Infrastructure & Facilities</span>
       </div>
+
+      {facilitiesText && (
+        <div className="mb-5 text-[0.8rem] text-[#1f2937] leading-relaxed whitespace-pre-wrap">
+          {facilitiesText}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {facilities.map((facility) => {

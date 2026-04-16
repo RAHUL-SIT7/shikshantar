@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GraduationCap, Lock, Mail, User, Phone, MapPin, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
+import { GraduationCap, Lock, Mail, User, Phone, MapPin, Calendar, BookOpen, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -25,6 +25,8 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,6 +96,21 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       return;
     }
 
+    const validatePasswordRule = (pass: string) => {
+      if (pass.length < 8) return 'Password must be at least 8 characters long';
+      if (!/[A-Z]/.test(pass)) return 'Password must contain at least one uppercase letter';
+      if (!/[a-z]/.test(pass)) return 'Password must contain at least one lowercase letter';
+      if (!/[0-9]/.test(pass)) return 'Password must contain at least one number';
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) return 'Password must contain at least one special character';
+      return null;
+    };
+
+    const passwordValidationError = validatePasswordRule(password);
+    if (passwordValidationError) {
+      setError(passwordValidationError);
+      return;
+    }
+
     if (!validatePhone(phone)) {
       setError('Phone number must be 10 digits and start with 98 or 97');
       return;
@@ -151,6 +168,21 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      return;
+    }
+
+    const validatePasswordRule = (pass: string) => {
+      if (pass.length < 8) return 'Password must be at least 8 characters long';
+      if (!/[A-Z]/.test(pass)) return 'Password must contain at least one uppercase letter';
+      if (!/[a-z]/.test(pass)) return 'Password must contain at least one lowercase letter';
+      if (!/[0-9]/.test(pass)) return 'Password must contain at least one number';
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) return 'Password must contain at least one special character';
+      return null;
+    };
+
+    const passwordValidationError = validatePasswordRule(password);
+    if (passwordValidationError) {
+      setError(passwordValidationError);
       return;
     }
 
@@ -240,15 +272,16 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
   if (view === 'verify') {
     return (
-      <div className="flex items-center justify-center min-h-screen relative">
-        <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="flex items-center justify-center min-h-screen relative bg-[#f8fafc]">
+        {/* Professional Background Pattern/Logo */}
+        <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03]">
           <img 
             src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
-            alt="School Background" 
-            className="w-full h-full object-cover opacity-20"
+            alt="School Background Pattern" 
+            className="w-full max-w-[800px] object-contain"
           />
         </div>
-        <div className="w-full max-w-md bg-white/80 backdrop-blur-md rounded-xl p-8 shadow-lg border border-white/40 text-center relative z-10">
+        <div className="w-full max-w-md bg-white backdrop-blur-md rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e2e8f0] text-center relative z-10 mx-4">
           <Mail className="w-16 h-16 text-[#1e3a8a] mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[#1f2937] mb-2">Verify Your Email</h2>
           <p className="text-[#4b5563] mb-6">
@@ -259,7 +292,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               setView('login');
               setPassword('');
             }}
-            className="w-full bg-[#1e3a8a] text-white font-medium py-3 px-4 rounded-lg hover:bg-[#1e3a8a]/90 transition-colors shadow-md"
+            className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl hover:bg-[#1e40af] transition-all shadow-md active:scale-[0.98]"
           >
             Go to Login
           </button>
@@ -269,29 +302,29 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen relative">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen relative bg-[#f8fafc] py-12 px-4 sm:px-6 lg:px-8">
+      {/* Professional Background Pattern/Logo */}
+      <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03] pointer-events-none">
         <img 
           src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
-          alt="School Background" 
-          className="w-full h-full object-cover opacity-30"
+          alt="School Background Pattern" 
+          className="w-[120%] max-w-[1000px] object-contain"
         />
       </div>
 
-      <div className="w-full max-w-md bg-white/75 backdrop-blur-md rounded-xl p-6 shadow-2xl border border-white/50 relative z-10 my-8">
-        <div className="text-center mb-6">
-          <div className="mx-auto h-16 w-16 bg-[#1e3a8a] rounded-full flex items-center justify-center mb-4 shadow-lg">
-            <GraduationCap className="h-8 w-8 text-white" />
+      <div className="w-full max-w-[440px] bg-white rounded-2xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e2e8f0] relative z-10 transition-all">
+        <div className="text-center mb-8">
+          <div className="mx-auto h-14 w-14 bg-[#1e3a8a] rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-blue-900/20 rotate-3 transition-transform hover:rotate-0">
+            <GraduationCap className="h-7 w-7 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-[#1f2937]">
+          <h2 className="text-[1.35rem] sm:text-2xl font-bold text-[#0f172a] tracking-tight">
             {view === 'forgot' && 'Reset Password'}
             {view === 'reset' && 'Create New Password'}
-            {(view === 'login' || view === 'register') && 'Welcome to Shikshantar Academy'}
+            {(view === 'login' || view === 'register') && 'Welcome to Shikshantar'}
           </h2>
-          <p className="text-sm text-[#4b5563] mt-1 font-medium">
-            {view === 'login' && 'Sign in to your account'}
-            {view === 'register' && 'Create a new account'}
+          <p className="text-sm text-[#64748b] mt-1.5 font-medium">
+            {view === 'login' && 'Sign in to your account to continue'}
+            {view === 'register' && 'Create your academy account'}
             {view === 'forgot' && 'Enter your email to receive a reset link'}
             {view === 'reset' && 'Enter your new password below'}
           </p>
@@ -299,16 +332,16 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
         {/* Role Selector (only for login and register) */}
         {(view === 'login' || view === 'register') && (
-          <div className="flex p-1 bg-white/50 backdrop-blur-sm rounded-lg mb-6 border border-white/40 shadow-inner">
+          <div className="flex p-1 bg-[#f1f5f9] rounded-xl mb-7 border border-[#e2e8f0]">
             {(['student', 'teacher', 'admin'] as Role[]).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRole(r)}
-                className={`flex-1 py-2 text-sm font-bold rounded-md capitalize transition-all ${
+                className={`flex-1 py-2 text-[0.8rem] sm:text-sm font-semibold rounded-lg capitalize transition-all duration-200 ${
                   role === r 
-                    ? 'bg-white text-[#1e3a8a] shadow-sm' 
-                    : 'text-[#4b5563] hover:text-[#1f2937]'
+                    ? 'bg-white text-[#1e3a8a] shadow-[0_1px_3px_rgba(0,0,0,0.1)]' 
+                    : 'text-[#64748b] hover:text-[#334155]'
                 }`}
               >
                 {r}
@@ -330,51 +363,56 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         )}
 
         {view === 'login' && (
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4 font-sans">
             <div>
-              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Email</label>
+              <label className="block text-[0.7rem] font-bold uppercase text-[#64748b] tracking-wider mb-1.5 ml-1">Email Address</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-[#6b7280]" />
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-4 w-4 text-[#94a3b8]" />
                 </div>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
-                  placeholder="Enter email"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-[#e2e8f0] rounded-xl bg-[#f8fafc] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/10 transition-all text-[#0f172a]"
+                  placeholder="name@example.com"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Password</label>
+              <label className="block text-[0.7rem] font-bold uppercase text-[#64748b] tracking-wider mb-1.5 ml-1">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-[#6b7280]" />
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-[#94a3b8]" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                  className="block w-full pl-10 pr-10 py-2.5 border border-[#e2e8f0] rounded-xl bg-[#f8fafc] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/10 transition-all text-[#0f172a]"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#94a3b8] hover:text-[#1e3a8a] focus:outline-none transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-end mt-2">
               <button 
                 type="button" 
                 onClick={() => { 
-                  // If they just want to see the reset UI without a code, we can let them see it for demo purposes, 
-                  // but normally they need the email link. We'll show the 'forgot' view first.
                   setView('forgot'); 
                   setError(''); 
                   setMessage(''); 
                 }}
-                className="text-xs text-[#1e3a8a] hover:underline font-bold"
+                className="text-xs text-[#1e3a8a] hover:text-[#1e40af] font-semibold transition-colors"
               >
                 Forgot Password?
               </button>
@@ -383,24 +421,24 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#1e3a8a] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#1e3a8a]/90 transition-colors disabled:opacity-70 shadow-md"
+              className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl text-sm mt-6 hover:bg-[#1e40af] hover:shadow-lg hover:shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none"
             >
-              {loading ? 'Signing in...' : `Sign in as ${role}`}
+              {loading ? 'Please wait...' : `Sign in as ${role}`}
             </button>
 
-            <div className="mt-4">
+            <div className="mt-8 mb-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300/50"></div>
+                  <div className="w-full border-t border-[#e2e8f0]"></div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-transparent text-gray-600 font-medium">Or continue with</span>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-3 bg-white text-[#64748b] font-medium uppercase tracking-wider">Or continue with</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="mt-4 w-full flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm text-gray-700 font-bold py-2.5 px-4 rounded-lg text-sm border border-white/60 hover:bg-white transition-colors shadow-sm"
+                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -408,13 +446,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Google
+                Sign in with Google
               </button>
             </div>
 
-            <p className="text-center text-sm text-[#4b5563] mt-4 font-medium">
+            <p className="text-center text-sm text-[#475569] mt-6">
               Don't have an account?{' '}
-              <button type="button" onClick={() => { setView('register'); setError(''); }} className="text-[#1e3a8a] font-bold hover:underline">
+              <button type="button" onClick={() => { setView('register'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
                 Register here
               </button>
             </p>
@@ -564,13 +602,20 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <Lock className="h-4 w-4 text-[#6b7280]" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
             <div>
@@ -580,15 +625,28 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <Lock className="h-4 w-4 text-[#6b7280]" />
                 </div>
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
+            
+            <ul className="text-[0.65rem] text-[#6b7280] list-disc pl-4 mb-2 space-y-0.5 text-left">
+              <li>Minimum 8 characters</li>
+              <li>At least one uppercase & lowercase letter</li>
+              <li>At least one number & special character</li>
+            </ul>
 
             <button
               type="submit"
@@ -728,7 +786,10 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
+                  <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
               <div>
@@ -737,10 +798,19 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
+                  <input type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none">
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             </div>
+
+            <ul className="text-[0.65rem] text-[#6b7280] list-disc pl-4 mb-2 space-y-0.5 text-left">
+              <li>Minimum 8 characters</li>
+              <li>At least one uppercase & lowercase letter</li>
+              <li>At least one number & special character</li>
+            </ul>
 
             <button
               type="submit"
@@ -750,19 +820,19 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               {loading ? 'Registering...' : `Register as ${role}`}
             </button>
 
-            <div className="mt-4">
+            <div className="mt-8 mb-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300/50"></div>
+                  <div className="w-full border-t border-[#e2e8f0]"></div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-transparent text-gray-600 font-medium">Or register with</span>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-3 bg-white text-[#64748b] font-medium uppercase tracking-wider">Or register with</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="mt-4 w-full flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm text-gray-700 font-bold py-2.5 px-4 rounded-lg text-sm border border-white/60 hover:bg-white transition-colors shadow-sm"
+                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -770,13 +840,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Google
+                Sign in with Google
               </button>
             </div>
 
-            <p className="text-center text-sm text-[#4b5563] mt-4 font-medium">
+            <p className="text-center text-sm text-[#475569] mt-6">
               Already have an account?{' '}
-              <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-[#1e3a8a] font-bold hover:underline">
+              <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
                 Sign in here
               </button>
             </p>
