@@ -416,13 +416,18 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
       <div className="w-full max-w-[440px] bg-white rounded-2xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e2e8f0] relative z-10 transition-all">
         <div className="text-center mb-8">
-          <div className="mx-auto h-14 w-14 bg-[#1e3a8a] rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-blue-900/20 rotate-3 transition-transform hover:rotate-0">
-            <GraduationCap className="h-7 w-7 text-white" />
+          <div className="mx-auto mb-4 flex flex-col items-center justify-center">
+            <img 
+              src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
+              alt="Shikshantar Academy Logo" 
+              className="w-20 h-20 object-contain drop-shadow-md"
+            />
+            <h1 className="text-xl font-black text-[#1e3a8a] uppercase tracking-wide mt-2">Shikshantar Academy</h1>
           </div>
-          <h2 className="text-[1.35rem] sm:text-2xl font-bold text-[#0f172a] tracking-tight">
+          <h2 className="text-[1.1rem] sm:text-lg font-bold text-[#0f172a] tracking-tight">
             {view === 'forgot' && 'Reset Password'}
             {view === 'reset' && 'Create New Password'}
-            {(view === 'login' || view === 'register') && 'Welcome to Shikshantar'}
+            {(view === 'login' || view === 'register') && 'Welcome back, please sign in'}
           </h2>
           <p className="text-sm text-[#64748b] mt-1.5 font-medium">
             {view === 'login' && 'Sign in to your account to continue'}
