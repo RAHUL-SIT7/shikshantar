@@ -51,10 +51,17 @@ export default function Facilities() {
     },
     {
       id: 'computer-lab',
-      title: 'Digital Lab',
-      description: 'State-of-art computer lab for practical lab work and digital skills.',
+      title: 'Computer Lab',
+      description: 'State-of-art computer lab for practical work and digital skills.',
       icon: Monitor,
-      image: 'https://picsum.photos/seed/computerlab/800/600',
+      image: 'https://picsum.photos/seed/computer/800/600',
+    },
+    {
+      id: 'project-lab',
+      title: 'Project Lab',
+      description: 'A dedicated workspace for students to build real-world projects.',
+      icon: Edit2,
+      image: 'https://picsum.photos/seed/projectlab/800/600',
     },
     {
       id: 'playground',

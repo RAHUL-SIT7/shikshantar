@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Link as LinkIcon, Image as ImageIcon, Trash2, CheckCircle, Circle } from 'lucide-react';
+import { Upload, Link as LinkIcon, Image as ImageIcon, Trash2, CheckCircle, Circle, X } from 'lucide-react';
 import { db, storage } from '../firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function Gallery() {
@@ -24,6 +24,8 @@ export default function Gallery() {
   const isAdminOrTeacher = userRole === 'admin' || userRole === 'teacher';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'school_data', 'gallery'), (docSnap) => {
@@ -114,16 +116,10 @@ export default function Gallery() {
 
   const handleClearGalleryCategory = async () => {
     if (window.confirm(`Clear all ${activeTab}?`)) {
-      const updatedGallery = { teachers, batches, events };
-      if (activeTab === 'teachers') {
-        updatedGallery.teachers = [];
-      } else if (activeTab === 'batches') {
-        updatedGallery.batches = [];
-      } else if (activeTab === 'events') {
-        updatedGallery.events = [];
-      }
       try {
-        await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+        await updateDoc(doc(db, 'school_data', 'gallery'), {
+          [activeTab]: []
+        });
         setSelectedIndexes([]);
         setIsDeleteMode(false);
       } catch (e) {
@@ -149,18 +145,19 @@ export default function Gallery() {
     if (selectedIndexes.length === 0) return;
     if (!window.confirm(`Delete ${selectedIndexes.length} selected items?`)) return;
 
-    const updatedGallery = { teachers, batches, events };
-    
+    let updatedArray: any[] = [];
     if (activeTab === 'teachers') {
-      updatedGallery.teachers = teachers.filter((_, idx) => !isSelected(idx));
+      updatedArray = teachers.filter((_, idx) => !isSelected(idx));
     } else if (activeTab === 'batches') {
-      updatedGallery.batches = batches.filter((_, idx) => !isSelected(idx));
+      updatedArray = batches.filter((_, idx) => !isSelected(idx));
     } else if (activeTab === 'events') {
-      updatedGallery.events = events.filter((_, idx) => !isSelected(idx));
+      updatedArray = events.filter((_, idx) => !isSelected(idx));
     }
 
     try {
-      await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+      await updateDoc(doc(db, 'school_data', 'gallery'), {
+        [activeTab]: updatedArray
+      });
       setSelectedIndexes([]);
       setIsDeleteMode(false);
     } catch (e) {
@@ -171,24 +168,31 @@ export default function Gallery() {
 
   const handleSingleDelete = async (e: React.MouseEvent, index: number, category: 'teachers' | 'batches' | 'events') => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this single image?')) return;
+    if (!window.confirm('Are you sure you want to delete this image?')) return;
 
-    const updatedGallery = { teachers, batches, events };
-    
+    let updatedArray: any[] = [];
     if (category === 'teachers') {
-      updatedGallery.teachers = teachers.filter((_, i) => i !== index);
+      updatedArray = teachers.filter((_, i) => i !== index);
     } else if (category === 'batches') {
-      updatedGallery.batches = batches.filter((_, i) => i !== index);
+      updatedArray = batches.filter((_, i) => i !== index);
     } else if (category === 'events') {
-      updatedGallery.events = events.filter((_, i) => i !== index);
+      updatedArray = events.filter((_, i) => i !== index);
     }
 
     try {
-      await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+      await updateDoc(doc(db, 'school_data', 'gallery'), {
+        [category]: updatedArray
+      });
     } catch (error) {
       console.error(error);
       alert('Error deleting image: ' + error);
     }
+  };
+
+  const switchTab = (tab: 'teachers' | 'batches' | 'events') => {
+    setActiveTab(tab);
+    setIsDeleteMode(false);
+    setSelectedIndexes([]);
   };
 
   return (
@@ -197,7 +201,7 @@ export default function Gallery() {
         <span>Photo Gallery</span>
         <div className="flex gap-2">
           <button
-            onClick={() => setActiveTab('teachers')}
+            onClick={() => switchTab('teachers')}
             className={`px-3 py-1 text-xs rounded border ${
               activeTab === 'teachers'
                 ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
@@ -207,7 +211,7 @@ export default function Gallery() {
             Staff
           </button>
           <button
-            onClick={() => setActiveTab('batches')}
+            onClick={() => switchTab('batches')}
             className={`px-3 py-1 text-xs rounded border ${
               activeTab === 'batches'
                 ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
@@ -217,7 +221,7 @@ export default function Gallery() {
             Batches
           </button>
           <button
-            onClick={() => setActiveTab('events')}
+            onClick={() => switchTab('events')}
             className={`px-3 py-1 text-xs rounded border ${
               activeTab === 'events'
                 ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
@@ -298,39 +302,39 @@ export default function Gallery() {
       )}
 
       {activeTab === 'teachers' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
           {teachers.map((teacher, idx) => (
             <div 
               key={teacher.id || idx} 
               onClick={() => isDeleteMode && toggleSelection(idx)}
-              className={`group relative bg-[#f9fafb] p-2 rounded-lg text-center border transition-all ${isDeleteMode ? 'cursor-pointer hover:bg-[#f3f4f6]' : ''} ${isSelected(idx) ? 'border-red-500 ring-2 ring-red-500/20 bg-[#fef2f2]' : 'border-[#e5e7eb]'}`}
+              className={`group relative bg-white p-3 rounded-xl text-center border shadow-sm transition-all ${isDeleteMode ? 'cursor-pointer hover:bg-[#f3f4f6]' : 'hover:shadow-md'} ${isSelected(idx) ? 'border-red-500 ring-2 ring-red-500/20 bg-[#fef2f2]' : 'border-[#e5e7eb]'}`}
             >
               {isAdminOrTeacher && isDeleteMode && (
-                <div className="absolute top-2 right-2 z-10 bg-white rounded-full flex items-center justify-center w-6 h-6 shadow pointer-events-none">
+                <div className="absolute top-3 right-3 z-10 bg-white rounded-full flex items-center justify-center w-6 h-6 shadow pointer-events-none">
                   {isSelected(idx) ? <CheckCircle className="w-5 h-5 text-red-500" /> : <Circle className="w-5 h-5 text-gray-300" />}
                 </div>
               )}
               {isAdminOrTeacher && !isDeleteMode && (
                 <button 
                   onClick={(e) => handleSingleDelete(e, idx, 'teachers')}
-                  className="absolute top-2 right-2 z-10 bg-red-100 p-1.5 rounded-full text-red-600 shadow opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-md opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               )}
-              <div className={`aspect-square rounded overflow-hidden mb-2 ${isDeleteMode ? 'pointer-events-none' : ''}`}>
+              <div className={`aspect-[4/5] rounded-lg overflow-hidden mb-3 border border-gray-100 ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
                   src={teacher.image}
                   alt={teacher.name}
-                  className="w-full h-full object-cover shadow-sm"
+                  className="w-full h-full object-cover shadow-sm bg-gray-50"
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <h3 className="text-[0.7rem] font-bold text-[#1f2937] truncate">{teacher.name}</h3>
-              <p className="text-[0.6rem] text-[#6b7280] truncate">{teacher.role}</p>
+              <h3 className="text-[0.85rem] font-bold text-[#1e293b] truncate" title={teacher.name}>{teacher.name}</h3>
+              <p className="text-[0.7rem] text-[#64748b] font-medium truncate" title={teacher.role}>{teacher.role}</p>
             </div>
           ))}
-          {teachers.length === 0 && <p className="text-xs text-gray-500 col-span-full">No staff photos uploaded yet.</p>}
+          {teachers.length === 0 && <p className="text-sm text-gray-500 col-span-full">No staff photos uploaded yet.</p>}
         </div>
       )}
 
@@ -339,8 +343,8 @@ export default function Gallery() {
           {batches.map((batch, idx) => (
             <div 
               key={batch.year || idx} 
-              onClick={() => isDeleteMode && toggleSelection(idx)}
-              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : ''} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
+              onClick={() => isDeleteMode ? toggleSelection(idx) : setExpandedImage(batch.image)}
+              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : 'cursor-pointer hover:shadow-md hover:-translate-y-0.5'} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
             >
               {isAdminOrTeacher && isDeleteMode && (
                 <div className="absolute top-3 right-3 z-10 bg-white/90 rounded-full flex items-center justify-center w-7 h-7 shadow-lg pointer-events-none">
@@ -350,7 +354,7 @@ export default function Gallery() {
               {isAdminOrTeacher && !isDeleteMode && (
                 <button 
                   onClick={(e) => handleSingleDelete(e, idx, 'batches')}
-                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -377,8 +381,8 @@ export default function Gallery() {
           {events.map((event, idx) => (
             <div 
               key={event.title || idx} 
-              onClick={() => isDeleteMode && toggleSelection(idx)}
-              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : ''} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
+              onClick={() => isDeleteMode ? toggleSelection(idx) : setExpandedImage(event.image)}
+              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : 'cursor-pointer hover:shadow-md hover:-translate-y-0.5'} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
             >
               {isAdminOrTeacher && isDeleteMode && (
                 <div className="absolute top-3 right-3 z-10 bg-white/90 rounded-full flex items-center justify-center w-7 h-7 shadow-lg pointer-events-none">
@@ -388,7 +392,7 @@ export default function Gallery() {
               {isAdminOrTeacher && !isDeleteMode && (
                 <button 
                   onClick={(e) => handleSingleDelete(e, idx, 'events')}
-                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -407,6 +411,28 @@ export default function Gallery() {
             </div>
           ))}
           {events.length === 0 && <p className="text-xs text-gray-500 col-span-full">No event photos uploaded yet.</p>}
+        </div>
+      )}
+
+      {/* Fullscreen Lightbox Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setExpandedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-black/50 hover:bg-white/20 rounded-full p-2 transition-all"
+            onClick={(e) => { e.stopPropagation(); setExpandedImage(null); }}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={expandedImage} 
+            alt="Expanded view" 
+            className="max-w-full max-h-[90vh] object-contain rounded drop-shadow-2xl"
+            onClick={(e) => e.stopPropagation()} 
+            referrerPolicy="no-referrer"
+          />
         </div>
       )}
     </div>

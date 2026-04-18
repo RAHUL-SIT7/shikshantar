@@ -9,11 +9,13 @@ export default function Home() {
     tagline1: 'Empowering Minds,',
     tagline2: 'Shaping Futures.',
     description: 'Shikshantar Academy provides quality education from class Play to Ten (10) in a peaceful and nurturing environment in Bastipur-5, Siraha.',
-    principalMessage: 'At Shikshantar Academy, we believe in nurturing not just academic excellence, but character, creativity, and critical thinking. Our peaceful environment and modern facilities provide the perfect setting for your child to grow and thrive.'
+    principalMessage: 'At Shikshantar Academy, we believe in nurturing not just academic excellence, but character, creativity, and critical thinking. Our peaceful environment and modern facilities provide the perfect setting for your child to grow and thrive.',
+    principalImage: 'https://scontent-bom5-1.xx.fbcdn.net/v/t39.30808-6/606350985_1458678509597899_5556893883060728495_n.jpg?stp=dst-jpegr_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=m_oCBJKH1PAQ7kNvwFHICaV&_nc_oc=Adqp37uV9GBTxjM1lLxaSYRDJLA3D4dbwIzW3BtH1qc7FPelv8gvcU9fTo6gODYsgXs&_nc_zt=23&se=-1&_nc_ht=scontent-bom5-1.xx&_nc_gid=tefv8-2c7oqqmBE4rv5zEw&_nc_ss=7a3a8&oh=00_Af0lPjuB4VGfbK8BddJKfDrz0pJsBdnKGq510rZ6abFJ_g&oe=69E6AC42'
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [tempContent, setTempContent] = useState(content);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const userRole = localStorage.getItem('userRole');
   const isAdmin = userRole === 'admin';
@@ -175,22 +177,34 @@ export default function Home() {
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#1e3a8a] to-[#f97316]"></div>
         <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-6 tracking-wider">Message from the Principal</div>
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-          <div className="w-28 h-28 shrink-0 rounded-full overflow-hidden border-4 border-white shadow-lg">
+          <div 
+            className="w-full md:w-64 h-56 shrink-0 rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 border-white bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={() => setExpandedImage(content.principalImage)}
+          >
             <img
-              src="https://scontent-bom5-1.xx.fbcdn.net/v/t39.30808-6/606350985_1458678509597899_5556893883060728495_n.jpg?stp=dst-jpegr_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=m_oCBJKH1PAQ7kNvwFHICaV&_nc_oc=Adqp37uV9GBTxjM1lLxaSYRDJLA3D4dbwIzW3BtH1qc7FPelv8gvcU9fTo6gODYsgXs&_nc_zt=23&se=-1&_nc_ht=scontent-bom5-1.xx&_nc_gid=tefv8-2c7oqqmBE4rv5zEw&_nc_ss=7a3a8&oh=00_Af0lPjuB4VGfbK8BddJKfDrz0pJsBdnKGq510rZ6abFJ_g&oe=69E6AC42"
+              src={content.principalImage}
               alt="Principal Mr. Pappu Jha"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-[center_85%]"
               referrerPolicy="no-referrer"
             />
           </div>
           <div className="flex-1 w-full">
             {isEditing ? (
-              <textarea 
-                className="w-full text-base text-[#1f2937] leading-relaxed p-3 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none mb-4"
-                rows={4}
-                value={tempContent.principalMessage}
-                onChange={(e) => setTempContent({...tempContent, principalMessage: e.target.value})}
-              />
+              <div className="flex flex-col gap-3 mb-4">
+                <input 
+                  type="text" 
+                  placeholder="Principal Image URL"
+                  value={tempContent.principalImage || ''}
+                  onChange={(e) => setTempContent({...tempContent, principalImage: e.target.value})}
+                  className="w-full text-sm p-3 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
+                />
+                <textarea 
+                  className="w-full text-base text-[#1f2937] leading-relaxed p-3 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
+                  rows={4}
+                  value={tempContent.principalMessage}
+                  onChange={(e) => setTempContent({...tempContent, principalMessage: e.target.value})}
+                />
+              </div>
             ) : (
               <blockquote className="text-base text-[#1f2937] italic mb-4 leading-relaxed relative whitespace-pre-wrap">
                 <span className="text-4xl text-[#e5e7eb] absolute -top-4 -left-4 font-serif">"</span>
@@ -206,6 +220,28 @@ export default function Home() {
         </div>
       </section>
       </div>
+
+      {/* Fullscreen Lightbox Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setExpandedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-black/50 hover:bg-white/20 rounded-full p-2 transition-all"
+            onClick={(e) => { e.stopPropagation(); setExpandedImage(null); }}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={expandedImage} 
+            alt="Expanded view" 
+            className="max-w-full max-h-[90vh] object-contain rounded drop-shadow-2xl"
+            onClick={(e) => e.stopPropagation()} 
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
     </div>
   );
 }

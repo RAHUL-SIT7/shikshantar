@@ -35,8 +35,14 @@ export default function Layout({ isAuthenticated, setIsAuthenticated }: { isAuth
   // For simplicity: If Gregorian month >= 4 (April), BS year = Gregorian + 57. Else + 56.
   const currentGregorianYear = currentTime.getFullYear();
   const currentGregorianMonth = currentTime.getMonth() + 1; // 1-12
-  const currentBSYear = currentGregorianMonth >= 4 ? currentGregorianYear + 57 : currentGregorianYear + 56;
-  const academicYearString = `${currentBSYear - 1} - ${currentBSYear} B.S.`;
+  const currentGregorianDate = currentTime.getDate();
+
+  let currentBSYear = currentGregorianYear + 56;
+  // Baisakh roughly starts mid-April, approximate as April 13
+  if (currentGregorianMonth > 4 || (currentGregorianMonth === 4 && currentGregorianDate >= 13)) {
+    currentBSYear = currentGregorianYear + 57;
+  }
+  const academicYearString = `${currentBSYear}-${currentBSYear + 1} B.S.`;
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -106,17 +112,17 @@ export default function Layout({ isAuthenticated, setIsAuthenticated }: { isAuth
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col">
-          <div className="px-5 text-[0.65rem] font-bold uppercase tracking-[1px] opacity-50 mb-2">Menu</div>
-          <nav className="flex-1 overflow-y-auto custom-scrollbar">
-            <ul className="list-none p-0 m-0">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="px-5 text-[0.65rem] font-bold uppercase tracking-[1px] opacity-50 mb-2 shrink-0">Menu</div>
+          <nav className="flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
+            <ul className="list-none p-0 m-0 pb-4">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
                   <li key={item.name}>
                     <Link
                       to={item.href}
-                      className={`px-6 py-3 text-[0.9rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
+                      className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
                         location.pathname === item.href 
                           ? 'bg-white/10 border-[#f97316]' 
                           : 'border-transparent hover:bg-white/5'
@@ -129,24 +135,26 @@ export default function Layout({ isAuthenticated, setIsAuthenticated }: { isAuth
                 );
               })}
               
+              <li className="mt-2 border-t border-white/10 pt-2 border-opacity-50 mx-4"></li>
+              
               {isAuthenticated ? (
-                <li className="mt-10">
+                <li>
                   <button
                     onClick={handleLogout}
-                    className="w-full px-6 py-3 text-[0.9rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 border-transparent hover:bg-white/5 text-[#fca5a5]"
+                    className="w-full px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 border-transparent hover:bg-white/5 text-[#fca5a5]"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout Session
                   </button>
                 </li>
               ) : (
-                <li className="mt-10">
+                <li>
                   <Link
                     to="/login"
-                    className={`px-6 py-3 text-[0.9rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
+                    className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
                       location.pathname === '/login' 
-                        ? 'bg-white/10 border-[#f97316]' 
-                        : 'border-transparent hover:bg-white/5'
+                        ? 'bg-white/10 border-[#fca5a5] text-[#fca5a5]' 
+                        : 'border-transparent hover:bg-white/5 text-[#fca5a5]'
                     }`}
                   >
                     <LogIn className="w-4 h-4" />
@@ -158,9 +166,9 @@ export default function Layout({ isAuthenticated, setIsAuthenticated }: { isAuth
           </nav>
         </div>
         
-        <div className="mt-auto p-5 border-t border-white/10">
-          <div className="text-[0.7rem] opacity-60">Academic Year</div>
-          <div className="text-[0.9rem] font-bold">{academicYearString}</div>
+        <div className="shrink-0 p-4 border-t border-white/10 bg-[#1e40af]/30">
+          <div className="text-[0.65rem] opacity-60 uppercase tracking-wider font-bold">Academic Year</div>
+          <div className="text-[0.85rem] font-bold text-white shadow-sm">{academicYearString}</div>
         </div>
       </aside>
 
