@@ -1,13 +1,45 @@
-import { Monitor, BookOpen, Camera, Leaf, FlaskConical, Activity } from 'lucide-react';
+import { Monitor, BookOpen, Camera, Leaf, FlaskConical, Activity, Edit2, Save, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Facilities() {
-  const [facilitiesText, setFacilitiesText] = useState('');
+  const [facilitiesText, setFacilitiesText] = useState('Our modern infrastructure is designed to provide students with the best possible environment for learning and growth.');
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempText, setTempText] = useState(facilitiesText);
+
+  const userRole = localStorage.getItem('userRole');
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
-    const stored = localStorage.getItem('school_facilities');
-    if (stored) setFacilitiesText(stored);
+    const loadData = () => {
+      const stored = localStorage.getItem('school_facilities_v2');
+      if (stored) {
+        setFacilitiesText(stored);
+        setTempText(stored);
+      }
+    };
+    
+    loadData();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'school_facilities_v2') {
+        loadData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  const handleSave = () => {
+    setFacilitiesText(tempText);
+    localStorage.setItem('school_facilities_v2', tempText);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setTempText(facilitiesText);
+    setIsEditing(false);
+  };
 
   const facilities = [
     {
@@ -55,16 +87,47 @@ export default function Facilities() {
   ];
 
   return (
-    <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
+    <div className="flex flex-col gap-4">
+      {isAdmin && (
+        <div className="flex justify-end w-full">
+          {isEditing ? (
+            <div className="flex gap-2">
+              <button onClick={handleSave} className="bg-[#10b981] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#059669] shadow">
+                <Save className="w-4 h-4"/> Save Editing
+              </button>
+              <button onClick={handleCancel} className="bg-[#ef4444] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#b91c1c] shadow">
+                <X className="w-4 h-4"/> Cancel
+              </button>
+            </div>
+          ) : (
+             <button onClick={() => setIsEditing(true)} className="bg-[#1e3a8a] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#1e40af] shadow">
+                <Edit2 className="w-4 h-4"/> Edit Page Content
+             </button>
+          )}
+        </div>
+      )}
+
+      <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] relative">
+
+
       <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex justify-between">
         <span>Infrastructure & Facilities</span>
       </div>
 
-      {facilitiesText && (
-        <div className="mb-5 text-[0.8rem] text-[#1f2937] leading-relaxed whitespace-pre-wrap">
-          {facilitiesText}
-        </div>
-      )}
+      <div className="mb-6 w-full md:w-3/4">
+        {isEditing ? (
+          <textarea 
+            className="w-full text-[0.8rem] text-[#1f2937] leading-relaxed p-3 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
+            rows={4}
+            value={tempText}
+            onChange={(e) => setTempText(e.target.value)}
+          />
+        ) : (
+          <p className="text-[0.8rem] text-[#1f2937] leading-relaxed whitespace-pre-wrap">
+            {facilitiesText}
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {facilities.map((facility) => {
@@ -89,6 +152,7 @@ export default function Facilities() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

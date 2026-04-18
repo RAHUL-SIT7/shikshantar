@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Bell, DollarSign, Search, History, X, CreditCard, User, GraduationCap, Building2 } from 'lucide-react';
 
 export default function AccountAdmin() {
@@ -6,19 +6,48 @@ export default function AccountAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<any>(null); // For Payment Modal
 
-  const [students, setStudents] = useState([
-    { id: 'S101', name: 'Aarav Sharma', class: '10', due: 20000, paid: 30000 },
-    { id: 'S102', name: 'Bina Thapa', class: '10', due: 0, paid: 50000 },
-    { id: 'S103', name: 'Chirag Yadav', class: '9', due: 15000, paid: 35000 },
-    { id: 'S104', name: 'Diya Rai', class: '8', due: 5000, paid: 40000 },
-  ]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
 
-  const [paymentHistory, setPaymentHistory] = useState([
-    { id: 'TXN001', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-04-15', amount: 10000, method: 'eSewa' },
-    { id: 'TXN002', studentId: 'S102', studentName: 'Bina Thapa', date: '2024-04-14', amount: 50000, method: 'Bank Transfer (Nabil)' },
-    { id: 'TXN003', studentId: 'S103', studentName: 'Chirag Yadav', date: '2024-04-10', amount: 15000, method: 'Khalti' },
-    { id: 'TXN004', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-03-05', amount: 20000, method: 'Cash' },
-  ]);
+  useEffect(() => {
+    const storedStudents = localStorage.getItem('school_fees_students');
+    if (storedStudents) {
+      setStudents(JSON.parse(storedStudents));
+    } else {
+      const defaultStudents = [
+        { id: 'S101', name: 'Aarav Sharma', class: '10', due: 20000, paid: 30000 },
+        { id: 'S102', name: 'Bina Thapa', class: '10', due: 0, paid: 50000 },
+        { id: 'S103', name: 'Chirag Yadav', class: '9', due: 15000, paid: 35000 },
+        { id: 'S104', name: 'Diya Rai', class: '8', due: 5000, paid: 40000 },
+      ];
+      setStudents(defaultStudents);
+      localStorage.setItem('school_fees_students', JSON.stringify(defaultStudents));
+    }
+
+    const storedHistory = localStorage.getItem('school_fees_history');
+    if (storedHistory) {
+      setPaymentHistory(JSON.parse(storedHistory));
+    } else {
+      const defaultHistory = [
+        { id: 'TXN001', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-04-15', amount: 10000, method: 'eSewa' },
+        { id: 'TXN002', studentId: 'S102', studentName: 'Bina Thapa', date: '2024-04-14', amount: 50000, method: 'Bank Transfer (Nabil)' },
+        { id: 'TXN003', studentId: 'S103', studentName: 'Chirag Yadav', date: '2024-04-10', amount: 15000, method: 'Khalti' },
+        { id: 'TXN004', studentId: 'S101', studentName: 'Aarav Sharma', date: '2024-03-05', amount: 20000, method: 'Cash' },
+      ];
+      setPaymentHistory(defaultHistory);
+      localStorage.setItem('school_fees_history', JSON.stringify(defaultHistory));
+    }
+
+    // Interval to poll for student Portal payments (simulate real-time)
+    const interval = setInterval(() => {
+      const st = localStorage.getItem('school_fees_students');
+      if (st) setStudents(JSON.parse(st));
+      const ph = localStorage.getItem('school_fees_history');
+      if (ph) setPaymentHistory(JSON.parse(ph));
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Modal State
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -36,11 +65,11 @@ export default function AccountAdmin() {
   };
 
   const submitPayment = () => {
-    if (!paymentAmount || isNaN(Number(paymentAmount))) return;
+    if (!paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0) return;
     const amountNum = Number(paymentAmount);
     
     // Update student balances
-    setStudents(students.map(s => {
+    const updatedStudents = students.map(s => {
       if (s.id === selectedStudent.id) {
         return {
           ...s,
@@ -49,20 +78,25 @@ export default function AccountAdmin() {
         };
       }
       return s;
-    }));
+    });
 
     // Add to history
-    setPaymentHistory([
+    const updatedHistory = [
       {
-        id: `TXN00${paymentHistory.length + 1}`,
+        id: `TXN${Date.now().toString().slice(-6)}`,
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
         date: new Date().toISOString().split('T')[0],
         amount: amountNum,
-        method: paymentMethod
+        method: paymentMethod + " (Manual)"
       },
       ...paymentHistory
-    ]);
+    ];
+
+    setStudents(updatedStudents);
+    setPaymentHistory(updatedHistory);
+    localStorage.setItem('school_fees_students', JSON.stringify(updatedStudents));
+    localStorage.setItem('school_fees_history', JSON.stringify(updatedHistory));
 
     setSelectedStudent(null);
   };

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function Result() {
   const [showNotification, setShowNotification] = useState(false);
@@ -7,18 +9,28 @@ export default function Result() {
 
   useEffect(() => {
     const studentId = localStorage.getItem('studentId');
-    const storedResults = localStorage.getItem('school_results');
-    
-    if (studentId && storedResults) {
-      const parsedResults = JSON.parse(storedResults);
-      // Find student by StudentId (case-insensitive)
-      const found = parsedResults.find((r: any) => 
-        String(r.StudentId).toLowerCase() === String(studentId).toLowerCase()
-      );
-      if (found) {
-        setStudentData(found);
+    if (!studentId) return;
+
+    const unsub = onSnapshot(doc(db, 'school_data', 'results'), (docSnap) => {
+      if (docSnap.exists()) {
+        const parsedResults = docSnap.data().records || [];
+        // Find student by StudentId (case-insensitive)
+        const found = parsedResults.find((r: any) => 
+          String(r.StudentId).toLowerCase() === String(studentId).toLowerCase()
+        );
+        if (found) {
+          setStudentData(found);
+        } else {
+          setStudentData(null);
+        }
+      } else {
+        setStudentData(null);
       }
-    }
+    }, (error) => {
+      console.error("Firebase read error:", error);
+    });
+
+    return () => unsub();
   }, []);
 
   const handleNotify = () => {

@@ -14,9 +14,11 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber
 } from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '../firebase';
 
 type Role = 'student' | 'teacher' | 'admin';
-type View = 'login' | 'register' | 'verify' | 'forgot' | 'reset';
+type View = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'register_otp';
 
 export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val: boolean) => void }) {
   const [searchParams] = useSearchParams();
@@ -46,6 +48,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [teachingLevel, setTeachingLevel] = useState('');
+  const [studentIdInput, setStudentIdInput] = useState('');
 
   const navigate = useNavigate();
 
@@ -70,19 +73,121 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      if (!userCredential.user.emailVerified) {
-        setView('verify');
-        setLoading(false);
-        return;
+      // Fetch user data from firestore
+      const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.children && userData.children.length > 0) {
+          // Set primary child student ID to local storage automatically
+          localStorage.setItem('studentId', userData.children[0].studentId);
+        }
+        if (userData.role) {
+          localStorage.setItem('userRole', userData.role);
+        } else {
+          localStorage.setItem('userRole', role);
+        }
+      } else {
+        localStorage.setItem('userRole', role);
       }
 
-      // Store role in localStorage since we can't use Firestore yet
-      localStorage.setItem('userRole', role);
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
       setError('Email or password is incorrect');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveStudentToFirestore = async (uid: string) => {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    const studentData = {
+      name,
+      fatherName,
+      motherName,
+      dob,
+      studentClass,
+      address,
+      phone,
+      studentId: studentIdInput
+    };
+
+    if (userSnap.exists()) {
+      await updateDoc(userRef, {
+        children: arrayUnion(studentData)
+      });
+    } else {
+      await setDoc(userRef, {
+        role: role,
+        email: email,
+        phone: phone,
+        children: [studentData]
+      });
+    }
+  };
+
+  const finalizeRegistration = async () => {
+    setLoading(true);
+    try {
+      let isExistingUser = false;
+      let userCredential;
+
+      // Try creating new user
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+      } catch (err: any) {
+        if (err.code === 'auth/email-already-in-use') {
+          // It's a parent adding a 2nd/3rd child. Let's log them in and append!
+          isExistingUser = true;
+          try {
+            userCredential = await signInWithEmailAndPassword(auth, email, password);
+          } catch (signInErr: any) {
+            setError('Email already exists, but the password provided is incorrect. Please use your exact password to add another child.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      if (userCredential && userCredential.user) {
+        await saveStudentToFirestore(userCredential.user.uid);
+        
+        // Temporarily store the latest StudentId in local storage for instant dashboard lookup
+        if (studentIdInput) {
+          localStorage.setItem('studentId', studentIdInput);
+        }
+        localStorage.setItem('userRole', role);
+        
+        setMessage(isExistingUser ? 'New child added successfully to your account!' : 'Registration complete! Logging in...');
+        
+        setTimeout(() => {
+          setIsAuthenticated(true);
+          navigate('/');
+        }, 1500);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to complete registration.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      if (confirmationResult) {
+        await confirmationResult.confirm(otpCode);
+        setMessage('Phone verified successfully! Finalizing account...');
+        await finalizeRegistration();
+      }
+    } catch (err: any) {
+      setError('Invalid OTP code. Please try again.');
       setLoading(false);
     }
   };
@@ -112,29 +217,26 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     }
 
     if (!validatePhone(phone)) {
-      setError('Phone number must be 10 digits and start with 98 or 97');
+      setError('Phone number must be exactly 10 digits and start with 98 or 97');
+      return;
+    }
+
+    if (role === 'student' && !studentIdInput) {
+      setError('Please provide a valid Student ID / Roll No');
       return;
     }
 
     setLoading(true);
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await sendEmailVerification(userCredential.user);
-      
-      // Store role temporarily to know what they registered as
-      localStorage.setItem('userRole', role);
-      
-      // Sign out immediately as per requirements
-      await signOut(auth);
-      
-      setView('verify');
+      setupRecaptcha();
+      const appVerifier = (window as any).recaptchaVerifier;
+      const formattedPhone = phone.startsWith('+') ? phone : `+977${phone}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      setConfirmationResult(result);
+      setMessage('OTP sent to your phone! Please complete verification to finish setting up.');
+      setView('register_otp');
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('User already exists. Please sign in');
-      } else {
-        setError(err.message);
-      }
+      setError(err.message || 'Failed to send OTP for Registration Verification.');
     } finally {
       setLoading(false);
     }
@@ -720,6 +822,15 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   </div>
                 </div>
                 <div>
+                  <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Student ID / Roll No</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-4 w-4 text-[#6b7280]" />
+                    </div>
+                    <input type="text" required value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Student ID (e.g. STU123)" />
+                  </div>
+                </div>
+                <div>
                   <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Address</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -850,6 +961,46 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 Sign in here
               </button>
             </p>
+          </form>
+        )}
+
+        {view === 'register_otp' && (
+          <form onSubmit={handleRegisterOtpVerify} className="space-y-4">
+            <div id="recaptcha-container"></div>
+            <div>
+              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Enter Phone Verification OTP</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-[#6b7280]" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm tracking-widest font-bold text-center"
+                  placeholder="123456"
+                  maxLength={6}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">We sent a 6-digit code to {phone}</p>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
+            >
+              {loading ? 'Verifying & Registering...' : 'Verify Phone & Register'}
+            </button>
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => { setView('register'); setError(''); setMessage(''); setConfirmationResult(null); }} 
+                className="text-[#1e3a8a] font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
+              >
+                <ArrowLeft className="w-4 h-4" /> Cancel & Go Back
+              </button>
+            </div>
           </form>
         )}
       </div>

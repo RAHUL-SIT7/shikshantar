@@ -10,6 +10,8 @@ import AccountAdmin from './pages/AccountAdmin';
 import Result from './pages/Result';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
+import Admission from './pages/Admission';
+import AdminAdmissions from './pages/AdminAdmissions';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -20,7 +22,8 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && user.emailVerified) {
+      // NOTE: Temporarily checking just for 'user' to bypass email verification for testing, matching the Login behavior
+      if (user) {
         setIsAuthenticated(true);
       } else {
         setIsAuthenticated(false);
@@ -45,6 +48,7 @@ export default function App() {
           <Route path="facilities" element={<Facilities />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="events" element={<Events />} />
+          <Route path="admission" element={<Admission />} />
           <Route 
             path="account" 
             element={isAuthenticated ? <Account /> : <Navigate to="/login" />} 
@@ -60,6 +64,10 @@ export default function App() {
           <Route 
             path="admin" 
             element={isAuthenticated ? <Admin /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="admin-admissions" 
+            element={isAuthenticated ? <AdminAdmissions /> : <Navigate to="/login" />} 
           />
         </Route>
       </Routes>

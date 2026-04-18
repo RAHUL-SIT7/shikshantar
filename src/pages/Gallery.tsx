@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, Link as LinkIcon, Image as ImageIcon, Trash2, CheckCircle, Circle } from 'lucide-react';
+import { db, storage } from '../firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function Gallery() {
   const [activeTab, setActiveTab] = useState<'teachers' | 'batches' | 'events'>('teachers');
@@ -7,31 +11,185 @@ export default function Gallery() {
   const [batches, setBatches] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
 
+  const [newImage, setNewImage] = useState({ url: '', caption: '', role: '' });
+  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [galleryStatus, setGalleryStatus] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
+  
+  const userRole = localStorage.getItem('userRole');
+  const isAdminOrTeacher = userRole === 'admin' || userRole === 'teacher';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    const storedGallery = localStorage.getItem('school_gallery');
-    if (storedGallery) {
-      const data = JSON.parse(storedGallery);
-      setTeachers(data.teachers || []);
-      setBatches(data.batches || []);
-      setEvents(data.events || []);
-    } else {
-      // Default Data
-      setTeachers([
-        { id: 1, name: 'Mr. Pappu Jha', role: 'Principal', image: 'https://picsum.photos/seed/t1/400/500' },
-        { id: 2, name: 'Mrs. Sharma', role: 'Science Teacher', image: 'https://picsum.photos/seed/t2/400/500' },
-        { id: 3, name: 'Mr. Koirala', role: 'Math Teacher', image: 'https://picsum.photos/seed/t3/400/500' },
-        { id: 4, name: 'Ms. Thapa', role: 'English Teacher', image: 'https://picsum.photos/seed/t4/400/500' },
-      ]);
-      setBatches([
-        { year: '2082 B.S', image: 'https://picsum.photos/seed/b82/800/600' },
-        { year: '2081 B.S', image: 'https://picsum.photos/seed/b81/800/600' },
-      ]);
-      setEvents([
-        { title: 'Annual Sports Day', image: 'https://picsum.photos/seed/e1/800/600' },
-        { title: 'Science Exhibition', image: 'https://picsum.photos/seed/e2/800/600' },
-      ]);
-    }
+    const unsub = onSnapshot(doc(db, 'school_data', 'gallery'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTeachers(data.teachers || []);
+        setBatches(data.batches || []);
+        setEvents(data.events || []);
+      } else {
+        // Init default if doesn't exist
+        const defaultData = {
+          teachers: [
+            { id: 1, name: 'Mr. Pappu Jha', role: 'Principal', image: 'https://picsum.photos/seed/t1/400/500' },
+            { id: 2, name: 'Mrs. Sharma', role: 'Science Teacher', image: 'https://picsum.photos/seed/t2/400/500' },
+            { id: 3, name: 'Mr. Koirala', role: 'Math Teacher', image: 'https://picsum.photos/seed/t3/400/500' },
+            { id: 4, name: 'Ms. Thapa', role: 'English Teacher', image: 'https://picsum.photos/seed/t4/400/500' },
+          ],
+          batches: [
+            { year: '2082 B.S', image: 'https://picsum.photos/seed/b82/800/600' },
+            { year: '2081 B.S', image: 'https://picsum.photos/seed/b81/800/600' },
+          ],
+          events: [
+            { title: 'Annual Sports Day', image: 'https://picsum.photos/seed/e1/800/600' },
+            { title: 'Science Exhibition', image: 'https://picsum.photos/seed/e2/800/600' },
+          ]
+        };
+        setDoc(doc(db, 'school_data', 'gallery'), defaultData).catch(console.error);
+      }
+    });
+
+    return () => unsub();
   }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImage({ ...newImage, url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddImage = async () => {
+    if (!newImage.url || !newImage.caption) {
+      setGalleryStatus('Please provide both Image and Caption.');
+      return;
+    }
+
+    setIsUploading(true);
+    setGalleryStatus('Saving image to Database...');
+    
+    // We are deliberately bypassing Firebase Storage and saving the Base64 string from newImage.url directly into the Firestore database document to avoid billing requirements.
+    const finalImageUrl = newImage.url;
+    
+    const updatedGallery = { teachers, batches, events };
+    
+    if (activeTab === 'teachers') {
+      const updated = [...teachers, { id: Date.now(), name: newImage.caption, role: newImage.role || 'Staff', image: finalImageUrl }];
+      setTeachers(updated);
+      updatedGallery.teachers = updated;
+    } else if (activeTab === 'batches') {
+      const updated = [...batches, { year: newImage.caption, image: finalImageUrl }];
+      setBatches(updated);
+      updatedGallery.batches = updated;
+    } else if (activeTab === 'events') {
+      const updated = [...events, { title: newImage.caption, image: finalImageUrl }];
+      setEvents(updated);
+      updatedGallery.events = updated;
+    }
+
+    try {
+      await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+      setNewImage({ url: '', caption: '', role: '' });
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setGalleryStatus('Image successfully added to gallery!');
+    } catch (e) {
+      console.error(e);
+      setGalleryStatus('Failed to upload image. Image size might be too large for free database.');
+    }
+    
+    setIsUploading(false);
+    setTimeout(() => setGalleryStatus(''), 4000);
+  };
+
+  const handleClearGalleryCategory = async () => {
+    if (window.confirm(`Clear all ${activeTab}?`)) {
+      const updatedGallery = { teachers, batches, events };
+      if (activeTab === 'teachers') {
+        updatedGallery.teachers = [];
+      } else if (activeTab === 'batches') {
+        updatedGallery.batches = [];
+      } else if (activeTab === 'events') {
+        updatedGallery.events = [];
+      }
+      try {
+        await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+        setSelectedIndexes([]);
+        setIsDeleteMode(false);
+      } catch (e) {
+        console.error(e);
+        alert('Error clearing category: ' + e);
+      }
+    }
+  };
+
+  const isSelected = (index: number) => {
+    return selectedIndexes.includes(index);
+  };
+
+  const toggleSelection = (index: number) => {
+    if (isSelected(index)) {
+      setSelectedIndexes(selectedIndexes.filter(i => i !== index));
+    } else {
+      setSelectedIndexes([...selectedIndexes, index]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIndexes.length === 0) return;
+    if (!window.confirm(`Delete ${selectedIndexes.length} selected items?`)) return;
+
+    const updatedGallery = { teachers, batches, events };
+    
+    if (activeTab === 'teachers') {
+      updatedGallery.teachers = teachers.filter((_, idx) => !isSelected(idx));
+    } else if (activeTab === 'batches') {
+      updatedGallery.batches = batches.filter((_, idx) => !isSelected(idx));
+    } else if (activeTab === 'events') {
+      updatedGallery.events = events.filter((_, idx) => !isSelected(idx));
+    }
+
+    try {
+      await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+      setSelectedIndexes([]);
+      setIsDeleteMode(false);
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting items: ' + e);
+    }
+  };
+
+  const handleSingleDelete = async (e: React.MouseEvent, index: number, category: 'teachers' | 'batches' | 'events') => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this single image?')) return;
+
+    const updatedGallery = { teachers, batches, events };
+    
+    if (category === 'teachers') {
+      updatedGallery.teachers = teachers.filter((_, i) => i !== index);
+    } else if (category === 'batches') {
+      updatedGallery.batches = batches.filter((_, i) => i !== index);
+    } else if (category === 'events') {
+      updatedGallery.events = events.filter((_, i) => i !== index);
+    }
+
+    try {
+      await setDoc(doc(db, 'school_data', 'gallery'), updatedGallery);
+    } catch (error) {
+      console.error(error);
+      alert('Error deleting image: ' + error);
+    }
+  };
 
   return (
     <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
@@ -71,11 +229,96 @@ export default function Gallery() {
         </div>
       </div>
 
+      {isAdminOrTeacher && (
+        <div className="bg-[#f8fafc] p-4 rounded-lg border border-[#e2e8f0] mb-6 shadow-sm">
+          <h3 className="text-sm font-bold text-[#1e293b] mb-3 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+            <span>Add New Photo to {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>
+            <div className="flex flex-wrap gap-2">
+              {!isDeleteMode ? (
+                <button onClick={() => { setIsDeleteMode(true); setSelectedIndexes([]); }} className="text-xs font-bold text-[#0284c7] border border-[#bae6fd] bg-[#f0f9ff] px-3 py-1.5 rounded hover:bg-[#e0f2fe] transition-colors flex items-center gap-1">
+                  Manage Select
+                </button>
+              ) : (
+                <>
+                  {selectedIndexes.length > 0 && (
+                    <button onClick={handleBulkDelete} className="text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-colors flex items-center gap-1 bg-red-600 text-white hover:bg-red-700">
+                      <Trash2 className="w-3 h-3" /> Delete Selected ({selectedIndexes.length})
+                    </button>
+                  )}
+                  <button onClick={() => { setIsDeleteMode(false); setSelectedIndexes([]); }} className="text-xs font-bold text-[#475569] border border-[#cbd5e1] bg-white px-3 py-1.5 rounded hover:bg-[#f1f5f9] hover:text-[#1e293b] transition-colors shadow-sm">
+                    Cancel Selection
+                  </button>
+                </>
+              )}
+              <button onClick={handleClearGalleryCategory} className="text-xs font-bold text-[#ef4444] border border-[#fca5a5] bg-[#fef2f2] px-3 py-1.5 rounded hover:bg-[#fee2e2] transition-colors">
+                Clear Category
+              </button>
+            </div>
+          </h3>
+          
+          <div className="flex gap-2 mb-3">
+            <button onClick={() => setUploadMode('url')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'url' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+              <LinkIcon className="w-3 h-3"/> URL
+            </button>
+            <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+              <Upload className="w-3 h-3"/> Device
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            {uploadMode === 'url' ? (
+              <input type="text" placeholder="Image URL (e.g. from Imgur)" value={newImage.url} onChange={(e) => setNewImage({...newImage, url: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+              </div>
+            )}
+            
+            <input type="text" placeholder={activeTab === 'teachers' ? 'Teacher Name' : activeTab === 'batches' ? 'Batch Year (e.g. 2082)' : 'Event Title'} value={newImage.caption} onChange={(e) => setNewImage({...newImage, caption: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+            
+            {activeTab === 'teachers' && (
+              <input type="text" placeholder="Subject / Role" value={newImage.role} onChange={(e) => setNewImage({...newImage, role: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+            )}
+          </div>
+          
+          {newImage.url && uploadMode === 'file' && (
+            <div className="mb-3 flex gap-2 items-center">
+              <span className="text-xs text-[#6b7280]">Preview:</span>
+              <img src={newImage.url} alt="Preview" className="h-10 w-10 object-cover rounded shadow" />
+            </div>
+          )}
+
+          <div className="flex gap-3 items-center">
+            <button disabled={isUploading} onClick={handleAddImage} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm ${isUploading ? 'bg-[#cbd5e1] text-[#475569] cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}>
+              {isUploading ? 'Uploading...' : 'Upload Photo'}
+            </button>
+            {galleryStatus && <span className={`text-xs font-bold ${galleryStatus.includes('Failed') || galleryStatus.includes('Error') ? 'text-red-500' : 'text-[#059669]'}`}>{galleryStatus}</span>}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'teachers' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {teachers.map((teacher, idx) => (
-            <div key={teacher.id || idx} className="bg-[#f9fafb] p-2 rounded-lg text-center border border-[#e5e7eb]">
-              <div className="aspect-square rounded overflow-hidden mb-2">
+            <div 
+              key={teacher.id || idx} 
+              onClick={() => isDeleteMode && toggleSelection(idx)}
+              className={`group relative bg-[#f9fafb] p-2 rounded-lg text-center border transition-all ${isDeleteMode ? 'cursor-pointer hover:bg-[#f3f4f6]' : ''} ${isSelected(idx) ? 'border-red-500 ring-2 ring-red-500/20 bg-[#fef2f2]' : 'border-[#e5e7eb]'}`}
+            >
+              {isAdminOrTeacher && isDeleteMode && (
+                <div className="absolute top-2 right-2 z-10 bg-white rounded-full flex items-center justify-center w-6 h-6 shadow pointer-events-none">
+                  {isSelected(idx) ? <CheckCircle className="w-5 h-5 text-red-500" /> : <Circle className="w-5 h-5 text-gray-300" />}
+                </div>
+              )}
+              {isAdminOrTeacher && !isDeleteMode && (
+                <button 
+                  onClick={(e) => handleSingleDelete(e, idx, 'teachers')}
+                  className="absolute top-2 right-2 z-10 bg-red-100 p-1.5 rounded-full text-red-600 shadow opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <div className={`aspect-square rounded overflow-hidden mb-2 ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
                   src={teacher.image}
                   alt={teacher.name}
@@ -94,8 +337,25 @@ export default function Gallery() {
       {activeTab === 'batches' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {batches.map((batch, idx) => (
-            <div key={batch.year || idx} className="relative rounded-lg overflow-hidden border border-[#e5e7eb]">
-              <div className="aspect-[4/3]">
+            <div 
+              key={batch.year || idx} 
+              onClick={() => isDeleteMode && toggleSelection(idx)}
+              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : ''} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
+            >
+              {isAdminOrTeacher && isDeleteMode && (
+                <div className="absolute top-3 right-3 z-10 bg-white/90 rounded-full flex items-center justify-center w-7 h-7 shadow-lg pointer-events-none">
+                  {isSelected(idx) ? <CheckCircle className="w-6 h-6 text-red-500" /> : <Circle className="w-6 h-6 text-gray-400" />}
+                </div>
+              )}
+              {isAdminOrTeacher && !isDeleteMode && (
+                <button 
+                  onClick={(e) => handleSingleDelete(e, idx, 'batches')}
+                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <div className={`aspect-[4/3] ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
                   src={batch.image}
                   alt={`Batch ${batch.year}`}
@@ -115,8 +375,25 @@ export default function Gallery() {
       {activeTab === 'events' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {events.map((event, idx) => (
-            <div key={event.title || idx} className="relative rounded-lg overflow-hidden border border-[#e5e7eb]">
-              <div className="aspect-[4/3]">
+            <div 
+              key={event.title || idx} 
+              onClick={() => isDeleteMode && toggleSelection(idx)}
+              className={`group relative rounded-lg overflow-hidden border transition-all ${isDeleteMode ? 'cursor-pointer hover:opacity-90' : ''} ${isSelected(idx) ? 'border-red-500 ring-4 ring-red-500/40' : 'border-[#e5e7eb]'}`}
+            >
+              {isAdminOrTeacher && isDeleteMode && (
+                <div className="absolute top-3 right-3 z-10 bg-white/90 rounded-full flex items-center justify-center w-7 h-7 shadow-lg pointer-events-none">
+                  {isSelected(idx) ? <CheckCircle className="w-6 h-6 text-red-500" /> : <Circle className="w-6 h-6 text-gray-400" />}
+                </div>
+              )}
+              {isAdminOrTeacher && !isDeleteMode && (
+                <button 
+                  onClick={(e) => handleSingleDelete(e, idx, 'events')}
+                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <div className={`aspect-[4/3] ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
                   src={event.image}
                   alt={event.title}
