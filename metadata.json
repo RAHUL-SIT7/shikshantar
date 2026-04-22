@@ -1,6 +1,8 @@
 {
   "name": "Shikshantar Academy Portal",
   "description": "School portal for Shikshantar Academy, Bastipur-5, Siraha, Madhesh Province, Nepal.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "camera"
+  ],
   "majorCapabilities": []
 }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Trash2, Folder, ChevronRight, Users, ArrowLeft, Edit2, Save, X, Plus, Search, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Trash2, Folder, ChevronRight, Users, ArrowLeft, Edit2, Save, X, Plus, Search, Download, Shield } from 'lucide-react';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from 'firebase/firestore';
 
 export default function Admin() {
   // Results State
@@ -21,21 +21,21 @@ export default function Admin() {
   const [exportSelection, setExportSelection] = useState<string>('ALL');
 
   useEffect(() => {
-    // Real-time listener for Results from Firestore
-    const unsub = onSnapshot(doc(db, 'school_data', 'results'), (docSnap) => {
-      if (docSnap.exists()) {
-        setData(docSnap.data().records || []);
-      } else {
-        setData([]);
-      }
-    }, (error) => {
-      console.error("Firebase read error:", error);
-    });
-
-    return () => unsub();
-  }, []);
-
-  const classes = useMemo(() => {
+      // Real-time listener for Results from Firestore
+      const unsub = onSnapshot(doc(db, 'school_data', 'results'), (docSnap) => {
+        if (docSnap.exists()) {
+          setData(docSnap.data().records || []);
+        } else {
+          setData([]);
+        }
+      }, (error) => {
+        console.error("Firebase read error:", error);
+      });
+  
+      return () => unsub();
+    }, []);
+  
+    const classes = useMemo(() => {
     const clsSet = new Set<string>();
     data.forEach(row => {
       const classVal = row['Class'] || row['class'] || 'Unknown';
@@ -201,8 +201,10 @@ export default function Admin() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-5">
-      <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
+    <div className="flex flex-col gap-5">
+      {/* Main Content Area */}
+      <div className="grid grid-cols-1 gap-5">
+            <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
         <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex justify-between items-center border-b border-[#e5e7eb] pb-3">
           <span className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-[#1e3a8a]" /> Result Management (Excel Upload)</span>
         </div>
@@ -448,6 +450,7 @@ export default function Admin() {
            </div>
          </section>
       )}
+      </div>
     </div>
   );
 }

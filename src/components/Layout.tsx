@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard } from 'lucide-react';
+import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
@@ -79,6 +79,7 @@ export default function Layout({ isAuthenticated, setIsAuthenticated }: { isAuth
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload });
       nav.push({ name: 'Manage Accounts', href: '/account-admin', icon: CreditCard });
       nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User });
+      nav.push({ name: 'User Approvals & Staff', href: '/user-approvals', icon: Shield });
     }
     
     return nav;

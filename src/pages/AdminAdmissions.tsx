@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
-import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
+import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown, Settings, Plus, Download } from 'lucide-react';
 
 export default function AdminAdmissions() {
   const [admissions, setAdmissions] = useState<any[]>([]);
@@ -12,7 +12,11 @@ export default function AdminAdmissions() {
   
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
+  // Form Config State
+  const [formFields, setFormFields] = useState<any[]>([]);
+
   useEffect(() => {
+    // Fetch Admission Data
     const q = query(collection(db, 'admissions'), orderBy('submittedAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const records: any[] = [];
@@ -25,6 +29,27 @@ export default function AdminAdmissions() {
       console.error("Error fetching admissions: ", error);
       setLoading(false);
     });
+
+    // Fetch Config Fields
+    const fetchFormConfig = async () => {
+      const configDoc = await getDoc(doc(db, 'settings', 'admissionFormConfig'));
+      if (configDoc.exists() && configDoc.data().fields) {
+        setFormFields(configDoc.data().fields);
+      } else {
+        setFormFields([
+            { id: 'studentName', label: 'Student Full Name', type: 'text', required: true },
+            { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
+            { id: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
+            { id: 'parentName', label: 'Parent/Guardian Name', type: 'text', required: true },
+            { id: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
+            { id: 'email', label: 'Email Address', type: 'email', required: false },
+            { id: 'address', label: 'Residential Address', type: 'textarea', required: true },
+            { id: 'gradeAppliedFor', label: 'Grade Applied For', type: 'select', options: ['Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2'], required: true },
+            { id: 'previousSchool', label: 'Previous School Attended (If any)', type: 'text', required: false }
+        ]);
+      }
+    };
+    fetchFormConfig();
 
     return () => unsubscribe();
   }, []);
@@ -57,14 +82,9 @@ export default function AdminAdmissions() {
 
   const handleSaveEdit = async () => {
     try {
-      await updateDoc(doc(db, 'admissions', editingId!), {
-        studentName: editData.studentName,
-        parentName: editData.parentName,
-        contactNumber: editData.contactNumber,
-        email: editData.email || '',
-        gradeAppliedFor: editData.gradeAppliedFor,
-        address: editData.address
-      });
+      // Exclude metadata from update
+      const { id, submittedAt, status, ...updatePayload } = editData;
+      await updateDoc(doc(db, 'admissions', editingId!), updatePayload);
       setEditingId(null);
     } catch (error) {
       console.error("Error saving edits: ", error);
@@ -133,15 +153,64 @@ export default function AdminAdmissions() {
     return <div className="p-8 text-center text-gray-500">Loading admissions data...</div>;
   }
 
+  const handleExportCSV = () => {
+    if (admissions.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    // Build headers based on form fields plus standard ones
+    const dynamicHeaders = formFields.map(f => f.label);
+    const standardHeaders = ['Date Submitted', 'Status'];
+    const csvHeaders = [...dynamicHeaders, ...standardHeaders];
+
+    // Build rows
+    const rows = admissions.map(adm => {
+      const rowData = formFields.map(f => {
+        // Enclose in quotes to handle commas inside text
+        const raw = adm[f.id] || '';
+        return `"${String(raw).replace(/"/g, '""')}"`;
+      });
+      // Date and Status
+      const dateRaw = adm.submittedAt ? (adm.submittedAt.toDate ? adm.submittedAt.toDate() : new Date(adm.submittedAt)) : new Date();
+      rowData.push(`"${dateRaw.toLocaleDateString()}"`);
+      rowData.push(`"${adm.status || 'Pending'}"`);
+      return rowData.join(',');
+    });
+
+    const csvContent = 
+      "Shikshantar Academy\n" + 
+      "Admission List Report\n\n" + 
+      csvHeaders.join(',') + "\n" + 
+      rows.join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Admission_List_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 py-2 border-b border-gray-100">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 py-2 border-b border-gray-100 gap-4">
         <div>
           <h2 className="text-xl font-bold text-[#1e293b]">Admission Requests</h2>
-          <p className="text-sm text-gray-500">Manage and contact new student applicants.</p>
+          <p className="text-xs text-gray-500 mt-1">Manage and respond to new student applications.</p>
         </div>
-        <div className="mt-2 md:mt-0 bg-[#f8fafc] px-4 py-2 rounded border border-gray-200 text-sm font-bold text-[#1e3a8a]">
-          Total Applications: {admissions.length}
+        <div className="flex items-center gap-2 mb-4 md:mb-0">
+          <div className="bg-[#f8fafc] px-4 py-2 flex items-center rounded border border-gray-200 text-sm font-bold text-[#1e3a8a]">
+            Total Applications: {admissions.length}
+          </div>
+          <button 
+            onClick={handleExportCSV}
+            className="bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] hover:bg-[#dcfce7] px-3 py-2 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4"/> Export CSV List
+          </button>
         </div>
       </div>
 
@@ -179,38 +248,17 @@ export default function AdminAdmissions() {
                       <td className="p-4 text-xs text-gray-500 whitespace-nowrap align-top">
                         <div className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDate(admission.submittedAt)}</div>
                       </td>
-                      <td className="p-4 align-top space-y-2">
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Student Name</label>
-                          <input type="text" value={editData.studentName} onChange={e => setEditData({...editData, studentName: e.target.value})} className="w-full text-sm font-bold border border-gray-300 rounded px-2 py-1 outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Grade</label>
-                          <input type="text" value={editData.gradeAppliedFor} onChange={e => setEditData({...editData, gradeAppliedFor: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1 outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Address</label>
-                          <textarea value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1 outline-none h-12 resize-none" />
+                      <td className="p-4 align-top space-y-2" colSpan={3}>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                          {Object.keys(editData).filter(key => !['id', 'status', 'submittedAt'].includes(key)).map(key => (
+                            <div key={key}>
+                              <label className="text-[0.6rem] uppercase text-gray-500 font-bold block mb-1">{formFields.find(f => f.id === key)?.label || key}</label>
+                              <input type="text" value={editData[key] || ''} onChange={e => setEditData({...editData, [key]: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 outline-none focus:border-blue-500" />
+                            </div>
+                          ))}
                         </div>
                       </td>
-                      <td className="p-4 align-top space-y-2">
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Parent Name</label>
-                          <input type="text" value={editData.parentName} onChange={e => setEditData({...editData, parentName: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1 outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Contact Number</label>
-                          <input type="text" value={editData.contactNumber} onChange={e => setEditData({...editData, contactNumber: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1 outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[0.6rem] uppercase text-gray-500 font-bold">Email</label>
-                          <input type="text" value={editData.email} onChange={e => setEditData({...editData, email: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1 outline-none" />
-                        </div>
-                      </td>
-                      <td className="p-4 align-top">
-                        <span className="text-xs italic text-gray-400">Status editing disabled during row edit..</span>
-                      </td>
-                      <td className="p-4 align-top">
+                      <td className="p-4 align-top border-l border-blue-100 text-center">
                         <div className="flex flex-col gap-2">
                           <button onClick={handleSaveEdit} className="bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded flex items-center justify-center gap-1 hover:bg-green-700 shadow-sm">
                             <Save className="w-3 h-3" /> Save
@@ -268,12 +316,12 @@ export default function AdminAdmissions() {
                         </select>
                       </td>
                       <td className="p-4 align-top">
-                        <div className="flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(admission)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors tooltip relative group/btn">
-                            <Edit2 className="w-4 h-4" />
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEditClick(admission)} className="p-2 text-blue-600 hover:bg-blue-50 rounded bg-blue-50/50 transition-colors tooltip relative group/btn flex items-center gap-1 font-bold text-xs">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
-                          <button onClick={() => handleDelete(admission.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors">
-                            <Trash2 className="w-4 h-4" />
+                          <button onClick={() => handleDelete(admission.id)} className="p-2 text-red-600 hover:bg-red-50 rounded bg-red-50/50 transition-colors tooltip flex items-center gap-1 font-bold text-xs">
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
                       </td>

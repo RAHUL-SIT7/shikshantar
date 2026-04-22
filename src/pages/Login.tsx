@@ -49,6 +49,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   const [phone, setPhone] = useState('');
   const [teachingLevel, setTeachingLevel] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
+  const [secretCode, setSecretCode] = useState('');
 
   const navigate = useNavigate();
 
@@ -84,10 +85,10 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         if (userData.role) {
           localStorage.setItem('userRole', userData.role);
         } else {
-          localStorage.setItem('userRole', role);
+          localStorage.setItem('userRole', "student"); // Default
         }
       } else {
-        localStorage.setItem('userRole', role);
+        localStorage.setItem('userRole', "student");
       }
 
       setIsAuthenticated(true);
@@ -119,7 +120,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       });
     } else {
       await setDoc(userRef, {
-        role: role,
+        role: "student", // Force everyone to student by default on registration
         email: email,
         phone: phone,
         children: [studentData]
@@ -160,7 +161,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         if (studentIdInput) {
           localStorage.setItem('studentId', studentIdInput);
         }
-        localStorage.setItem('userRole', role);
+        localStorage.setItem('userRole', "student");
         
         setMessage(isExistingUser ? 'New child added successfully to your account!' : 'Registration complete! Logging in...');
         
@@ -221,7 +222,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       return;
     }
 
-    if (role === 'student' && !studentIdInput) {
+    if (!studentIdInput) {
       setError('Please provide a valid Student ID / Roll No');
       return;
     }
@@ -316,7 +317,24 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      localStorage.setItem('userRole', role);
+      
+      const userRef = doc(db, 'users', result.user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.role) {
+          localStorage.setItem('userRole', userData.role);
+        } else {
+          // If no role exists in DB for an existing user, safe fallback to student
+          localStorage.setItem('userRole', 'student');
+        }
+      } else {
+        // Completely new user. Force role to 'student' to prevent hacking Google login.
+        await setDoc(userRef, { role: 'student', email: result.user.email });
+        localStorage.setItem('userRole', 'student');
+      }
+
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
@@ -437,26 +455,6 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
           </p>
         </div>
 
-        {/* Role Selector (only for login and register) */}
-        {(view === 'login' || view === 'register') && (
-          <div className="flex p-1 bg-[#f1f5f9] rounded-xl mb-7 border border-[#e2e8f0]">
-            {(['student', 'teacher', 'admin'] as Role[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRole(r)}
-                className={`flex-1 py-2 text-[0.8rem] sm:text-sm font-semibold rounded-lg capitalize transition-all duration-200 ${
-                  role === r 
-                    ? 'bg-white text-[#1e3a8a] shadow-[0_1px_3px_rgba(0,0,0,0.1)]' 
-                    : 'text-[#64748b] hover:text-[#334155]'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        )}
-
         {error && (
           <div className="mb-4 p-3 bg-red-50/90 backdrop-blur-sm border border-red-200 text-red-600 rounded-lg text-sm text-center font-medium shadow-sm">
             {error}
@@ -530,7 +528,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               disabled={loading}
               className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl text-sm mt-6 hover:bg-[#1e40af] hover:shadow-lg hover:shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none"
             >
-              {loading ? 'Please wait...' : `Sign in as ${role}`}
+              {loading ? 'Please wait...' : `Login Securely`}
             </button>
 
             <div className="mt-8 mb-6">
@@ -559,7 +557,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
             <p className="text-center text-sm text-[#475569] mt-6">
               Don't have an account?{' '}
-              <button type="button" onClick={() => { setView('register'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
+              <button type="button" onClick={() => { setRole('student'); setView('register'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
                 Register here
               </button>
             </p>
@@ -787,83 +785,61 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               </div>
             </div>
 
-            {role === 'student' && (
-              <>
-                <div>
-                  <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Father's Name</label>
-                  <input type="text" required value={fatherName} onChange={(e) => setFatherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Father's name" />
-                </div>
-                <div>
-                  <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Mother's Name</label>
-                  <input type="text" required value={motherName} onChange={(e) => setMotherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Mother's name" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Date of Birth</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Calendar className="h-4 w-4 text-[#6b7280]" />
-                      </div>
-                      <input type="date" required value={dob} onChange={(e) => setDob(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Class</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <BookOpen className="h-4 w-4 text-[#6b7280]" />
-                      </div>
-                      <select required value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm appearance-none">
-                        <option value="" disabled>Select Class</option>
-                        <option value="Playgroup">Playgroup</option>
-                        <option value="Nursery">Nursery</option>
-                        <option value="LKG">LKG</option>
-                        <option value="UKG">UKG</option>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                          <option key={num} value={num.toString()}>Class {num}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Student ID / Roll No</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-4 w-4 text-[#6b7280]" />
-                    </div>
-                    <input type="text" required value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Student ID (e.g. STU123)" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Address</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <MapPin className="h-4 w-4 text-[#6b7280]" />
-                    </div>
-                    <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Full address" />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {role === 'teacher' && (
+            <div>
+              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Father's Name</label>
+              <input type="text" required value={fatherName} onChange={(e) => setFatherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Father's name" />
+            </div>
+            <div>
+              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Mother's Name</label>
+              <input type="text" required value={motherName} onChange={(e) => setMotherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Mother's name" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Teaching Level</label>
+                <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Date of Birth</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Calendar className="h-4 w-4 text-[#6b7280]" />
+                  </div>
+                  <input type="date" required value={dob} onChange={(e) => setDob(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Class</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <BookOpen className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <select required value={teachingLevel} onChange={(e) => setTeachingLevel(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm appearance-none">
-                    <option value="" disabled>Select Level</option>
-                    <option value="Pre-Primary">Pre-Primary</option>
-                    <option value="Primary">Primary</option>
-                    <option value="Lower Secondary">Lower Secondary</option>
-                    <option value="Secondary">Secondary</option>
+                  <select required value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm appearance-none">
+                    <option value="" disabled>Select Class</option>
+                    <option value="Playgroup">Playgroup</option>
+                    <option value="Nursery">Nursery</option>
+                    <option value="LKG">LKG</option>
+                    <option value="UKG">UKG</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <option key={num} value={num.toString()}>Class {num}</option>
+                    ))}
                   </select>
                 </div>
               </div>
-            )}
+            </div>
+            <div>
+              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Student ID / Roll No</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-[#6b7280]" />
+                </div>
+                <input type="text" required value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Student ID (e.g. STU123)" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MapPin className="h-4 w-4 text-[#6b7280]" />
+                </div>
+                <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Full address" />
+              </div>
+            </div>
 
             <div>
               <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Phone Number</label>
@@ -922,7 +898,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               </div>
             </div>
 
-            <ul className="text-[0.65rem] text-[#6b7280] list-disc pl-4 mb-2 space-y-0.5 text-left">
+            <ul className="text-[0.65rem] text-[#6b7280] list-disc pl-4 mb-2 space-y-0.5 text-left mt-3">
               <li>Minimum 8 characters</li>
               <li>At least one uppercase & lowercase letter</li>
               <li>At least one number & special character</li>
@@ -933,7 +909,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               disabled={loading}
               className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
             >
-              {loading ? 'Registering...' : `Register as ${role}`}
+              {loading ? 'Registering...' : `Register Account`}
             </button>
 
             <div className="mt-8 mb-6">

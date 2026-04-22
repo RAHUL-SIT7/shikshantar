@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import Admin from './pages/Admin';
 import Admission from './pages/Admission';
 import AdminAdmissions from './pages/AdminAdmissions';
+import UserApprovals from './pages/UserApprovals';
 import { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -68,6 +69,10 @@ export default function App() {
           <Route 
             path="admin-admissions" 
             element={isAuthenticated ? <AdminAdmissions /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="user-approvals" 
+            element={isAuthenticated ? <UserApprovals /> : <Navigate to="/login" />} 
           />
         </Route>
       </Routes>

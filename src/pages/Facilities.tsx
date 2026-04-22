@@ -5,6 +5,7 @@ export default function Facilities() {
   const [facilitiesText, setFacilitiesText] = useState('Our modern infrastructure is designed to provide students with the best possible environment for learning and growth.');
   const [isEditing, setIsEditing] = useState(false);
   const [tempText, setTempText] = useState(facilitiesText);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const userRole = localStorage.getItem('userRole');
   const isAdmin = userRole === 'admin';
@@ -140,15 +141,19 @@ export default function Facilities() {
         {facilities.map((facility) => {
           const Icon = facility.icon;
           return (
-            <div key={facility.id} className="bg-[#f9fafb] p-3 rounded-lg text-center border border-[#e5e7eb]">
-              <div className="h-20 bg-[#e2e8f0] rounded overflow-hidden mb-2 relative flex items-center justify-center">
+            <div 
+              key={facility.id} 
+              onClick={() => setExpandedImage(facility.image)}
+              className="bg-[#f9fafb] p-3 rounded-lg text-center border border-[#e5e7eb] cursor-pointer hover:shadow-md transition-shadow group"
+            >
+              <div className="h-24 bg-[#e2e8f0] rounded overflow-hidden mb-2 relative flex items-center justify-center">
                 <img
                   src={facility.image}
                   alt={facility.title}
-                  className="absolute inset-0 w-full h-full object-cover opacity-80"
+                  className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   referrerPolicy="no-referrer"
                 />
-                <div className="relative z-10 bg-white/80 p-1.5 rounded">
+                <div className="relative z-10 bg-white/80 p-1.5 rounded shadow-sm">
                   <Icon className="h-4 w-4 text-[#1e3a8a]" />
                 </div>
               </div>
@@ -161,6 +166,28 @@ export default function Facilities() {
         })}
       </div>
       </div>
+
+      {/* Fullscreen Lightbox Modal */}
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setExpandedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-black/50 hover:bg-white/20 rounded-full p-2 transition-all"
+            onClick={(e) => { e.stopPropagation(); setExpandedImage(null); }}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={expandedImage} 
+            alt="Expanded facility view" 
+            className="max-w-full max-h-[90vh] object-contain rounded drop-shadow-2xl"
+            onClick={(e) => e.stopPropagation()} 
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
     </div>
   );
 }

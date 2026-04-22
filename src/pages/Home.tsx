@@ -1,6 +1,8 @@
 import { ArrowRight, BookOpen, Users, Trophy, MapPin, Edit2, Save, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Home() {
   const logoUrl = "https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE";
@@ -10,7 +12,9 @@ export default function Home() {
     tagline2: 'Shaping Futures.',
     description: 'Shikshantar Academy provides quality education from class Play to Ten (10) in a peaceful and nurturing environment in Bastipur-5, Siraha.',
     principalMessage: 'At Shikshantar Academy, we believe in nurturing not just academic excellence, but character, creativity, and critical thinking. Our peaceful environment and modern facilities provide the perfect setting for your child to grow and thrive.',
-    principalImage: 'https://scontent-bom5-1.xx.fbcdn.net/v/t39.30808-6/606350985_1458678509597899_5556893883060728495_n.jpg?stp=dst-jpegr_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=m_oCBJKH1PAQ7kNvwFHICaV&_nc_oc=Adqp37uV9GBTxjM1lLxaSYRDJLA3D4dbwIzW3BtH1qc7FPelv8gvcU9fTo6gODYsgXs&_nc_zt=23&se=-1&_nc_ht=scontent-bom5-1.xx&_nc_gid=tefv8-2c7oqqmBE4rv5zEw&_nc_ss=7a3a8&oh=00_Af0lPjuB4VGfbK8BddJKfDrz0pJsBdnKGq510rZ6abFJ_g&oe=69E6AC42'
+    principalImage: 'https://scontent-bom5-1.xx.fbcdn.net/v/t39.30808-6/606350985_1458678509597899_5556893883060728495_n.jpg?stp=dst-jpegr_tt6&_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=m_oCBJKH1PAQ7kNvwFHICaV&_nc_oc=Adqp37uV9GBTxjM1lLxaSYRDJLA3D4dbwIzW3BtH1qc7FPelv8gvcU9fTo6gODYsgXs&_nc_zt=23&se=-1&_nc_ht=scontent-bom5-1.xx&_nc_gid=tefv8-2c7oqqmBE4rv5zEw&_nc_ss=7a3a8&oh=00_Af0lPjuB4VGfbK8BddJKfDrz0pJsBdnKGq510rZ6abFJ_g&oe=69E6AC42',
+    announcement: '🌟 Welcome to the new Shikshantar Academy Portal! Term 1 Examinations starting from next week. 🌟',
+    admissionsBadge: 'Admissions Open 2081 B.S.'
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -21,30 +25,28 @@ export default function Home() {
   const isAdmin = userRole === 'admin';
 
   useEffect(() => {
-    const loadData = () => {
-      const rawData = localStorage.getItem('school_home_content');
-      if (rawData) {
-        setContent(JSON.parse(rawData));
-        setTempContent(JSON.parse(rawData));
+    const unsub = onSnapshot(doc(db, 'settings', 'home_content'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as any;
+        setContent(data);
+        if(!isEditing) {
+          setTempContent(data);
+        }
       }
-    };
-    
-    loadData();
+    });
 
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'school_home_content') {
-        loadData();
-      }
-    };
+    return () => unsub();
+  }, [isEditing]);
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const handleSave = () => {
-    setContent(tempContent);
-    localStorage.setItem('school_home_content', JSON.stringify(tempContent));
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      await setDoc(doc(db, 'settings', 'home_content'), tempContent);
+      setContent(tempContent);
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      alert('Error saving content. Make sure you are an admin.');
+    }
   };
 
   const handleCancel = () => {
@@ -54,6 +56,34 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Global Scrolling Announcement */}
+      {(content.announcement || isEditing) && (
+        <div className={`w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl overflow-hidden flex flex-col md:flex-row shadow-sm relative ${isEditing ? 'p-2 gap-2' : 'items-center'}`}>
+          <div className="bg-[#f97316] text-white text-xs font-bold px-4 py-2.5 uppercase tracking-wider relative z-10 shadow-[2px_0_5px_rgba(0,0,0,0.1)] whitespace-nowrap shrink-0 flex items-center gap-2 rounded-l-md md:rounded-none">
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            Notice
+          </div>
+          <div className="relative flex-1 overflow-hidden h-full flex items-center w-full">
+            {isEditing ? (
+              <div className="flex flex-col w-full px-2 py-1">
+                <label className="text-[0.65rem] font-bold text-[#64748b] uppercase mb-1">Scrolling Notice (Leave empty to hide entirely)</label>
+                <input
+                  type="text"
+                  placeholder="Type an announcement to show globally, or clear this text to hide the notice bar."
+                  value={tempContent.announcement || ''}
+                  onChange={(e) => setTempContent({...tempContent, announcement: e.target.value})}
+                  className="w-full bg-white border-2 border-[#1e3a8a]/20 text-[#1e293b] rounded-lg focus:outline-none focus:border-[#1e3a8a] px-3 py-2 text-sm font-medium transition-colors"
+                />
+              </div>
+            ) : (
+                <div className="animate-marquee whitespace-nowrap text-[#1e293b] text-sm font-semibold pl-[100%] inline-block h-full flex items-center py-2.5">
+                  {content.announcement}
+                </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {isAdmin && (
         <div className="flex justify-end w-full">
           {isEditing ? (
@@ -86,10 +116,23 @@ export default function Home() {
         </div>
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#f97316] rounded-full blur-3xl opacity-20 pointer-events-none"></div>
         <div className="relative z-10 w-full max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold mb-6 border border-white/20 uppercase backdrop-blur-sm shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse"></span>
-            Admissions Open 2081 B.S.
-          </div>
+          {(!isEditing && content.admissionsBadge) ? (
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold mb-6 border border-white/20 uppercase backdrop-blur-sm shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse"></span>
+              {content.admissionsBadge}
+            </div>
+          ) : isEditing ? (
+            <div className="mb-6 flex flex-col gap-1">
+              <label className="text-[0.65rem] font-bold text-white/70 uppercase">Top Badge Text (Leave empty to hide)</label>
+              <input
+                type="text"
+                placeholder="e.g. Admissions Open 2081 B.S."
+                value={tempContent.admissionsBadge}
+                onChange={(e) => setTempContent({...tempContent, admissionsBadge: e.target.value})}
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold border border-white/30 uppercase backdrop-blur-sm shadow-sm outline-none w-fit"
+              />
+            </div>
+          ) : null}
           
           {isEditing ? (
             <div className="mb-4 flex flex-col gap-2">

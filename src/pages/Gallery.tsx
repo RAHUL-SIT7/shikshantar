@@ -12,7 +12,7 @@ export default function Gallery() {
   const [events, setEvents] = useState<any[]>([]);
 
   const [newImage, setNewImage] = useState({ url: '', caption: '', role: '' });
-  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [uploadMode, setUploadMode] = useState<'url' | 'file' | 'camera'>('url');
   const [galleryStatus, setGalleryStatus] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -155,37 +155,14 @@ export default function Gallery() {
     }
 
     try {
-      await updateDoc(doc(db, 'school_data', 'gallery'), {
+      await setDoc(doc(db, 'school_data', 'gallery'), {
         [activeTab]: updatedArray
-      });
+      }, { merge: true });
       setSelectedIndexes([]);
       setIsDeleteMode(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Error deleting items: ' + e);
-    }
-  };
-
-  const handleSingleDelete = async (e: React.MouseEvent, index: number, category: 'teachers' | 'batches' | 'events') => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this image?')) return;
-
-    let updatedArray: any[] = [];
-    if (category === 'teachers') {
-      updatedArray = teachers.filter((_, i) => i !== index);
-    } else if (category === 'batches') {
-      updatedArray = batches.filter((_, i) => i !== index);
-    } else if (category === 'events') {
-      updatedArray = events.filter((_, i) => i !== index);
-    }
-
-    try {
-      await updateDoc(doc(db, 'school_data', 'gallery'), {
-        [category]: updatedArray
-      });
-    } catch (error) {
-      console.error(error);
-      alert('Error deleting image: ' + error);
+      alert('Error deleting items from database. Details: ' + (e?.message || 'Unknown error. Check rules.'));
     }
   };
 
@@ -196,7 +173,7 @@ export default function Gallery() {
   };
 
   return (
-    <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
+    <div className="w-full max-w-7xl mx-auto bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
       <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <span>Photo Gallery</span>
         <div className="flex gap-2">
@@ -267,14 +244,23 @@ export default function Gallery() {
             <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
               <Upload className="w-3 h-3"/> Device
             </button>
+            <button onClick={() => setUploadMode('camera')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'camera' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+              <ImageIcon className="w-3 h-3"/> Camera
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             {uploadMode === 'url' ? (
               <input type="text" placeholder="Image URL (e.g. from Imgur)" value={newImage.url} onChange={(e) => setNewImage({...newImage, url: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+            ) : uploadMode === 'camera' ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[0.65rem] font-bold text-gray-500 uppercase">Will request Camera Permission</span>
+                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+              </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+              <div className="flex flex-col gap-1">
+                 <span className="text-[0.65rem] font-bold text-gray-500 uppercase">Select from File System</span>
+                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
               </div>
             )}
             
@@ -306,21 +292,13 @@ export default function Gallery() {
           {teachers.map((teacher, idx) => (
             <div 
               key={teacher.id || idx} 
-              onClick={() => isDeleteMode && toggleSelection(idx)}
-              className={`group relative bg-white p-3 rounded-xl text-center border shadow-sm transition-all ${isDeleteMode ? 'cursor-pointer hover:bg-[#f3f4f6]' : 'hover:shadow-md'} ${isSelected(idx) ? 'border-red-500 ring-2 ring-red-500/20 bg-[#fef2f2]' : 'border-[#e5e7eb]'}`}
+              onClick={() => isDeleteMode ? toggleSelection(idx) : setExpandedImage(teacher.image)}
+              className={`group relative bg-white p-3 rounded-xl text-center border shadow-sm transition-all ${isDeleteMode ? 'cursor-pointer hover:bg-[#f3f4f6]' : 'cursor-pointer hover:shadow-md'} ${isSelected(idx) ? 'border-red-500 ring-2 ring-red-500/20 bg-[#fef2f2]' : 'border-[#e5e7eb]'}`}
             >
               {isAdminOrTeacher && isDeleteMode && (
                 <div className="absolute top-3 right-3 z-10 bg-white rounded-full flex items-center justify-center w-6 h-6 shadow pointer-events-none">
                   {isSelected(idx) ? <CheckCircle className="w-5 h-5 text-red-500" /> : <Circle className="w-5 h-5 text-gray-300" />}
                 </div>
-              )}
-              {isAdminOrTeacher && !isDeleteMode && (
-                <button 
-                  onClick={(e) => handleSingleDelete(e, idx, 'teachers')}
-                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-md opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               )}
               <div className={`aspect-[4/5] rounded-lg overflow-hidden mb-3 border border-gray-100 ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
@@ -351,14 +329,6 @@ export default function Gallery() {
                   {isSelected(idx) ? <CheckCircle className="w-6 h-6 text-red-500" /> : <Circle className="w-6 h-6 text-gray-400" />}
                 </div>
               )}
-              {isAdminOrTeacher && !isDeleteMode && (
-                <button 
-                  onClick={(e) => handleSingleDelete(e, idx, 'batches')}
-                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
               <div className={`aspect-[4/3] ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img
                   src={batch.image}
@@ -388,14 +358,6 @@ export default function Gallery() {
                 <div className="absolute top-3 right-3 z-10 bg-white/90 rounded-full flex items-center justify-center w-7 h-7 shadow-lg pointer-events-none">
                   {isSelected(idx) ? <CheckCircle className="w-6 h-6 text-red-500" /> : <Circle className="w-6 h-6 text-gray-400" />}
                 </div>
-              )}
-              {isAdminOrTeacher && !isDeleteMode && (
-                <button 
-                  onClick={(e) => handleSingleDelete(e, idx, 'events')}
-                  className="absolute top-3 right-3 z-10 bg-white/90 p-1.5 rounded-full text-red-600 shadow-lg opacity-90 transition-opacity hover:bg-red-50 hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               )}
               <div className={`aspect-[4/3] ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 <img

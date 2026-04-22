@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Bell, DollarSign, Search, History, X, CreditCard, User, GraduationCap, Building2 } from 'lucide-react';
+import { CheckCircle2, Bell, DollarSign, Search, History, X, CreditCard, User, GraduationCap, Building2, TrendingUp, AlertTriangle, FileDown, PlusCircle } from 'lucide-react';
 
 export default function AccountAdmin() {
   const [showNotification, setShowNotification] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<any>(null); // For Payment Modal
+  const [addingFees, setAddingFees] = useState(false); // To toggle between "Add Payment" and "Add Fine/Fee"
 
   const [students, setStudents] = useState<any[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
@@ -62,6 +63,14 @@ export default function AccountAdmin() {
     setSelectedStudent(student);
     setPaymentAmount('');
     setPaymentMethod('Cash');
+    setAddingFees(false);
+  };
+
+  const handleAddFee = (student: any) => {
+    setSelectedStudent(student);
+    setPaymentAmount('');
+    setPaymentMethod('Penalty/Extra Charge');
+    setAddingFees(true);
   };
 
   const submitPayment = () => {
@@ -71,24 +80,33 @@ export default function AccountAdmin() {
     // Update student balances
     const updatedStudents = students.map(s => {
       if (s.id === selectedStudent.id) {
-        return {
-          ...s,
-          paid: s.paid + amountNum,
-          due: Math.max(0, s.due - amountNum)
-        };
+        if (addingFees) {
+          // Increase their due
+          return {
+            ...s,
+            due: s.due + amountNum
+          };
+        } else {
+          // Record payment
+          return {
+            ...s,
+            paid: s.paid + amountNum,
+            due: Math.max(0, s.due - amountNum)
+          };
+        }
       }
       return s;
     });
 
     // Add to history
-    const updatedHistory = [
+    const updatedHistory = addingFees ? paymentHistory : [
       {
         id: `TXN${Date.now().toString().slice(-6)}`,
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
         date: new Date().toISOString().split('T')[0],
         amount: amountNum,
-        method: paymentMethod + " (Manual)"
+        method: paymentMethod + " (Manual Setup)"
       },
       ...paymentHistory
     ];
@@ -106,8 +124,64 @@ export default function AccountAdmin() {
     s.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalCollected = students.reduce((acc, s) => acc + s.paid, 0);
+  const totalDues = students.reduce((acc, s) => acc + s.due, 0);
+
+  const handleDownloadDefaulters = () => {
+    const defaulters = students.filter(s => s.due > 0);
+    if (defaulters.length === 0) {
+      alert("No pending dues found.");
+      return;
+    }
+
+    let csvContent = "Student ID,Name,Class,Pending Due (NRs.)\n";
+    defaulters.forEach(d => {
+      csvContent += `${d.id},${d.name},${d.class},${d.due}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Overdue_Students_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
     <div className="grid grid-cols-1 gap-6 relative">
+      {/* Top Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#1e3a8a]/10 flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-[#1e3a8a]" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#64748b] uppercase">Total Revenue</p>
+            <p className="text-xl font-extrabold text-[#1f2937]">NRs. {totalCollected.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#dc2626]/10 flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-[#dc2626]" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#64748b] uppercase">Total Pending Dues</p>
+            <p className="text-xl font-extrabold text-[#1f2937]">NRs. {totalDues.toLocaleString()}</p>
+          </div>
+        </div>
+        <div 
+          onClick={handleDownloadDefaulters}
+          className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex items-center justify-between cursor-pointer hover:bg-[#f8fafc] transition-colors group"
+        >
+          <div className="flex flex-col">
+            <p className="text-sm font-bold text-[#1f2937] group-hover:text-[#1e3a8a]">Defaulters List</p>
+            <p className="text-xs text-[#64748b]">Download CSV Report</p>
+          </div>
+          <FileDown className="w-6 h-6 text-[#94a3b8] group-hover:text-[#1e3a8a] transition-colors" />
+        </div>
+      </div>
       {/* Payment Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -115,8 +189,8 @@ export default function AccountAdmin() {
             <div className="bg-[#1e3a8a] text-white p-4 flex justify-between items-center relative overflow-hidden">
               <Building2 className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10" />
               <div className="relative z-10 text-left">
-                <h3 className="font-bold text-lg">Record Payment</h3>
-                <p className="text-white/80 text-xs">Update account balance for {selectedStudent.id}</p>
+                <h3 className="font-bold text-lg">{addingFees ? 'Add Fees / Penalty' : 'Record Payment'}</h3>
+                <p className="text-white/80 text-xs">{addingFees ? 'Increase due amount' : 'Update account balance'} for {selectedStudent.id}</p>
               </div>
               <button onClick={() => setSelectedStudent(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors relative z-10"><X className="w-5 h-5"/></button>
             </div>
@@ -131,13 +205,13 @@ export default function AccountAdmin() {
                   <div className="flex gap-2 text-xs text-[#6b7280]">
                     <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Class {selectedStudent.class}</span>
                     <span>•</span>
-                    <span className="text-[#b91c1c] font-semibold">Due: NRs. {selectedStudent.due.toLocaleString()}</span>
+                    <span className="text-[#b91c1c] font-semibold">Current Due: NRs. {selectedStudent.due.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#4b5563] mb-1">Payment Amount (NRs.)</label>
+                <label className="block text-xs font-bold text-[#4b5563] mb-1">{addingFees ? 'Charge Amount (NRs.)' : 'Payment Amount (NRs.)'}</label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
                   <input 
@@ -151,7 +225,7 @@ export default function AccountAdmin() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#4b5563] mb-1">Payment Method</label>
+                <label className="block text-xs font-bold text-[#4b5563] mb-1">{addingFees ? 'Reason for Charge' : 'Payment Method'}</label>
                 <div className="relative">
                   <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
                   <select 
@@ -159,17 +233,30 @@ export default function AccountAdmin() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border border-[#d1d5db] rounded-lg text-sm appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="eSewa">eSewa</option>
-                    <option value="Khalti">Khalti</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
+                    {!addingFees ? (
+                      <>
+                        <option value="Cash">Cash</option>
+                        <option value="eSewa">eSewa</option>
+                        <option value="Khalti">Khalti</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Penalty/Extra Charge">Penalty / Extra Charge</option>
+                        <option value="Transport Fees">Transport Fees</option>
+                        <option value="Exam Fees">Exam Fees</option>
+                        <option value="Books / Uniforms">Books / Uniforms</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-[#f3f4f6]">
                 <button onClick={() => setSelectedStudent(null)} className="px-4 py-2 text-sm font-semibold text-[#4b5563] hover:bg-[#f3f4f6] rounded-lg transition-colors">Cancel</button>
-                <button onClick={submitPayment} className="px-4 py-2 text-sm font-semibold bg-[#1e3a8a] text-white hover:bg-[#1e40af] rounded-lg transition-colors shadow-sm">Confirm Payment</button>
+                <button onClick={submitPayment} className={`px-4 py-2 text-sm font-semibold text-white rounded-lg transition-colors shadow-sm ${addingFees ? 'bg-[#ea580c] hover:bg-[#c2410c]' : 'bg-[#1e3a8a] hover:bg-[#1e40af]'}`}>
+                  {addingFees ? 'Apply Charge' : 'Confirm Payment'}
+                </button>
               </div>
             </div>
           </div>
@@ -236,6 +323,13 @@ export default function AccountAdmin() {
                         title="Record Payment"
                       >
                         <DollarSign className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleAddFee(student)}
+                        className="p-1.5 bg-[#ffedd5] text-[#ea580c] rounded hover:bg-[#fed7aa] hover:text-[#c2410c] transition-colors shadow-sm"
+                        title="Add Fine / Fee"
+                      >
+                        <PlusCircle className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={handleNotify}
