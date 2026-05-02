@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
-import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, IndianRupee } from 'lucide-react';
+import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, IndianRupee, Users } from 'lucide-react';
 
 const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
 
@@ -227,9 +227,23 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                     )}
                   </React.Fragment>
                ))}
-               {filteredStudents.length === 0 && (
+               {filteredStudents.length === 0 && studentsData.length > 0 && (
                   <tr>
-                     <td colSpan={8} className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No students found</td>
+                     <td colSpan={8} className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No students match your filters</td>
+                  </tr>
+               )}
+               {studentsData.length === 0 && (
+                  <tr>
+                     <td colSpan={8} className="p-10 text-center">
+                        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-8 max-w-sm mx-auto flex flex-col items-center">
+                           <Users className="w-10 h-10 text-orange-400 mb-3" />
+                           <h3 className="font-black text-gray-800 text-lg mb-1">No Students Found</h3>
+                           <p className="text-sm text-gray-600 mb-4 font-medium">There are no students registered in the system yet.</p>
+                           <a href="/admin/users" className="bg-[#1e3a8a] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-800 transition-colors">
+                              Go to User Management
+                           </a>
+                        </div>
+                     </td>
                   </tr>
                )}
             </tbody>

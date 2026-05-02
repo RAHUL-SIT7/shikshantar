@@ -9,11 +9,6 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
   const [uploadExamType, setUploadExamType] = useState(EXAM_TYPES[0]);
   const [uploadClass, setUploadClass] = useState('');
   const [previewData, setPreviewData] = useState<any[] | null>(null);
-  
-  // Manual Entry States
-  const [entryMode, setEntryMode] = useState<'excel' | 'manual'>('excel');
-  const [manualRows, setManualRows] = useState<any[]>([{ StudentId: '', Name: '', English: '', Mathematics: '', Science: '', Social: '', Nepali: '' }]);
-  const defaultSubjects = ['Mathematics', 'Science', 'English', 'Nepali', 'Social'];
 
   const allowedClasses = userRole === 'admin' ? allClasses : assignedClasses;
 
@@ -81,34 +76,6 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
     };
     reader.readAsBinaryString(file);
     e.target.value = '';
-  };
-
-  const handleManualEntrySubmit = () => {
-     if(!uploadClass) {
-         setStatus({type: 'error', message: 'Select a class before mapping.'});
-         return;
-     }
-     const cleanRows = manualRows.filter(r => r.StudentId && r.Name).map(r => {
-         const out: any = { StudentId: r.StudentId, Name: r.Name, Class: uploadClass, ExamType: uploadExamType };
-         Object.keys(r).forEach(k => {
-             if(k !== 'StudentId' && k !== 'Name' && String(r[k]).trim() !== '') {
-                 out[k] = isNaN(Number(r[k])) ? r[k] : Number(r[k]);
-             }
-         });
-         return out;
-     });
-     if(cleanRows.length === 0){
-         setStatus({type: 'error', message: 'Please enter at least one valid row.'});
-         return;
-     }
-     
-     const mappedRows = cleanRows.map(r => {
-           let errs: string[] = [];
-           if (!r.Name) errs.push('Missing Name');
-           return {...r, _errors: errs};
-     });
-     
-     setPreviewData(mappedRows);
   };
 
   const confirmAndSave = async () => {
@@ -207,20 +174,70 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
 
           setStatus({ type: 'success', message: `Results for Class ${uploadClass} - ${uploadExamType} saved successfully. ${resultsCount} students updated.` });
           setPreviewData(null);
-          setManualRows([{ StudentId: '', Name: '', English: '', Mathematics: '', Science: '', Social: '', Nepali: '' }]);
       } catch (error: any) {
           console.error("Firebase save error:", error);
           setStatus({ type: 'error', message: 'Failed to write to Firebase: ' + error.message });
       }
   };
 
+  const publishResults = async () => {
+    if (!uploadClass || !uploadExamType) return;
+    setStatus({type: 'info', message: 'Calculating ranks and publishing results...'});
+    try {
+        const examId = `${uploadExamType.replace(/\s+/g, '_')}_${uploadClass}`;
+        const summaryDocs = await getDocs(query(collection(db, 'resultSummary'), where('examId', '==', examId)));
+        
+        let allStudents = summaryDocs.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        allStudents.sort((a, b) => b.total - a.total);
+        
+        let batch = writeBatch(db);
+        let opCount = 0;
+        let currentRank = 1;
+        let prevTotal = -1;
+        let sameRankCount = 0;
+        
+        allStudents.forEach((std, idx) => {
+             if (std.total === prevTotal) {
+                 std.rank = currentRank;
+                 sameRankCount++;
+             } else {
+                 currentRank += sameRankCount;
+                 if (idx === 0) currentRank = 1;
+                 std.rank = currentRank;
+                 sameRankCount = 1;
+                 prevTotal = std.total;
+             }
+             
+             batch.update(doc(db, 'resultSummary', std.id), {
+                 rank: std.rank,
+                 published: true
+             });
+             opCount++;
+        });
+        
+        batch.update(doc(db, 'exams', examId), { published: true });
+        
+        await batch.commit();
+        setStatus({type: 'success', message: `Results and Ranks Published successfully for Class ${uploadClass}.`});
+    } catch(err: any) {
+        setStatus({type: 'error', message: 'Publish failed: ' + err.message});
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6">
       <div className="flex-1">
         <label className="block text-sm font-bold text-gray-700 mb-2">1. Select Exam Type</label>
-        <select value={uploadExamType} onChange={e => setUploadExamType(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none">
-            {EXAM_TYPES.map((ex: string) => <option key={ex} value={ex}>{ex}</option>)}
-        </select>
+        <input 
+            list="upload-exam-types"
+            value={uploadExamType} 
+            onChange={e => setUploadExamType(e.target.value)} 
+            className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none"
+            placeholder="Type or select exam..."
+        />
+        <datalist id="upload-exam-types">
+            {EXAM_TYPES.map((ex: string) => <option key={ex} value={ex} />)}
+        </datalist>
 
         <label className="block text-sm font-bold text-gray-700 mb-2">2. Select Class</label>
         <select value={uploadClass} onChange={e => setUploadClass(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none">
@@ -229,61 +246,22 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
             {allowedClasses.length === 0 && <option value="1">Class 1 (Default)</option>}
         </select>
 
-        <label className="block text-sm font-bold text-gray-700 mb-2">3. Entry Mode</label>
-        <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg">
-           <button onClick={() => setEntryMode('excel')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${entryMode === 'excel' ? 'bg-white shadow text-[#1e3a8a] border border-gray-200' : 'text-gray-500'}`}>Excel Upload</button>
-           <button onClick={() => setEntryMode('manual')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${entryMode === 'manual' ? 'bg-white shadow text-[#1e3a8a] border border-gray-200' : 'text-gray-500'}`}>Manual Entry</button>
+        <label className="block text-sm font-bold text-gray-700 mb-2">3. Upload File</label>
+        <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg transition-colors ${!uploadClass ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60' : 'bg-[#f9fafb] border-[#e5e7eb] cursor-pointer hover:bg-[#f3f4f6]'}`}>
+          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            <Upload className="w-8 h-8 text-[#6b7280] mb-2" />
+            <p className="text-sm text-[#6b7280]"><span className="font-semibold text-[#1e3a8a]">Click to upload</span> or drag and drop</p>
+            <p className="text-xs text-[#6b7280] mt-1">.XLSX, .XLS, or .CSV</p>
+          </div>
+          <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} disabled={!uploadClass} />
+        </label>
+        
+        <div className="mt-8 pt-4 border-t border-gray-200">
+           <button onClick={publishResults} disabled={!uploadClass || !uploadExamType} className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors ${(!uploadClass || !uploadExamType) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+              <CheckCircle2 className="w-5 h-5" /> Calculate Rank & Publish Results
+           </button>
+           <p className="text-xs text-gray-500 mt-2 text-center">Calculates ranks based on saved marks and publishes to students.</p>
         </div>
-
-        {entryMode === 'excel' ? (
-            <>
-               <label className="block text-sm font-bold text-gray-700 mb-2">4. Upload File</label>
-               <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg transition-colors ${!uploadClass ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60' : 'bg-[#f9fafb] border-[#e5e7eb] cursor-pointer hover:bg-[#f3f4f6]'}`}>
-                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                   <Upload className="w-8 h-8 text-[#6b7280] mb-2" />
-                   <p className="text-sm text-[#6b7280]"><span className="font-semibold text-[#1e3a8a]">Click to upload</span> or drag and drop</p>
-                   <p className="text-xs text-[#6b7280] mt-1">.XLSX, .XLS, or .CSV</p>
-                 </div>
-                 <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} disabled={!uploadClass} />
-               </label>
-            </>
-        ) : (
-            <>
-               <label className="block text-sm font-bold text-gray-700 mb-2">4. Input Data</label>
-               <div className="border rounded-lg overflow-hidden bg-white max-w-full overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                     <thead className="bg-gray-50 border-b">
-                        <tr>
-                           <th className="p-2 min-w-[80px]">ID/Roll</th>
-                           <th className="p-2 min-w-[120px]">Name</th>
-                           <th className="p-2 min-w-[80px]">English</th>
-                           <th className="p-2 min-w-[80px]">Math</th>
-                           <th className="p-2 min-w-[80px]">Science</th>
-                           <th className="p-2 min-w-[80px]">Social</th>
-                           <th className="p-2 min-w-[80px]">Nepali</th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y">
-                        {manualRows.map((row, idx) => (
-                           <tr key={idx}>
-                              <td className="p-1"><input value={row.StudentId} onChange={e => { const r = [...manualRows]; r[idx].StudentId = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="ID" /></td>
-                              <td className="p-1"><input value={row.Name} onChange={e => { const r = [...manualRows]; r[idx].Name = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Name" /></td>
-                              <td className="p-1"><input value={row.English || ''} onChange={e => { const r = [...manualRows]; r[idx].English = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Marks" /></td>
-                              <td className="p-1"><input value={row.Mathematics || ''} onChange={e => { const r = [...manualRows]; r[idx].Mathematics = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Marks" /></td>
-                              <td className="p-1"><input value={row.Science || ''} onChange={e => { const r = [...manualRows]; r[idx].Science = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Marks" /></td>
-                              <td className="p-1"><input value={row.Social || ''} onChange={e => { const r = [...manualRows]; r[idx].Social = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Marks" /></td>
-                              <td className="p-1"><input value={row.Nepali || ''} onChange={e => { const r = [...manualRows]; r[idx].Nepali = e.target.value; setManualRows(r); }} className="w-full border px-1 py-1 rounded" placeholder="Marks" /></td>
-                           </tr>
-                        ))}
-                     </tbody>
-                  </table>
-                  <div className="p-2 bg-gray-50 border-t flex justify-between">
-                     <button onClick={() => setManualRows([...manualRows, { StudentId:'', Name:'', Sub1:'' }])} className="text-[#1e3a8a] text-xs font-bold hover:underline">+ Add Row</button>
-                     <button onClick={handleManualEntrySubmit} className="bg-[#1e3a8a] text-white px-3 py-1 text-xs font-bold rounded hover:bg-[#1e40af]">Preview & Save</button>
-                  </div>
-               </div>
-            </>
-        )}
       </div>
 
       <div className="flex-1 bg-gray-50 p-6 rounded-lg border border-gray-200">

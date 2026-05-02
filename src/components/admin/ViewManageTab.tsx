@@ -24,9 +24,25 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
          f = f.filter(r => (r.studentName?.toLowerCase().includes(s) || r.studentId?.toLowerCase().includes(s)));
      }
      
-     // Rank Assignment within the currently filtered set (mostly visually here, store rank varies)
+     // Rank Assignment within the currently filtered set
      let withStats = [...f];
-     withStats.sort((a, b) => b.percentage - a.percentage);
+     withStats.sort((a, b) => b.total - a.total);
+
+     let currentRank = 1;
+     let prevTotal = -1;
+     let sameRankCount = 0;
+     withStats.forEach((r, idx) => {
+         if (r.total === prevTotal) {
+             r.rank = currentRank;
+             sameRankCount++;
+         } else {
+             currentRank += sameRankCount;
+             if (idx === 0) currentRank = 1;
+             r.rank = currentRank;
+             sameRankCount = 1;
+             prevTotal = r.total;
+         }
+     });
      
      return withStats;
   }, [data, filterClass, filterExam, searchTerm, allowedClasses, userRole]);
@@ -163,7 +179,46 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
          let batch = writeBatch(db);
          for (const c of classesToPublish) {
              const examId = `${filterExam.replace(/\s+/g, '_')}_${c}`;
-             batch.update(doc(db, 'exams', examId), { published: true });
+             
+             // Calculate stats for this specific class
+             const classStudents = filteredData.filter(r => String(r.class) === String(c));
+             const highestMarks: Record<string, number> = {};
+             const sumMarks: Record<string, number> = {};
+             const countMarks: Record<string, number> = {};
+
+             classStudents.forEach(std => {
+                if (!std.subjects) return;
+                Object.entries(std.subjects).map(([sub, rawMarks]) => {
+                    const marks: any = rawMarks;
+                    const obtained = marks.obtained === "AB" ? 0 : Number(marks.obtained) || 0;
+                    
+                    if (!highestMarks[sub] || highestMarks[sub] < obtained) {
+                        highestMarks[sub] = obtained;
+                    }
+                    if (!sumMarks[sub]) { sumMarks[sub] = 0; countMarks[sub] = 0; }
+                    sumMarks[sub] += obtained;
+                    countMarks[sub] += 1;
+                });
+             });
+
+             const classAverages: Record<string, number> = {};
+             Object.keys(sumMarks).forEach(sub => {
+                classAverages[sub] = countMarks[sub] > 0 ? sumMarks[sub] / countMarks[sub] : 0;
+             });
+
+             batch.update(doc(db, 'exams', examId), { 
+                 published: true,
+                 highestMarks: highestMarks,
+                 classAverages: classAverages
+             });
+
+             // Also save their respective ranks
+             classStudents.forEach(std => {
+                 batch.update(doc(db, 'resultSummary', `${examId}_${std.studentId}`), {
+                     rank: std.rank || 0,
+                     published: true
+                 });
+             });
          }
 
          // Send a notification to guardians

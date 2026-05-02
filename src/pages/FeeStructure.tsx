@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Edit2, Save, X, Plus, Trash2, Search, Award, User as UserIcon } from 'lucide-react';
+import { Edit2, Save, X, Plus, Trash2, Search, Award, User as UserIcon, Users } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -83,8 +83,67 @@ const FeeStructure = () => {
   const [policyEditMode, setPolicyEditMode] = useState(false);
   const [tempPolicy, setTempPolicy] = useState('');
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [generatingFees, setGeneratingFees] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ type: '', text: '' });
 
   const isAdmin = localStorage.getItem('userRole') === 'admin';
+
+  const applyBulkFee = async () => {
+      if (!window.confirm(`Are you sure you want to generate fee statements for all students? This will apply tuition fees based on the fee structure to all students.`)) return;
+      
+      setGeneratingFees(true);
+      setToastMessage({ type: '', text: '' });
+      try {
+          // 1. Fetch all students
+          const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
+          const students = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
+          // 2. Fetch current structure map
+          const structMap = new Map();
+          data.academic.forEach(s => structMap.set(s.className, s));
+
+          // 3. Batch commit fees for a specific month
+          const selectedMonth = window.prompt("Enter the month to generate fee for (e.g. Shrawan, Bhadra, Ashoj...):", "Poush");
+          if (!selectedMonth) { setGeneratingFees(false); return; }
+
+          let count = 0;
+          let batch = writeBatch(db);
+          
+          for (const s of students) {
+              const studentClass = s.class || s.studentClass;
+              const feeStruct = structMap.get(studentClass);
+              const tuitionFee = feeStruct && feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
+
+              const feeRef = doc(db, 'studentFees', `${s.id}_${selectedMonth}`);
+              batch.set(feeRef, {
+                  studentId: s.id,
+                  month: selectedMonth,
+                  totalFee: tuitionFee,
+                  paidAmount: 0,
+                  dueAmount: tuitionFee,
+                  status: 'due',
+                  createdAt: new Date().toISOString()
+              }, { merge: true });
+
+              count++;
+              if (count === 400) {
+                  await batch.commit();
+                  batch = writeBatch(db);
+                  count = 0;
+              }
+          }
+          if (count > 0) {
+              await batch.commit();
+          }
+
+          setToastMessage({ type: 'success', text: `Successfully generated ${selectedMonth} fee for ${students.length} students!` });
+          setTimeout(() => setToastMessage({ type: '', text: '' }), 5000);
+      } catch (err) {
+          console.error("Failed bulk fee generation:", err);
+          setToastMessage({ type: 'error', text: "Failed to generate bulk fees." });
+      }
+      setGeneratingFees(false);
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'fee_structure'), (docSnap) => {
@@ -237,12 +296,28 @@ const FeeStructure = () => {
           <h2 className="text-2xl font-bold text-[#1e3a8a]">Academy Fee Structure</h2>
           <p className="text-sm text-slate-600 mt-1">Comprehensive fee details for all classes</p>
         </div>
+        
         {isAdmin && (
-          <div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {toastMessage.text && (
+              <div className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center ${toastMessage.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                {toastMessage.text}
+              </div>
+            )}
+            
+            <button
+               onClick={applyBulkFee}
+               disabled={generatingFees}
+               className="flex justify-center items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+            >
+               <Users className="w-4 h-4" />
+               {generatingFees ? 'Calculating...' : 'Calculate Future Bills'}
+            </button>
+
             {!editMode ? (
               <button
                 onClick={() => setEditMode(true)}
-                className="flex items-center gap-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                className="flex justify-center items-center gap-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit Fee Structure
@@ -251,14 +326,14 @@ const FeeStructure = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={resetToDefault}
-                  className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
                   disabled={saving}
                 >
                   Reset Defaults
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
                   disabled={saving}
                 >
                   <X className="w-4 h-4" />
@@ -266,7 +341,7 @@ const FeeStructure = () => {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
                   disabled={saving}
                 >
                   <Save className="w-4 h-4" />

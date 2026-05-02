@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
-import { db, auth } from '../../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FileDown, Users, TrendingUp, DollarSign } from 'lucide-react';
@@ -19,10 +19,10 @@ export default function ReportsAnalyticsTab() {
       if (user) {
         unsubS = onSnapshot(collection(db, 'financial_students'), (snap) => {
           setStudents(snap.docs.map(skip => skip.data()));
-        });
+        }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'financial_students'));
         unsubT = onSnapshot(query(collection(db, 'financial_transactions'), orderBy('date', 'desc')), (snap) => {
           setTransactions(snap.docs.map(skip => skip.data()));
-        });
+        }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'financial_transactions'));
       } else {
         setStudents([]);
         setTransactions([]);

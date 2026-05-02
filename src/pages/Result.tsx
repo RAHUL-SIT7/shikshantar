@@ -35,7 +35,16 @@ export default function Result() {
              throw new Error("fetching exams: " + e.message);
          }
          const publishedExamIds = new Set<string>();
-         examsSnap.forEach(doc => publishedExamIds.add(doc.id));
+         const examStats: Record<string, { highestMarks?: Record<string, number>, classAverages?: Record<string, number> }> = {};
+         
+         examsSnap.forEach(doc => {
+            publishedExamIds.add(doc.id);
+            const data = doc.data();
+            examStats[doc.id] = {
+               highestMarks: data.highestMarks || {},
+               classAverages: data.classAverages || {}
+            };
+         });
 
          if (publishedExamIds.size === 0) {
              setResults([]);
@@ -81,23 +90,6 @@ export default function Result() {
              };
          });
 
-         // 4. Fetch all results for the same exam to calculate Highest Marks (Admins only will succeed, students will gracefully degrade)
-         const highestMarksByExamAndSubject: Record<string, Record<string, number>> = {};
-         try {
-             const allResultsSnap = await getDocs(query(collection(db, 'results')));
-             const rawAllResults = allResultsSnap.docs.map(doc => doc.data());
-             
-             rawAllResults.forEach(sub => {
-                 if (!highestMarksByExamAndSubject[sub.examId]) highestMarksByExamAndSubject[sub.examId] = {};
-                 const m = sub.marks === "AB" ? 0 : Number(sub.marks) || 0;
-                 if (!highestMarksByExamAndSubject[sub.examId][sub.subject] || highestMarksByExamAndSubject[sub.examId][sub.subject] < m) {
-                     highestMarksByExamAndSubject[sub.examId][sub.subject] = m;
-                 }
-             });
-         } catch {
-             console.warn("Non-admin user: cannot read all results for highest marks.");
-         }
-
          const parsedData: StudentResult[] = summaryList.map(sum => ({
               studentId: sum.studentId,
               studentName: sum.studentName,
@@ -106,7 +98,8 @@ export default function Result() {
               examType: sum.examType,
               examId: sum.examId,
               subjects: resultsByExamId[sum.examId] || {},
-              highestMarks: highestMarksByExamAndSubject[sum.examId] || {},
+              highestMarks: examStats[sum.examId]?.highestMarks || {},
+              classAverages: examStats[sum.examId]?.classAverages || {},
               total: sum.total,
               fullTotal: sum.fullTotal,
               percentage: sum.percentage,
@@ -184,6 +177,11 @@ export default function Result() {
       fetchResults(searchStudentId.trim());
   };
 
+  // Group results into dynamically available exam types to act as navigation
+  const availableExams = useMemo(() => {
+     return Array.from(new Set(results.map(r => r.examType)));
+  }, [results]);
+
   const currentResult = results.find(r => r.examType === activeTab);
 
   const getGradeInfo = (obtained: number | "AB", full: number) => {
@@ -195,15 +193,14 @@ export default function Result() {
      if (pct >= 60) return { grade: "B", gpa: 2.8, pass: true, text: "Good" };
      if (pct >= 50) return { grade: "C+", gpa: 2.4, pass: true, text: "Satisfactory" };
      if (pct >= 40) return { grade: "C", gpa: 2.0, pass: true, text: "Acceptable" };
-     if (pct >= 35) return { grade: "D", gpa: 1.6, pass: true, text: "Basic" }; // D is pass in basic level usually, but NG is fail.
-     return { grade: "NG", gpa: 0, pass: false, text: "Non Graded" };
+     if (pct >= 35) return { grade: "D", gpa: 1.6, pass: true, text: "Basic" }; 
+     return { grade: "NG", gpa: 0, pass: false, text: "Not Graded" };
   };
 
   const chartData = useMemo(() => {
      if (!currentResult) return [];
      return Object.entries(currentResult.subjects).map(([sub, rawMarks]) => {
          const marks: any = rawMarks;
-         // Note: Class average removed because students shouldn't have read access to other students' marks.
          return {
             subject: sub,
             myMarks: marks.obtained === "AB" ? 0 : marks.obtained,
@@ -288,24 +285,44 @@ export default function Result() {
             </form>
          </div>
       )}
-      <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
-         {EXAM_TYPES.map(exam => {
-             const hasResult = results.some(r => r.examType === exam);
-             return (
-                 <button 
-                   key={exam} 
-                   onClick={() => hasResult && setActiveTab(exam)}
-                   disabled={!hasResult}
-                   className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
-                      activeTab === exam ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 
-                      hasResult ? 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50' :
-                      'border-transparent text-gray-300 cursor-not-allowed'
-                   }`}
-                 >
-                    {exam} {hasResult ? '✓' : '—'}
-                 </button>
-             );
-         })}
+      <div className="flex flex-col gap-2 pb-2">
+         {availableExams.length === 0 && !loading && (
+             <span className="text-sm font-bold text-gray-400">No Exams to display</span>
+         )}
+         {availableExams.filter(e => e.toLowerCase().includes('terminal')).length > 0 && (
+             <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
+                <span className="text-xs font-bold text-gray-400 uppercase mr-2 whitespace-nowrap">Terminals:</span>
+                {availableExams.filter(e => e.toLowerCase().includes('terminal')).map(exam => (
+                    <button 
+                      key={exam} 
+                      onClick={() => setActiveTab(exam)}
+                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
+                         activeTab === exam ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 
+                         'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                      }`}
+                    >
+                       {exam} ✓
+                    </button>
+                ))}
+             </div>
+         )}
+         {availableExams.filter(e => !e.toLowerCase().includes('terminal')).length > 0 && (
+             <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
+                <span className="text-xs font-bold text-gray-400 uppercase mr-2 whitespace-nowrap">Tests / Others:</span>
+                {availableExams.filter(e => !e.toLowerCase().includes('terminal')).map(exam => (
+                    <button 
+                      key={exam} 
+                      onClick={() => setActiveTab(exam)}
+                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
+                         activeTab === exam ? 'border-purple-600 text-purple-600 bg-purple-50/50' : 
+                         'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                      }`}
+                    >
+                       {exam} ✓
+                    </button>
+                ))}
+             </div>
+         )}
       </div>
       
       {loading ? (
@@ -346,6 +363,17 @@ export default function Result() {
                      <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Grade</p>
                      <p className="text-2xl font-black text-emerald-600">{currentResult.grade}</p>
                   </div>
+                  <div className="bg-amber-50 px-5 py-3 rounded-2xl border border-amber-100 text-center flex-1 min-w-[120px]">
+                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">GPA</p>
+                     <p className="text-2xl font-black text-amber-600">
+                        {(() => {
+                             const subjects = Object.values(currentResult.subjects) as any[];
+                             if (subjects.length === 0) return '0.0';
+                             const totalGpa = subjects.reduce((acc, marks) => acc + getGradeInfo(marks.obtained, marks.fullMarks).gpa, 0);
+                             return (totalGpa / subjects.length).toFixed(1);
+                        })()}
+                     </p>
+                  </div>
                </div>
             </div>
 
@@ -359,13 +387,14 @@ export default function Result() {
                         <th className="p-4 font-black text-gray-600 text-center">Full Marks</th>
                         <th className="p-4 font-black text-gray-600 text-center">Obtained</th>
                         <th className="p-4 font-black text-gray-600 text-center">Grade</th>
+                        <th className="p-4 font-black text-gray-600 text-center">GPA</th>
                         <th className="p-4 font-black text-gray-600">Pass/Fail</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {Object.entries(currentResult.subjects).map(([subject, rawMarks]) => {
                          const marks: any = rawMarks;
-                         const { grade, pass } = getGradeInfo(marks.obtained, marks.fullMarks);
+                         const { grade, pass, gpa } = getGradeInfo(marks.obtained, marks.fullMarks);
                          return (
                             <tr key={subject} className="hover:bg-blue-50/20">
                               <td className="p-4 font-bold text-gray-800">{subject}</td>
@@ -381,6 +410,7 @@ export default function Result() {
                                     {grade}
                                  </span>
                               </td>
+                              <td className="p-4 text-center font-bold text-gray-800">{gpa.toFixed(1)}</td>
                               <td className="p-4 font-bold">
                                  {pass ? <span className="text-green-600">✅ Pass</span> : <span className="text-red-600">❌ Fail</span>}
                               </td>
@@ -392,6 +422,12 @@ export default function Result() {
                          <td className="p-4 text-center">{currentResult.fullTotal}</td>
                          <td className="p-4 text-center">{currentResult.total}</td>
                          <td className="p-4 text-center">{currentResult.grade}</td>
+                         <td className="p-4 text-center text-[#1e3a8a]">{(() => {
+                             const subjects = Object.values(currentResult.subjects) as any[];
+                             if (subjects.length === 0) return '0.0';
+                             const totalGpa = subjects.reduce((acc, marks) => acc + getGradeInfo(marks.obtained, marks.fullMarks).gpa, 0);
+                             return (totalGpa / subjects.length).toFixed(1);
+                         })()}</td>
                          <td className="p-4">{currentResult.percentage >= 40 ? 'PASSED ✅' : 'FAILED ❌'}</td>
                       </tr>
                     </tbody>
@@ -413,7 +449,7 @@ export default function Result() {
                       <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} />
                       <Legend wrapperStyle={{fontSize: '12px', fontWeight: 'bold', paddingTop: '10px'}} />
                       <Bar dataKey="myMarks" name="My Marks" fill="#3b82f6" radius={[4,4,0,0]} />
-                      <Bar dataKey="highestMarks" name="Highest Marks" fill="#cbd5e1" radius={[4,4,0,0]} />
+                      <Bar dataKey="highestMarks" name="Rank 1's Marks" fill="#cbd5e1" radius={[4,4,0,0]} />
                     </BarChart>
                  </ResponsiveContainer>
                </div>

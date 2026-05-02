@@ -6,7 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 
 import StudentLedgerTab from '../components/fee_management/StudentLedgerTab';
 import RecordPaymentTab from '../components/fee_management/RecordPaymentTab';
-import FeeStructureTab from '../components/fee_management/FeeStructureTab';
+import FeeStructure from './FeeStructure';
 import ReportsAnalyticsTab from '../components/fee_management/ReportsAnalyticsTab';
 import TransactionHistoryTab from '../components/fee_management/TransactionHistoryTab';
 
@@ -95,7 +95,8 @@ export default function AccountAdmin() {
           const defaulterIds = new Set(feesList.filter(f => f.status === 'due').map(f => f.studentId));
           defaulters = defaulterIds.size;
 
-          const rate = 85; // Mock for now until expectedYear is calculated properly
+          const expectedTotal = collectedYear + outstanding;
+          const rate = expectedTotal > 0 ? Math.round((collectedYear / expectedTotal) * 100) : 0;
 
           setStats({
              collectedThisMonth: collectedMonth, // Implement later
@@ -200,7 +201,7 @@ export default function AccountAdmin() {
             <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2 mb-1">
                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${stats.collectionRate}%` }}></div>
             </div>
-            <p className="text-[10px] text-blue-600 font-medium leading-tight">Mock tracking value</p>
+            <p className="text-[10px] text-blue-600 font-medium leading-tight">Current collection rate</p>
           </div>
         </div>
       </div>
@@ -235,7 +236,11 @@ export default function AccountAdmin() {
                     setActiveTab('record_payment');
                  }} />}
                  {activeTab === 'record_payment' && <RecordPaymentTab initialStudentId={targetStudentId} studentsData={studentsData} onRefresh={fetchFeeData} />}
-                 {activeTab === 'fee_structure' && <FeeStructureTab />}
+                 {activeTab === 'fee_structure' && (
+                     <div className="-mt-8">
+                       <FeeStructure />
+                     </div>
+                 )}
                  {activeTab === 'history' && <TransactionHistoryTab transactionsData={transactionsData} onRefresh={fetchFeeData} />}
              </>
          )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, onSnapshot } from 'firebase/firestore';
 import { BookOpen, Users, Folder, AlertCircle, FileSpreadsheet, Edit2, Search, Settings, Loader2, Upload, CheckCircle } from 'lucide-react';
 
 import { UploadTab } from '../components/admin/UploadTab';
@@ -11,12 +11,12 @@ import { ReportCardsTab } from '../components/admin/ReportCardsTab';
 
 import { StudentResult } from '../data/resultsState';
 
-const EXAM_TYPES = ['Terminal 1', 'Unit Test 1', 'Terminal 2', 'Final Exam'];
-const DEFAULT_CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const EXAM_TYPES = ['First Terminal Examination', 'Second Terminal Examination', 'Third Terminal Examination', 'Final Examination'];
+const DEFAULT_CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 const SUBJECTS = ['Mathematics', 'Science', 'English', 'Nepali', 'Social Studies', 'Computer', 'HPE', 'Opt. Math'];
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState('view'); // 'upload', 'manual', 'view', 'reports'
+  const [activeTab, setActiveTab] = useState('manual'); // 'upload', 'manual'
   const [data, setData] = useState<StudentResult[]>([]);
   const [status, setStatus] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,66 +26,12 @@ export default function Admin() {
   const [isTeacherSetupDone, setIsTeacherSetupDone] = useState(false);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
-
-  const fetchResults = async () => {
-      setLoading(true);
-      try {
-         // Fetch all exams to know published status
-         const examsSnap = await getDocs(collection(db, 'exams'));
-         const examsMap: Record<string, any> = {};
-         examsSnap.forEach(doc => {
-            examsMap[doc.id] = doc.data();
-         });
-
-         // Fetch summaries
-         const summarySnap = await getDocs(collection(db, 'resultSummary'));
-         const summaryList: any[] = [];
-         summarySnap.forEach(doc => summaryList.push({ id: doc.id, ...doc.data() }));
-
-         // Fetch subjects
-         const resultsSnap = await getDocs(collection(db, 'results'));
-         const resultsBySummaryId: Record<string, any> = {};
-         resultsSnap.forEach(doc => {
-             const sub = doc.data();
-             const mapId = `${sub.examId}_${sub.studentId}`;
-             if (!resultsBySummaryId[mapId]) resultsBySummaryId[mapId] = {};
-             resultsBySummaryId[mapId][sub.subject] = {
-                 fullMarks: sub.fullMarks, obtained: sub.marks
-             };
-         });
-
-         const parsedData: StudentResult[] = summaryList.map(sum => {
-             const exm = examsMap[sum.examId];
-             return {
-                studentId: sum.studentId,
-                studentName: sum.studentName,
-                class: sum.class,
-                rollNo: sum.rollNo || '',
-                examType: sum.examType,
-                subjects: resultsBySummaryId[`${sum.examId}_${sum.studentId}`] || {},
-                total: sum.total,
-                fullTotal: sum.fullTotal,
-                percentage: sum.percentage,
-                grade: sum.grade,
-                gpa: sum.gpa || 0,
-                rank: sum.rank || 0,
-                published: exm ? exm.published : false,
-                classTeacherRemark: sum.classTeacherRemark || ''
-             }
-         });
-
-         setData(parsedData);
-      } catch (err: any) {
-         if (err.message.includes("permission")) {
-            setStatus({type: 'error', message: "Permission Denied: You must be an admin or assigned teacher to view all class results."});
-         } else {
-            console.error("Error loading results:", err);
-            setStatus({type: 'error', message: "Could not load results: " + err.message});
-         }
-      } finally {
-         setLoading(false);
-      }
-  };
+  
+  const dynamicExamTypes = useMemo(() => {
+     const types = new Set(EXAM_TYPES);
+     data.forEach(d => types.add(d.examType));
+     return Array.from(types);
+  }, [data]);
 
   useEffect(() => {
     // Determine role (simplified for demo, usually from Auth)
@@ -101,23 +47,109 @@ export default function Admin() {
     } else {
         setIsTeacherSetupDone(true);
     }
+  }, []);
 
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            fetchResults();
-        } else {
-            setLoading(false);
-        }
-    });
+  useEffect(() => {
+     let unsubExams: any;
+     let unsubSummary: any;
+     let unsubResults: any;
 
-    return () => unsubAuth();
+     const subscribeToResults = () => {
+         setLoading(true);
+         let examsMap: Record<string, any> = {};
+         let summaryList: any[] = [];
+         let resultsList: any[] = [];
+
+         const updateState = () => {
+             const resultsBySummaryId: Record<string, any> = {};
+             resultsList.forEach(sub => {
+                 const mapId = `${sub.examId}_${sub.studentId}`;
+                 if (!resultsBySummaryId[mapId]) resultsBySummaryId[mapId] = {};
+                 resultsBySummaryId[mapId][sub.subject] = {
+                     fullMarks: sub.fullMarks, obtained: sub.marks
+                 };
+             });
+
+             const parsedData: StudentResult[] = summaryList.map(sum => {
+                 const exm = examsMap[sum.examId];
+                 return {
+                    studentId: sum.studentId,
+                    studentName: sum.studentName,
+                    class: sum.class,
+                    rollNo: sum.rollNo || '',
+                    examType: sum.examType,
+                    subjects: resultsBySummaryId[`${sum.examId}_${sum.studentId}`] || {},
+                    total: sum.total,
+                    fullTotal: sum.fullTotal,
+                    percentage: sum.percentage,
+                    grade: sum.grade,
+                    gpa: sum.gpa || 0,
+                    rank: sum.rank || 0,
+                    published: exm ? exm.published : false,
+                    classTeacherRemark: sum.classTeacherRemark || ''
+                 }
+             });
+             setData(parsedData);
+             setLoading(false);
+         };
+
+         try {
+             unsubExams = onSnapshot(collection(db, 'exams'), (snap) => {
+                 examsMap = {};
+                 snap.forEach(doc => examsMap[doc.id] = doc.data());
+                 updateState();
+             }, (e) => { 
+                console.error("Snapshot error:", e); 
+                setLoading(false); 
+                handleFirestoreError(e, OperationType.LIST, 'exams');
+             });
+
+             unsubSummary = onSnapshot(collection(db, 'resultSummary'), (snap) => {
+                 summaryList = [];
+                 snap.forEach(doc => summaryList.push({ id: doc.id, ...doc.data() }));
+                 updateState();
+             }, (e) => { 
+                console.error("Snapshot error:", e); 
+                setLoading(false);
+                handleFirestoreError(e, OperationType.LIST, 'resultSummary');
+             });
+
+             unsubResults = onSnapshot(collection(db, 'results'), (snap) => {
+                 resultsList = [];
+                 snap.forEach(doc => resultsList.push({ id: doc.id, ...doc.data() }));
+                 updateState();
+             }, (e) => { 
+                console.error("Snapshot error:", e); 
+                setLoading(false);
+                handleFirestoreError(e, OperationType.LIST, 'results');
+             });
+         } catch (err: any) {
+             setLoading(false);
+         }
+     };
+
+     const unsubAuth = onAuthStateChanged(auth, (user) => {
+         if (user) {
+             subscribeToResults();
+         } else {
+             if (unsubExams) unsubExams();
+             if (unsubSummary) unsubSummary();
+             if (unsubResults) unsubResults();
+             setLoading(false);
+         }
+     });
+
+     return () => {
+         unsubAuth();
+         if (unsubExams) unsubExams();
+         if (unsubSummary) unsubSummary();
+         if (unsubResults) unsubResults();
+     };
   }, []);
 
   useEffect(() => {
     if (status) {
-        if(status.message.includes('saved successfully')) {
-             fetchResults();
-        }
+        // Data is auto-updated via onSnapshot, so we don't need a manual fetch command
         const timer = setTimeout(() => setStatus(null), 5000);
         return () => clearTimeout(timer);
     }
@@ -223,20 +255,12 @@ export default function Admin() {
 
        {/* Tabs Header */}
        <div className="flex overflow-x-auto bg-white rounded-xl border border-gray-200 p-2 gap-2 shadow-sm font-bold scrollbar-hide">
-           <button onClick={()=>setActiveTab('view')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'view' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
-               <Search className="w-4 h-4"/> View & Manage
-           </button>
            <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
                <Edit2 className="w-4 h-4"/> Manual Entry
            </button>
            <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
                <Upload className="w-4 h-4"/> Excel Upload
            </button>
-           {userRole === 'admin' && (
-               <button onClick={()=>setActiveTab('reports')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reports' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
-                   <BookOpen className="w-4 h-4"/> Report Cards
-               </button>
-           )}
        </div>
 
        {/* Tab Contents */}
@@ -250,7 +274,7 @@ export default function Admin() {
                <>
                    {activeTab === 'upload' && (
                        <UploadTab 
-                           EXAM_TYPES={EXAM_TYPES} 
+                           EXAM_TYPES={dynamicExamTypes} 
                            allClasses={DEFAULT_CLASSES} 
                            data={data} 
                            setStatus={setStatus} 
@@ -261,7 +285,7 @@ export default function Admin() {
                    )}
                    {activeTab === 'manual' && (
                        <ManualEntryTab 
-                           EXAM_TYPES={EXAM_TYPES} 
+                           EXAM_TYPES={dynamicExamTypes} 
                            allClasses={DEFAULT_CLASSES} 
                            allSubjects={SUBJECTS}
                            data={data} 
@@ -269,24 +293,6 @@ export default function Admin() {
                            userRole={userRole} 
                            assignedClasses={assignedClasses} 
                            assignedSubjects={assignedSubjects} 
-                       />
-                   )}
-                   {activeTab === 'view' && (
-                       <ViewManageTab 
-                           EXAM_TYPES={EXAM_TYPES} 
-                           allClasses={DEFAULT_CLASSES} 
-                           data={data} 
-                           setStatus={setStatus} 
-                           userRole={userRole} 
-                           assignedClasses={assignedClasses} 
-                       />
-                   )}
-                   {activeTab === 'reports' && userRole === 'admin' && (
-                       <ReportCardsTab 
-                           EXAM_TYPES={EXAM_TYPES} 
-                           allClasses={DEFAULT_CLASSES} 
-                           data={data} 
-                           setStatus={setStatus} 
                        />
                    )}
                </>

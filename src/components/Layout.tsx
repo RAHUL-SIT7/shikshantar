@@ -47,11 +47,18 @@ export default function Layout({
   const [currentTime, setCurrentTime] = useState(getNPTDate());
   const location = useLocation();
   const navigate = useNavigate();
+  const mainRef = React.useRef<HTMLElement>(null);
   
   const role = userRole || 'student';
   const studentId = localStorage.getItem('studentId') || '';
   
   const logoUrl = logoImage;
+
+  React.useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(getNPTDate()), 1000);
@@ -127,11 +134,20 @@ export default function Layout({
     return () => { unsubNotices(); unsubAdmissions(); unsubAuth(); };
   }, [role]);
 
+  // Local Read Receipts for visual immediate update and guest users
+  const [localReads, setLocalReads] = useState<string[]>([]);
+  useEffect(() => {
+     try {
+         const reads = JSON.parse(localStorage.getItem('localReadNotices') || '[]');
+         setLocalReads(reads);
+     } catch(e) {}
+  }, []);
+
   // Merge notices and admissions for the bell
   // Only include items that the current user has NOT read.
   const currentUidForFilter = auth.currentUser?.uid || studentId || 'guest';
   const combinedBellItems = [
-    ...pendingAdmissions.filter(a => !a.readBy || !a.readBy.includes(currentUidForFilter)).map(a => ({
+    ...pendingAdmissions.filter(a => (!a.readBy || !a.readBy.includes(currentUidForFilter)) && !localReads.includes(a.id)).map(a => ({
       id: a.id,
       title: `Admission Request: ${a.studentName || 'Student'}`,
       priority: 'Urgent',
@@ -139,7 +155,7 @@ export default function Layout({
       isAdmission: true,
       readBy: a.readBy || []
     })),
-    ...recentNotices.filter(n => !n.readBy || !n.readBy.includes(currentUidForFilter)).map(n => ({
+    ...recentNotices.filter(n => (!n.readBy || !n.readBy.includes(currentUidForFilter)) && !localReads.includes(n.id)).map(n => ({
       ...n,
       isAdmission: false,
       date: n.timestamp?.toDate?.()?.toISOString() || new Date().toISOString()
@@ -217,12 +233,18 @@ export default function Layout({
 
   // Combine Unread counts
   const currentUid = auth.currentUser?.uid || studentId || 'guest';
-  const unreadNoticesCount = recentNotices.filter(n => !n.readBy || !n.readBy.includes(currentUid)).length;
-  const unreadAdmissionsCount = pendingAdmissions.filter(a => !a.readBy || !a.readBy.includes(currentUid)).length;
+  const unreadNoticesCount = recentNotices.filter(n => (!n.readBy || !n.readBy.includes(currentUid)) && !localReads.includes(n.id)).length;
+  const unreadAdmissionsCount = pendingAdmissions.filter(a => (!a.readBy || !a.readBy.includes(currentUid)) && !localReads.includes(a.id)).length;
   const unreadUrgentCount = role === 'admin' ? unreadNoticesCount + unreadAdmissionsCount : unreadNoticesCount;
 
   const markAsRead = async (noticeId: string, isAdmission: boolean, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent navigation
+    
+    // Save locally
+    const newReads = [...localReads, noticeId];
+    setLocalReads(newReads);
+    localStorage.setItem('localReadNotices', JSON.stringify(newReads));
+
     const uid = auth.currentUser?.uid || studentId || 'guest';
     const collectionName = isAdmission ? 'admissions' : 'notices';
     try {
@@ -230,21 +252,23 @@ export default function Layout({
             readBy: arrayUnion(uid)
         });
     } catch(err) {
-        console.warn(`Could not mark ${collectionName} as read`, err);
+        console.warn(`Could not mark ${collectionName} as read (permission expected for guests/students)`, err);
     }
   };
 
   const markAllAsRead = async () => {
     const uid = auth.currentUser?.uid || studentId || 'guest';
-    const updates = [];
+    const updates: any[] = [];
+    const newReads = [...localReads];
     
     recentNotices.forEach(n => {
       if (!n.readBy || !n.readBy.includes(uid)) {
+        if (!newReads.includes(n.id)) newReads.push(n.id);
         updates.push(
           updateDoc(doc(db, 'notices', n.id), {
             readBy: arrayUnion(uid)
           }).catch(err => {
-            console.warn("Failed to mark notice read:", err);
+            console.warn("Failed to mark notice read (expected for students):", err);
           })
         );
       }
@@ -253,6 +277,7 @@ export default function Layout({
     if (role === 'admin') {
       pendingAdmissions.forEach(a => {
         if (!a.readBy || !a.readBy.includes(uid)) {
+          if (!newReads.includes(a.id)) newReads.push(a.id);
           updates.push(
             updateDoc(doc(db, 'admissions', a.id), {
               readBy: arrayUnion(uid)
@@ -264,16 +289,17 @@ export default function Layout({
       });
     }
 
+    setLocalReads(newReads);
+    localStorage.setItem('localReadNotices', JSON.stringify(newReads));
+
     if (updates.length > 0) {
       try {
         await Promise.all(updates);
-        setIsBellOpen(false); // Close dropdown after marking all as read
       } catch (err) {
         console.warn("Error marking all as read:", err);
       }
-    } else {
-        setIsBellOpen(false); // Close it anyway if no updates
     }
+    setIsBellOpen(false); // Always close the dropdown
   };
 
   return (
@@ -416,11 +442,11 @@ export default function Layout({
                <div key={n.id} onClick={() => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); }} className="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer group relative">
                   <div className="flex justify-between items-center mb-1.5 pr-8">
                      <span className={`text-[9px] leading-tight font-bold px-1.5 py-0.5 rounded uppercase flex items-center h-4 border border-current/10 ${n.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{n.isAdmission ? 'Admission' : n.priority}</span>
-                     {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
+                     {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
                   </div>
                   <p className="font-bold text-[0.8rem] text-gray-800 line-clamp-2 pr-10 leading-snug">{n.title}</p>
                   
-                  {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && (
+                  {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && (
                       <button 
                          onClick={(e) => markAsRead(n.id, !!n.isAdmission, e)}
                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white hover:bg-blue-600 text-blue-500 hover:text-white rounded-full transition-all z-10 border border-blue-100 shadow-sm"
@@ -436,7 +462,7 @@ export default function Layout({
                  </div>}
          </div>
          <div className="p-2 bg-gray-50 text-center border-t border-gray-100">
-            <button onClick={() => { setIsBellOpen(false); navigate('/notices'); }} className="text-sm font-bold text-blue-600 hover:text-blue-800">View All</button>
+            <button onClick={() => { setIsBellOpen(false); navigate('/notices'); }} className="text-sm font-bold text-blue-600 hover:text-blue-800 w-full text-center block outline-none">Open Notice Board</button>
          </div>
       </div>
     )}
@@ -538,11 +564,11 @@ export default function Layout({
                           <div key={n.id} onClick={() => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); }} className="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer group relative">
                              <div className="flex justify-between items-center mb-2 pr-10">
                                 <span className={`text-[9px] leading-none font-bold px-1.5 py-0.5 rounded uppercase flex items-center h-4 border border-current/10 ${n.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{n.isAdmission ? 'Admission' : n.priority}</span>
-                                {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
+                                {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
                              </div>
                              <p className="font-bold text-[0.8rem] text-gray-800 line-clamp-2 pr-10 leading-snug">{n.title}</p>
 
-                             {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && (
+                             {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && (
                                 <button 
                                    onClick={(e) => markAsRead(n.id, !!n.isAdmission, e)}
                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white hover:bg-blue-600 text-blue-500 hover:text-white rounded-full transition-all scale-90 hover:scale-100 z-10 border border-blue-100 shadow-sm"
@@ -558,7 +584,7 @@ export default function Layout({
                             </div>}
                     </div>
                     <div className="p-3 bg-gray-50 text-center border-t border-gray-100">
-                       <button onClick={() => { setIsBellOpen(false); navigate('/notices'); }} className="text-sm font-bold text-blue-600 hover:text-blue-800 w-full text-center">Open Notice Board</button>
+                       <button onClick={() => { setIsBellOpen(false); navigate('/notices'); }} className="text-sm font-bold text-blue-600 hover:text-blue-800 w-full text-center block outline-none">Open Notice Board</button>
                     </div>
                  </div>
                )}
@@ -583,7 +609,7 @@ export default function Layout({
         </header>
 
         {/* Scrollable Content */}
-        <main className="flex-1 flex flex-col overflow-y-auto custom-scrollbar print:overflow-visible print:p-0 relative">
+        <main ref={mainRef} className="flex-1 flex flex-col overflow-y-auto custom-scrollbar print:overflow-visible print:p-0 relative">
           <div className="p-5 flex-1">
             <div className="max-w-6xl mx-auto min-h-full">
               <Outlet />
@@ -618,6 +644,9 @@ export default function Layout({
                   <li><Link to="/fee-structure" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Fee Structure</Link></li>
                   <li><Link to="/notices" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Notice Board</Link></li>
                   <li><Link to="/gallery" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Photo Gallery</Link></li>
+                  {(!isAuthenticated || localStorage.getItem('isGuest') === 'true') && (
+                    <li><Link to="/login" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Login Portal</Link></li>
+                  )}
                 </ul>
               </div>
 

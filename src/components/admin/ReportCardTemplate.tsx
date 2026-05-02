@@ -81,6 +81,35 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                          </tr>
                       );
                   })}
+                  <tr className="bg-gray-100 font-black">
+                     <td className="border border-gray-400 p-3 uppercase">TOTAL</td>
+                     <td className="border border-gray-400 p-3 text-center">{student.fullTotal}</td>
+                     <td className="border border-gray-400 p-3 text-center">{student.total}</td>
+                     <td className="border border-gray-400 p-3 text-center">{student.grade}</td>
+                     <td className="border border-gray-400 p-3 text-center">
+                        {(() => {
+                           const subjects = Object.values(student.subjects) as any[];
+                           if (subjects.length === 0) return '0.0';
+                           const totalGpa = subjects.reduce((acc, marks) => {
+                               const fm = marks.fullMarks;
+                               const displayOm = marks.obtained;
+                               let subGpa = 0;
+                               if (displayOm !== 'AB') {
+                                   const pct = (displayOm / fm) * 100;
+                                   if (pct >= 90) { subGpa = 4.0; }
+                                   else if (pct >= 80) { subGpa = 3.6; }
+                                   else if (pct >= 70) { subGpa = 3.2; }
+                                   else if (pct >= 60) { subGpa = 2.8; }
+                                   else if (pct >= 50) { subGpa = 2.4; }
+                                   else if (pct >= 40) { subGpa = 2.0; }
+                                   else if (pct >= 35) { subGpa = 1.6; }
+                               }
+                               return acc + subGpa;
+                           }, 0);
+                           return (totalGpa / subjects.length).toFixed(1);
+                        })()}
+                     </td>
+                  </tr>
                </tbody>
             </table>
 

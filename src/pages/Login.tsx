@@ -12,7 +12,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   RecaptchaVerifier,
-  signInWithPhoneNumber
+  signInWithPhoneNumber,
+  signInAnonymously
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -396,7 +397,15 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
-      setError(err.message);
+      if (err.code === 'auth/popup-closed-by-user') {
+          setError('Google Login popup was closed before completing. Please try again.');
+      } else if (err.code === 'auth/popup-blocked') {
+          setError('Google Login popup was blocked by your browser. Please allow popups for this site.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+          setError('Google Sign-In is not enabled on this project. Please contact the administrator.');
+      } else {
+          setError(err.message || 'Error configuring Google login.');
+      }
     } finally {
       setLoading(false);
     }

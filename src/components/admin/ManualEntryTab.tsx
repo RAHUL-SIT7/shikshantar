@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Save, Loader2, AlertCircle } from 'lucide-react';
 import { StudentResult } from '../../data/resultsState';
-import { doc, writeBatch, setDoc } from 'firebase/firestore';
+import { doc, writeBatch, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
+
+const CLASS_SUBJECTS: any = {
+  'PG': ['English', 'Nepali', 'Math', 'Drawing', 'Rhymes'],
+  'Nursery': ['English', 'Nepali', 'Math', 'Drawing', 'Rhymes'],
+  'LKG': ['English', 'Nepali', 'Math', 'Drawing', 'Rhymes'],
+  'UKG': ['English', 'Nepali', 'Math', 'Drawing', 'Rhymes'],
+  '1': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK'],
+  '2': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK'],
+  '3': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK'],
+  '4': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK', 'Moral Science'],
+  '5': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK', 'Moral Science'],
+  '6': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK', 'Moral Science', 'Opt Math'],
+  '7': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK', 'Moral Science', 'Opt Math'],
+  '8': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Computer', 'GK', 'Moral Science', 'Opt Math'],
+  '9': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Opt Math', 'Opt II'],
+  '10': ['English', 'Nepali', 'Math', 'Science', 'Social', 'Opt Math', 'Opt II']
+};
 
 export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setStatus, userRole, assignedClasses, assignedSubjects }: any) {
   const [examType, setExamType] = useState(EXAM_TYPES[0]);
@@ -11,9 +28,12 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
   const [fullMarks, setFullMarks] = useState(100);
   
   const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   const allowedClasses = userRole === 'admin' ? allClasses : assignedClasses;
-  const allowedSubjects = userRole === 'admin' ? allSubjects : assignedSubjects;
+  const dynamicSubjects = selectedClass ? (CLASS_SUBJECTS[selectedClass] || allSubjects) : [];
+  const allowedSubjects = userRole === 'admin' ? dynamicSubjects : assignedSubjects.filter((s: string) => dynamicSubjects.includes(s));
+
 
   const getNepalGPA = (pct: number) => {
       if (pct >= 90) return 4.0;
@@ -42,27 +62,50 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
   useEffect(() => {
     if (!selectedClass || !selectedSubject) return;
 
-    // Get all students in this class from the current records to prefill
-    const classResults = (data as StudentResult[]).filter(r => r.class === selectedClass);
-    
-    // Create unique set of students
-    const uniqueStudentsMap = new Map<string, {studentId: string, studentName: string}>();
-    classResults.forEach(r => uniqueStudentsMap.set(r.studentId, {studentId: r.studentId, studentName: r.studentName}));
-    
-    const classStudents = Array.from(uniqueStudentsMap.values());
-    
-    const mapped = classStudents.map(s => {
-        const existingRec = classResults.find(r => r.studentId === s.studentId && r.examType === examType);
-        const existingMarks = existingRec?.subjects[selectedSubject]?.obtained;
-        return {
-            ...s,
-            Class: selectedClass,
-            tempMark: existingMarks !== undefined && existingMarks !== 'AB' ? String(existingMarks) : '',
-            isAbsent: existingMarks === 'AB',
-        };
-    });
+    const loadStudents = async () => {
+      setLoadingStudents(true);
+      try {
+          // Get all students in this class from the users collection
+          const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student'), where('class', '==', selectedClass)));
+          
+          let classStudents = usersSnap.docs.map(d => {
+             const usr = d.data();
+             return {
+                 studentId: d.id,
+                 studentName: usr.firstName && usr.lastName ? `${usr.firstName} ${usr.lastName}` : (usr.email || 'Unknown')
+             };
+          });
 
-    setStudents(mapped);
+          // Fallback if no students in users col: try the current results to prefill
+          if (classStudents.length === 0) {
+              const classResults = (data as StudentResult[]).filter(r => String(r.class) === selectedClass);
+              const uniqueStudentsMap = new Map<string, {studentId: string, studentName: string}>();
+              classResults.forEach(r => uniqueStudentsMap.set(r.studentId, {studentId: r.studentId, studentName: r.studentName}));
+              classStudents = Array.from(uniqueStudentsMap.values());
+          }
+          
+          const classResults = (data as StudentResult[]).filter(r => String(r.class) === selectedClass);
+
+          const mapped = classStudents.map(s => {
+              const existingRec = classResults.find(r => r.studentId === s.studentId && r.examType === examType);
+              const existingMarks = existingRec?.subjects[selectedSubject]?.obtained;
+              return {
+                  ...s,
+                  Class: selectedClass,
+                  tempMark: existingMarks !== undefined && existingMarks !== 'AB' ? String(existingMarks) : '',
+                  isAbsent: existingMarks === 'AB',
+              };
+          });
+
+          setStudents(mapped);
+      } catch (err) {
+          console.error("Error loading students config:", err);
+      } finally {
+          setLoadingStudents(false);
+      }
+    };
+
+    loadStudents();
   }, [selectedClass, selectedSubject, examType, data]);
 
   const handleMarkChange = (idx: number, val: string) => {
@@ -106,14 +149,18 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
 
           setStatus({type: 'info', message: 'Saving marks to Firebase...'});
 
-          // We write exam doc just in case it doesn't exist
-          await setDoc(doc(db, "exams", examId), {
-              name: examType,
-              type: examType,
-              class: selectedClass,
-              academicYear: new Date().getFullYear().toString(),
-              published: false
-          }, { merge: true });
+          try {
+              await setDoc(doc(db, "exams", examId), {
+                  name: examType,
+                  type: examType,
+                  class: selectedClass,
+                  academicYear: new Date().getFullYear().toString(),
+                  published: false
+              }, { merge: true });
+          } catch (e: any) {
+              console.error("Error creating exam document:", e);
+              throw new Error("Failed to create Exam document: " + e.message);
+          }
 
           let batch = writeBatch(db);
           let opCount = 0;
@@ -219,12 +266,22 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
               }
 
               if (opCount > 400) {
-                  await batch.commit();
+                  try {
+                      await batch.commit();
+                  } catch (e: any) {
+                      throw new Error("Batch commit failed (>400): " + e.message);
+                  }
                   batch = writeBatch(db);
                   opCount = 0;
               }
           }
-          await batch.commit();
+          if (opCount > 0) {
+              try {
+                  await batch.commit();
+              } catch (e: any) {
+                  throw new Error("Final batch commit failed: " + e.message);
+              }
+          }
 
           setStatus({type: 'success', message: `Class ${selectedClass} ${selectedSubject} - ${examType} marks saved successfully!` });
       } catch (err: any) {
@@ -233,14 +290,67 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
       }
   };
 
+  const publishResults = async () => {
+    if (!selectedClass || !examType) return;
+    setStatus({type: 'info', message: 'Calculating ranks and publishing results...'});
+    try {
+        const examId = `${examType.replace(/\s+/g, '_')}_${selectedClass}`;
+        const summaryDocs = await getDocs(query(collection(db, 'resultSummary'), where('examId', '==', examId)));
+        
+        let allStudents = summaryDocs.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        allStudents.sort((a, b) => b.total - a.total);
+        
+        let batch = writeBatch(db);
+        let opCount = 0;
+        let currentRank = 1;
+        let prevTotal = -1;
+        let sameRankCount = 0;
+        
+        allStudents.forEach((std, idx) => {
+             if (std.total === prevTotal) {
+                 std.rank = currentRank;
+                 sameRankCount++;
+             } else {
+                 currentRank += sameRankCount;
+                 if (idx === 0) currentRank = 1;
+                 std.rank = currentRank;
+                 sameRankCount = 1;
+                 prevTotal = std.total;
+             }
+             
+             batch.update(doc(db, 'resultSummary', std.id), {
+                 rank: std.rank,
+                 published: true
+             });
+             opCount++;
+             
+             // Keep batch limits safe
+        });
+        
+        batch.update(doc(db, 'exams', examId), { published: true });
+        
+        await batch.commit();
+        setStatus({type: 'success', message: `Results and Ranks Published successfully for Class ${selectedClass}.`});
+    } catch(err: any) {
+        setStatus({type: 'error', message: 'Publish failed: ' + err.message});
+    }
+  };
+
   return (
     <div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div>
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Exam Type</label>
-               <select value={examType} onChange={e=>setExamType(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium">
-                   {EXAM_TYPES.map((ex: string) => <option key={ex} value={ex}>{ex}</option>)}
-               </select>
+               <input 
+                 list="exam-types" 
+                 value={examType} 
+                 onChange={e=>setExamType(e.target.value)} 
+                 className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium"
+                 placeholder="Type or select exam..."
+               />
+               <datalist id="exam-types">
+                   {EXAM_TYPES.map((ex: string) => <option key={ex} value={ex} />)}
+               </datalist>
             </div>
             <div>
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Class</label>
@@ -258,7 +368,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
             </div>
             <div>
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Marks</label>
-               <input type="number" value={fullMarks} onChange={e=>setFullMarks(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-bold text-[#1e3a8a]" />
+               <input type="number" readOnly value={fullMarks} onChange={e=>setFullMarks(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg pointer-events-none bg-gray-100 outline-none font-bold text-[#1e3a8a]" />
             </div>
         </div>
 
@@ -270,7 +380,10 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
         ) : (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="bg-gray-100 p-3 px-4 border-b flex justify-between items-center whitespace-nowrap overflow-x-auto">
-                    <h3 className="font-bold text-gray-800">Student List ({students.length})</h3>
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        Student List ({students.length})
+                        {loadingStudents && <Loader2 className="w-4 h-4 animate-spin text-[#1e3a8a]" />}
+                    </h3>
                     <div className="flex gap-2">
                         <button onClick={addStudentRow} className="bg-white border border-[#1e3a8a] py-1 px-3 rounded-md font-bold text-sm text-[#1e3a8a] hover:bg-blue-50 active:scale-95 transition-all">+ Add Student Row</button>
                         <button onClick={markAllPresent} className="bg-white border rounded-md px-3 py-1 font-bold text-sm text-gray-600 hover:bg-gray-50 active:scale-95 transition-all">Mark All Present</button>
@@ -356,7 +469,10 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    ))}
                 </div>
 
-                <div className="p-4 border-t bg-gray-50 flex justify-end">
+                <div className="p-4 border-t bg-gray-50 flex justify-end gap-4 border-x">
+                    <button onClick={publishResults} className="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2 shadow-lg active:scale-95 transition-all">
+                       <CheckCircle2 className="w-5 h-5" /> Calculate Rank & Publish
+                    </button>
                     <button onClick={saveMarks} className="bg-[#1e3a8a] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#1e40af] flex items-center gap-2 shadow-lg active:scale-95 transition-all">
                        <Save className="w-5 h-5" /> Save marks for {students.length} students
                     </button>

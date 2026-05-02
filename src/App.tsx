@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -22,6 +22,16 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import FeeStructure from './pages/FeeStructure';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -84,6 +94,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/login" element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
         <Route path="/" element={(isAuthenticated || isGuest) ? <Layout isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} userRole={userRole} /> : <Navigate to="/login" />}>
