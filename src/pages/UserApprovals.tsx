@@ -1,150 +1,685 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle2, AlertCircle } from 'lucide-react';
-import { db } from '../firebase';
-import { doc, onSnapshot, collection, updateDoc } from 'firebase/firestore';
+import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye } from 'lucide-react';
+import { db, auth } from '../firebase';
+import { doc, onSnapshot, collection, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
+
+// Initialize a secondary Firebase app to create users without signing out the admin
+const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+const secondaryAuth = getAuth(secondaryApp);
+
+interface UserProfile {
+  id: string;
+  email?: string;
+  role?: 'student' | 'teacher' | 'admin';
+  fullName?: string;
+  phone?: string;
+  studentId?: string;
+  class?: string;
+  active?: boolean;
+  status?: string;
+}
 
 export default function UserApprovals() {
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
-  
-  // User Management State
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const uList: any[] = [];
-      snapshot.forEach((docSnap) => {
-        uList.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setUsersList(uList);
-      setIsUsersLoading(false);
-    }, (error) => {
-      console.error("Firebase read users error:", error);
-      setStatus({ type: 'error', message: 'Failed to fetch users. You might not have permission.' });
-      setIsUsersLoading(false);
+    let unsubUsers = () => {};
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+          const uList: UserProfile[] = [];
+          snapshot.forEach((docSnap) => {
+            uList.push({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+          });
+          setUsersList(uList);
+          setIsUsersLoading(false);
+        }, (error) => {
+          console.error("Firebase read users error:", error);
+          setStatus({ type: 'error', message: 'Failed to fetch users database.' });
+          setIsUsersLoading(false);
+        });
+      } else {
+        setUsersList([]);
+        setIsUsersLoading(false);
+      }
     });
-    return () => unsubUsers();
+
+    return () => { unsubUsers(); unsubAuth(); };
   }, []);
 
-  const updateUserRole = async (userId: string, newRole: string) => {
-    if (!window.confirm(`Are you sure you want to upgrade this user to ${newRole}?`)) return;
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
     try {
-      await updateDoc(doc(db, 'users', userId), { role: newRole });
-      setStatus({ type: 'success', message: `User role upgraded to ${newRole} successfully.` });
+      const { id, ...updateData } = editingUser;
+      await updateDoc(doc(db, 'users', id), updateData as any);
+      setStatus({ type: 'success', message: `User ${editingUser.fullName || editingUser.email} updated successfully.` });
+      setEditingUser(null);
     } catch (error) {
       console.error(error);
-      setStatus({ type: 'error', message: 'Failed to upgrade user role.' });
+      setStatus({ type: 'error', message: 'Failed to update user details.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
+  const setRole = async (userId: string, newRole: 'admin' | 'teacher' | 'student') => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { role: newRole });
+      setStatus({ type: 'success', message: `Role changed to ${newRole}.` });
+    } catch (error) {
+      setStatus({ type: 'error', message: 'Update failed.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
+  const deleteUser = async (userId: string, name: string) => {
+    if (!window.confirm(`Permanently delete account for ${name}? This action cannot be undone.`)) return;
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+      setStatus({ type: 'success', message: 'User deleted successfully.' });
+    } catch (error) {
+      setStatus({ type: 'error', message: 'Failed to delete user.' });
     }
     setTimeout(() => setStatus({ type: null, message: '' }), 3000);
   };
 
   const getFilteredUsers = () => {
-    if (!userSearchQuery) return usersList;
     return usersList.filter(u => {
-      const emailMatch = String(u.email || '').toLowerCase().includes(userSearchQuery.toLowerCase());
-      const roleMatch = String(u.role || '').toLowerCase().includes(userSearchQuery.toLowerCase());
-      const phoneMatch = String(u.phone || '').toLowerCase().includes(userSearchQuery.toLowerCase());
-      return emailMatch || roleMatch || phoneMatch;
+      const matchesSearch = 
+        String(u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(u.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(u.studentId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(u.phone || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const isPending = u.status === 'pending';
+      let matchesRole = false;
+      if (roleFilter === 'all') matchesRole = true;
+      else if (roleFilter === 'pending') matchesRole = isPending;
+      else matchesRole = u.role === roleFilter && !isPending;
+      
+      return matchesSearch && matchesRole;
     });
   };
 
-  return (
-    <div className="flex flex-col gap-5">
-      <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-[#e5e7eb] pb-4 mb-4 gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-[#1f2937] flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#3b82f6]" />
-              Staff & User Management
-            </h2>
-            <p className="text-xs text-[#64748b] mt-1">Upgrade user roles (like "student" to "teacher") and manage staff access.</p>
-          </div>
+  const stats = {
+    total: usersList.filter(u => u.status !== 'pending').length,
+    teachers: usersList.filter(u => u.role === 'teacher' && u.status !== 'pending').length,
+    admins: usersList.filter(u => u.role === 'admin' && u.status !== 'pending').length,
+    students: usersList.filter(u => u.role === 'student' && u.status !== 'pending').length,
+    pending: usersList.filter(u => u.status === 'pending').length,
+  };
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-[#94a3b8] absolute left-3 top-1/2 -translate-y-1/2" />
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    role: 'teacher' as const,
+    phone: '',
+    class: '',
+    studentId: ''
+  });
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.email || !newUser.password) {
+      setStatus({ type: 'error', message: 'Email and password are mandatory for staff creation.' });
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+       setStatus({ type: 'error', message: 'Password must be at least 6 characters.' });
+       return;
+    }
+
+    setIsCreating(true);
+    try {
+      // Create user auth account without signing current admin out
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
+      const docId = userCredential.user.uid;
+      
+      // Store in users collection
+      const userProfilePayload: any = {
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: newUser.role,
+        active: true,
+        createdAt: new Date().toISOString()
+      };
+      if (newUser.phone) userProfilePayload.phone = newUser.phone;
+      if (newUser.studentId) userProfilePayload.studentId = newUser.studentId;
+      if (newUser.class) userProfilePayload.class = newUser.class;
+
+      await setDoc(doc(db, 'users', docId), userProfilePayload);
+      
+      // Immediately sign out the secondary auth so it can be used again cleanly
+      await secondaryAuth.signOut();
+
+      setStatus({ type: 'success', message: `${newUser.role.toUpperCase()} account created successfully. They can now log in.` });
+      setIsCreatingUser(false);
+      setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '' });
+    } catch (error: any) {
+      console.error(error);
+      setStatus({ type: 'error', message: error.message || 'Failed to create user account. Email might be in use.' });
+    } finally {
+      setIsCreating(false);
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 4000);
+  };
+
+  return (
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+      {/* Header & Stats */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-[#1e3a8a] flex items-center gap-2">
+            <Shield className="w-8 h-8 text-orange-500" />
+            Administrative User Management
+          </h1>
+          <p className="text-gray-500 font-medium">Control system access, roles, and administrative privileges.</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Total</p>
+            <p className="text-xl font-black text-gray-800">{stats.total}</p>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px] cursor-pointer" onClick={() => setRoleFilter('pending')}>
+            <p className="text-[10px] font-bold text-red-500 uppercase">Pending</p>
+            <p className="text-xl font-black text-gray-800">{stats.pending}</p>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
+            <p className="text-[10px] font-bold text-blue-500 uppercase">Teachers</p>
+            <p className="text-xl font-black text-gray-800">{stats.teachers}</p>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
+            <p className="text-[10px] font-bold text-orange-500 uppercase">Admins</p>
+            <p className="text-xl font-black text-gray-800">{stats.admins}</p>
+          </div>
+        </div>
+      </div>
+
+      {status.type && (
+        <div className={`p-4 rounded-xl flex items-center justify-between text-sm font-bold shadow-md animate-in slide-in-from-top duration-300 ${
+          status.type === 'success' ? 'bg-[#ecfdf5] text-[#065f46] border border-[#a7f3d0]' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            {status.message}
+          </div>
+          <button onClick={() => setStatus({type: null, message: ''})}><X className="w-4 h-4"/></button>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <section className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Filters Bar */}
+        <div className="p-4 bg-gray-50 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="relative w-full md:w-96">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
-              placeholder="Search by email or role..."
-              value={userSearchQuery}
-              onChange={(e) => setUserSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-[#cbd5e1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/20 focus:border-[#3b82f6] bg-[#f8fafc]"
+              placeholder="Search by name, email, ID or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
+          </div>
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => setIsCreatingUser(true)}
+              className="flex items-center gap-2 bg-[#1e3a8a] text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#1e40af] transition-all shadow-md active:scale-95"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add New User</span>
+            </button>
+            <div className="flex items-center gap-2 bg-white px-3 py-2 border border-gray-200 rounded-xl">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <select 
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="text-sm font-bold text-gray-700 focus:outline-none bg-transparent"
+              >
+                <option value="all">All Roles</option>
+                <option value="pending">Pending Approvals</option>
+                <option value="admin">Administrators</option>
+                <option value="teacher">Teachers</option>
+                <option value="student">Students</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {status.type && (
-          <div className={`mb-4 p-3 rounded-lg text-sm flex items-center gap-2 ${
-            status.type === 'success' ? 'bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46]' : 'bg-[#fef2f2] border border-[#fecaca] text-[#991b1b]'
-          }`}>
-            {status.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            {status.message}
-          </div>
-        )}
-
-        {isUsersLoading ? (
-          <div className="p-8 text-center text-[#64748b]">Loading users database...</div>
-        ) : (
-          <div className="border border-[#e5e7eb] rounded-lg overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
+        {/* Table Area */}
+        <div className="overflow-x-auto min-h-[400px]">
+          {isUsersLoading ? (
+            <div className="flex flex-col items-center justify-center p-20 gap-4">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-gray-500 font-bold animate-pulse">Loading Identity Data...</p>
+            </div>
+          ) : (
+            <table className="w-full text-left whitespace-nowrap">
               <thead>
-                <tr className="bg-[#f8fafc] border-b border-[#e5e7eb]">
-                  <th className="p-3 font-bold text-[#475569]">Email</th>
-                  <th className="p-3 font-bold text-[#475569]">Role</th>
-                  <th className="p-3 font-bold text-[#475569] text-right">Actions</th>
+                <tr className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                  <th className="p-4 px-6 uppercase tracking-wider">User Information</th>
+                  <th className="p-4 px-6 uppercase tracking-wider">Contact & ID</th>
+                  <th className="p-4 px-6 uppercase tracking-wider">System Role</th>
+                  <th className="p-4 px-6 text-right uppercase tracking-wider">Management</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e5e7eb]">
-                {getFilteredUsers().length === 0 && (
+              <tbody className="divide-y divide-gray-50">
+                {getFilteredUsers().length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="p-8 text-center text-[#64748b]">No users found matching your search.</td>
-                  </tr>
-                )}
-                {getFilteredUsers().map(user => (
-                  <tr key={user.id} className="hover:bg-[#f8fafc] transition-colors">
-                    <td className="p-3 font-medium text-[#1f2937]">{user.email || 'N/A'}</td>
-                    <td className="p-3">
-                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full capitalize ${
-                        user.role === 'admin' ? 'bg-[#fee2e2] text-[#991b1b]' :
-                        user.role === 'teacher' ? 'bg-[#fef3c7] text-[#92400e]' :
-                        'bg-[#e0f2fe] text-[#0369a1]'
-                      }`}>
-                        {user.role || 'student'}
-                      </span>
+                    <td colSpan={4} className="p-20 text-center text-gray-400">
+                       <Users className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                       <p className="font-bold">No users found matching your filters</p>
                     </td>
-                    <td className="p-3 flex justify-end gap-2">
-                      {user.role !== 'admin' && (
-                        <button 
-                          onClick={() => updateUserRole(user.id, 'admin')}
-                          className="text-xs bg-[#fef2f2] text-[#991b1b] border border-[#fecaca] px-3 py-1 rounded hover:bg-[#fee2e2] transition-colors font-bold"
-                        >
-                          Make Admin
-                        </button>
-                      )}
-                      {user.role !== 'teacher' && (
-                        <button 
-                          onClick={() => updateUserRole(user.id, 'teacher')}
-                          className="text-xs bg-[#fffbeb] text-[#92400e] border border-[#fde68a] px-3 py-1 rounded hover:bg-[#fef3c7] transition-colors font-bold"
-                        >
-                          Make Teacher
-                        </button>
-                      )}
-                      {user.role !== 'student' && (
-                        <button 
-                          onClick={() => updateUserRole(user.id, 'student')}
-                          className="text-xs bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd] px-3 py-1 rounded hover:bg-[#e0f2fe] transition-colors font-bold"
-                        >
-                          Revoke Staff
-                        </button>
-                      )}
+                  </tr>
+                ) : getFilteredUsers().map(user => (
+                  <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
+                    <td className="p-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
+                          user.role === 'admin' ? 'bg-orange-500' : user.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500'
+                        }`}>
+                          {user.fullName ? user.fullName.charAt(0) : user.email?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800 text-[0.9rem] flex items-center gap-1">
+                            {user.fullName || 'New User'}
+                            {user.role === 'admin' && <ShieldCheck className="w-3 h-3 text-orange-500" />}
+                          </p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1"><Mail className="w-3 h-3" /> {user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 px-6">
+                      <div className="text-xs space-y-1">
+                        <p className="font-bold text-gray-600 flex items-center gap-1"><Smartphone className="w-3 h-3 text-gray-400" /> {user.phone || '--'}</p>
+                        <p className="text-gray-400">ID: <span className="text-blue-600 font-mono font-bold capitalize">{user.studentId || 'N/A'}</span></p>
+                      </div>
+                    </td>
+                    <td className="p-4 px-6">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider w-fit border ${
+                          user.status === 'pending' ? 'bg-red-50 text-red-700 border-red-200' :
+                          user.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                          user.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {user.status === 'pending' ? 'PENDING APPROVAL' : user.role}
+                        </span>
+                        {user.class && <span className="text-[10px] text-gray-400 font-bold ml-1">Class {user.class}</span>}
+                      </div>
+                    </td>
+                    <td className="p-4 px-6 text-right">
+                       <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => setViewingUser(user)}
+                            className="p-1.5 bg-gray-100 hover:bg-emerald-100 text-gray-500 hover:text-emerald-700 rounded-lg transition-all"
+                            title="View Profile"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          
+                          <button 
+                            onClick={() => setEditingUser(user)}
+                            className="p-1.5 bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-700 rounded-lg transition-all"
+                            title="Edit Details"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                          
+                          {user.status === 'pending' ? (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await updateDoc(doc(db, 'users', user.id), { status: 'active' });
+                                  setStatus({ type: 'success', message: 'User approved securely.' });
+                                } catch (e) {
+                                  setStatus({ type: 'error', message: 'Failed to approve.' });
+                                }
+                              }}
+                              className="px-3 py-1 bg-green-500 text-white font-bold text-xs rounded-lg hover:bg-green-600 transition-colors"
+                            >
+                              Approve
+                            </button>
+                          ) : (
+                            <div className="flex gap-1">
+                               <button 
+                                 onClick={() => setRole(user.id, 'admin')} 
+                                 disabled={user.role === 'admin'}
+                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'admin' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-orange-500 border-orange-200 hover:bg-orange-50'}`}
+                               >ADM</button>
+                               <button 
+                                 onClick={() => setRole(user.id, 'teacher')} 
+                                 disabled={user.role === 'teacher'}
+                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'teacher' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-blue-500 border-blue-200 hover:bg-blue-50'}`}
+                               >TCH</button>
+                               <button 
+                                 onClick={() => setRole(user.id, 'student')} 
+                                 disabled={user.role === 'student'}
+                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'student' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-emerald-500 border-emerald-200 hover:bg-emerald-50'}`}
+                               >STD</button>
+                            </div>
+                          )}
+
+                          <button 
+                            onClick={() => deleteUser(user.id, user.fullName || user.email || '')}
+                            className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2"
+                            title="Delete Account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </section>
+
+      {/* View User Modal */}
+      {viewingUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 relative">
+              <h2 className="text-xl font-black flex items-center gap-2">
+                <User className="w-6 h-6" /> User Profile
+              </h2>
+              <p className="text-emerald-100 text-xs font-medium mt-1">Detailed identity information</p>
+              <button 
+                onClick={() => setViewingUser(null)} 
+                className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="flex items-center gap-4 border-b border-gray-100 pb-6">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black text-white shadow-sm ${
+                  viewingUser.role === 'admin' ? 'bg-orange-500' : viewingUser.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500'
+                }`}>
+                  {viewingUser.fullName ? viewingUser.fullName.charAt(0) : viewingUser.email?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{viewingUser.fullName || 'No Name Provided'}</h3>
+                  <div className="flex gap-2 items-center mt-1">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border ${
+                      viewingUser.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                      viewingUser.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {viewingUser.role}
+                    </span>
+                    {viewingUser.class && (
+                      <span className="text-[10px] bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full font-bold">Class {viewingUser.class}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Email Address</p>
+                  <p className="font-medium text-gray-800 flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400"/> {viewingUser.email}</p>
+                </div>
+                
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contact Phone</p>
+                  <p className="font-medium text-gray-800 flex items-center gap-2"><Smartphone className="w-4 h-4 text-gray-400"/> {viewingUser.phone || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">School Identification</p>
+                  <p className="font-mono font-bold text-blue-600 flex items-center gap-2"><BadgeCheck className="w-4 h-4 text-gray-400"/> {viewingUser.studentId || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Account Status</p>
+                  <p className="font-medium text-emerald-600 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> {viewingUser.active !== false ? 'Active' : 'Inactive'}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6 mt-6 border-t border-gray-100">
+                <button 
+                  onClick={() => setViewingUser(null)} 
+                  className="w-full py-3.5 text-sm font-black bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-2xl transition-colors"
+                >
+                  Close Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-[#1e3a8a] text-white p-6 relative">
+              <h2 className="text-xl font-black">Edit User Profile</h2>
+              <p className="text-blue-200 text-xs font-medium">Updating identity of {editingUser.email}</p>
+              <button 
+                onClick={() => setEditingUser(null)} 
+                className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUser} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.fullName || ''}
+                    onChange={e => setEditingUser({...editingUser, fullName: e.target.value})}
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Phone Number</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.phone || ''}
+                    onChange={e => setEditingUser({...editingUser, phone: e.target.value})}
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    placeholder="+977-..."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">System Role</label>
+                  <select 
+                    value={editingUser.role}
+                    onChange={e => setEditingUser({...editingUser, role: e.target.value as any})}
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
+                  >
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Designated Class</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.class || ''}
+                    onChange={e => setEditingUser({...editingUser, class: e.target.value})}
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    placeholder="e.g. 10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">School Identification (ID)</label>
+                <input 
+                  type="text" 
+                  value={editingUser.studentId || ''}
+                  onChange={e => setEditingUser({...editingUser, studentId: e.target.value})}
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-600" 
+                  placeholder="EX: SA-2024-001"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setEditingUser(null)} 
+                  className="flex-1 py-4 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  Discard Changes
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-4 text-sm font-black bg-[#1e3a8a] text-white rounded-2xl shadow-lg hover:bg-[#1e40af] transition-transform active:scale-95"
+                >
+                  Save Profile Info
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {isCreatingUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-[#1e3a8a] text-white p-6 relative">
+              <button 
+                onClick={() => setIsCreatingUser(false)} 
+                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/30 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+              <h3 className="text-xl font-black">Register New System Profile</h3>
+              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Initialize account for student or staff</p>
+            </div>
+            
+            <form onSubmit={handleCreateUser} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Email (Required)</label>
+                  <input 
+                    required
+                    type="email" 
+                    value={newUser.email}
+                    onChange={e => setNewUser({...newUser, email: e.target.value})}
+                    placeholder="official@school.com"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1"><Lock className="w-3 h-3" /> Temporary Password (Required)</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newUser.password}
+                    onChange={e => setNewUser({...newUser, password: e.target.value})}
+                    placeholder="Set initial password"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">System Role</label>
+                  <select 
+                    value={newUser.role}
+                    onChange={e => setNewUser({...newUser, role: e.target.value as any})}
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  >
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Legal Name</label>
+                  <input 
+                    type="text" 
+                    value={newUser.fullName}
+                    onChange={e => setNewUser({...newUser, fullName: e.target.value})}
+                    placeholder="Enter full name"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Student ID / Staff ID</label>
+                  <input 
+                    type="text" 
+                    value={newUser.studentId}
+                    onChange={e => setNewUser({...newUser, studentId: e.target.value})}
+                    placeholder="ID Number (e.g. 1001)"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Class (Students Only)</label>
+                  <input 
+                    type="text" 
+                    value={newUser.class}
+                    onChange={e => setNewUser({...newUser, class: e.target.value})}
+                    placeholder="e.g. 10B"
+                    disabled={newUser.role !== 'student'}
+                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Phone</label>
+                  <input 
+                    type="text" 
+                    value={newUser.phone}
+                    onChange={e => setNewUser({...newUser, phone: e.target.value})}
+                    placeholder="Phone number"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsCreatingUser(false)} 
+                  className="flex-1 py-4 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-2xl transition-colors disabled:opacity-50"
+                  disabled={isCreating}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 py-4 text-sm font-black bg-[#1e3a8a] text-white rounded-2xl shadow-lg hover:bg-[#1e40af] transition-transform active:scale-95 disabled:opacity-70"
+                >
+                  {isCreating ? 'Creating...' : 'Initialize User Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

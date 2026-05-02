@@ -1,4 +1,5 @@
 import { Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function Events() {
   const events = [
@@ -34,8 +35,15 @@ export default function Events() {
         <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
           <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4">School Events</div>
           <div className="flex flex-col gap-4">
-            {events.map((event) => (
-              <div key={event.id} className="flex gap-4 p-3 bg-[#f9fafb] rounded-lg border border-[#e5e7eb]">
+            {events.map((event, index) => (
+              <motion.div 
+                key={event.id} 
+                className="flex gap-4 p-3 bg-[#f9fafb] rounded-lg border border-[#e5e7eb] hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-white"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
                 <div className="w-24 h-24 shrink-0 rounded overflow-hidden relative">
                   <img
                     src={event.image}
@@ -59,7 +67,7 @@ export default function Events() {
                   <h3 className="text-sm font-bold text-[#1f2937] mb-1">{event.title}</h3>
                   <p className="text-xs text-[#6b7280] line-clamp-2">{event.description}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </section>

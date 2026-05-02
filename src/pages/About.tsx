@@ -1,9 +1,10 @@
-import { Info, Target, Eye, Heart, History as HistoryIcon, User, Edit2, Save, X } from 'lucide-react';
+import { Info, Target, Eye, Heart, History as HistoryIcon, User, Edit2, Save, X, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
+const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
 
 export default function About() {
   const [content, setContent] = useState({
-    aboutUs: 'Located in the heart of Bastipur-5, Siraha, Madhesh Province, Nepal, Shikshantar Academy is a premier educational institution dedicated to providing quality education from Playgroup to Class Ten (10). We foster an environment where academic excellence meets character building.',
+    aboutUs: 'Located in the heart of Karjanha Municipality, Ward No. 05, Siraha, Madhesh Province, Nepal, Shikshantar Academy is a premier educational institution dedicated to providing quality education from Playgroup to Class Ten (10). We foster an environment where academic excellence meets character building.',
     mission: 'To provide a nurturing, safe, and innovative learning environment that empowers students to reach their full potential, develop critical thinking skills, and become responsible global citizens.',
     vision: 'To be a center of excellence in education that inspires lifelong learning, creativity, and leadership among students in the Madhesh Province and beyond.',
     history: 'Established with a vision to transform the educational landscape of Siraha, Shikshantar Academy has grown from a modest beginning into a leading institution. Over the years, we have consistently produced outstanding academic results and nurtured talents across various disciplines, becoming a trusted name for parents in the region.',
@@ -93,6 +94,17 @@ export default function About() {
               {content.aboutUs}
             </p>
           )}
+          <div className="mt-6">
+            <a
+              href="https://maps.app.goo.gl/n3Y7iLB1fry5cqtX9"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-lg text-sm font-bold inline-flex items-center gap-2 hover:bg-[#1e40af] transition-colors shadow-sm"
+            >
+              <MapPin className="h-4 w-4" />
+              Find Us on Map
+            </a>
+          </div>
         </div>
       </section>
 
@@ -186,7 +198,7 @@ export default function About() {
 
           <section className="bg-[#1e293b] text-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col justify-center relative overflow-hidden">
             <div className="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4">
-              <User className="w-32 h-32" />
+              <img src={logoImage} alt="Background Logo" className="w-32 h-32 object-contain grayscale" />
             </div>
             <div className="relative z-10">
               <blockquote className="text-sm italic mb-4 leading-relaxed relative">

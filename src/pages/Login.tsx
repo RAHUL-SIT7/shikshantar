@@ -16,12 +16,14 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
+const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
 
 type Role = 'student' | 'teacher' | 'admin';
 type View = 'login' | 'register' | 'verify' | 'forgot' | 'reset' | 'register_otp';
 
 export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val: boolean) => void }) {
   const [searchParams] = useSearchParams();
+  const logoUrl = logoImage;
   const [view, setView] = useState<View>('login');
   const [role, setRole] = useState<Role>('student');
   const [email, setEmail] = useState('');
@@ -78,9 +80,26 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        
+        if (userData.status === 'pending') {
+          await signOut(auth);
+          setError('Your account is pending admin approval. Please wait for an administrator to approve your account.');
+          setLoading(false);
+          return;
+        }
+
         if (userData.children && userData.children.length > 0) {
           // Set primary child student ID to local storage automatically
           localStorage.setItem('studentId', userData.children[0].studentId);
+          // BACKFILL studentIds if missing for legacy users
+          if (!userData.studentIds) {
+            const ids = userData.children.map((c: any) => c.studentId);
+            try {
+              await updateDoc(doc(db, 'users', userCredential.user.uid), { studentIds: ids });
+            } catch (e) {
+              console.warn("Failed to backfill studentIds:", e);
+            }
+          }
         }
         if (userData.role) {
           localStorage.setItem('userRole', userData.role);
@@ -91,16 +110,23 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         localStorage.setItem('userRole', "student");
       }
 
+      localStorage.removeItem('isGuest');
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
-      setError('Email or password is incorrect');
+      console.error("Login failed:", err);
+      // Show actual error message if possible to help the user debug
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+         setError('Email or password is incorrect.');
+      } else {
+         setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const saveStudentToFirestore = async (uid: string) => {
+  const saveStudentToFirestore = async (uid: string, isNewUser: boolean = false) => {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
     const studentData = {
@@ -116,14 +142,17 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
     if (userSnap.exists()) {
       await updateDoc(userRef, {
-        children: arrayUnion(studentData)
+        children: arrayUnion(studentData),
+        studentIds: arrayUnion(studentIdInput)
       });
     } else {
       await setDoc(userRef, {
         role: "student", // Force everyone to student by default on registration
         email: email,
         phone: phone,
-        children: [studentData]
+        status: "pending", // New users go to pending state
+        children: [studentData],
+        studentIds: [studentIdInput]
       });
     }
   };
@@ -155,8 +184,17 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       }
 
       if (userCredential && userCredential.user) {
-        await saveStudentToFirestore(userCredential.user.uid);
+        await saveStudentToFirestore(userCredential.user.uid, !isExistingUser);
         
+        if (!isExistingUser) {
+           await signOut(auth);
+           setMessage('Registration complete! Your account is pending admin approval. Please wait until your account is approved before logging in.');
+           setTimeout(() => {
+             setView('login');
+           }, 3000);
+           return;
+        }
+
         // Temporarily store the latest StudentId in local storage for instant dashboard lookup
         if (studentIdInput) {
           localStorage.setItem('studentId', studentIdInput);
@@ -166,6 +204,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         setMessage(isExistingUser ? 'New child added successfully to your account!' : 'Registration complete! Logging in...');
         
         setTimeout(() => {
+          localStorage.removeItem('isGuest');
           setIsAuthenticated(true);
           navigate('/');
         }, 1500);
@@ -323,7 +362,24 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       
       if (userSnap.exists()) {
         const userData = userSnap.data();
-        if (userData.role) {
+        
+        if (userData.children && userData.children.length > 0) {
+          localStorage.setItem('studentId', userData.children[0].studentId);
+          // BACKFILL studentIds if missing for legacy users
+          if (!userData.studentIds) {
+            const ids = userData.children.map((c: any) => c.studentId);
+            try {
+              await updateDoc(userRef, { studentIds: ids });
+            } catch (e) {
+              console.warn("Failed to backfill studentIds:", e);
+            }
+          }
+        }
+        
+        if (result.user.email === 'rahulsah4534@gmail.com') {
+          localStorage.setItem('userRole', 'admin');
+          await updateDoc(userRef, { role: 'admin' }).catch(() => {});
+        } else if (userData.role) {
           localStorage.setItem('userRole', userData.role);
         } else {
           // If no role exists in DB for an existing user, safe fallback to student
@@ -331,10 +387,12 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         }
       } else {
         // Completely new user. Force role to 'student' to prevent hacking Google login.
-        await setDoc(userRef, { role: 'student', email: result.user.email });
-        localStorage.setItem('userRole', 'student');
+        const defaultRole = result.user.email === 'rahulsah4534@gmail.com' ? 'admin' : 'student';
+        await setDoc(userRef, { role: defaultRole, email: result.user.email });
+        localStorage.setItem('userRole', defaultRole);
       }
 
+      localStorage.removeItem('isGuest');
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
@@ -396,7 +454,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         {/* Professional Background Pattern/Logo */}
         <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03]">
           <img 
-            src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
+            src={logoUrl} 
             alt="School Background Pattern" 
             className="w-full max-w-[800px] object-contain"
           />
@@ -426,7 +484,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       {/* Professional Background Pattern/Logo */}
       <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03] pointer-events-none">
         <img 
-          src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
+          src={logoUrl} 
           alt="School Background Pattern" 
           className="w-[120%] max-w-[1000px] object-contain"
         />
@@ -436,11 +494,14 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         <div className="text-center mb-8">
           <div className="mx-auto mb-5 flex items-center justify-center gap-3">
             <img 
-              src="https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE" 
+              src={logoUrl} 
               alt="Shikshantar Academy Logo" 
               className="w-12 h-12 object-contain drop-shadow-sm"
             />
-            <h1 className="text-xl sm:text-2xl font-black text-[#1e3a8a] uppercase tracking-wide">Shikshantar</h1>
+            <div className="text-left flex flex-col justify-center">
+              <h1 className="text-xl sm:text-2xl font-black text-[#1e3a8a] uppercase tracking-wide leading-tight">Shikshantar Academy</h1>
+              <p className="text-[10px] text-[#64748b] font-bold uppercase tracking-wider">Bastipur-5, Siraha</p>
+            </div>
           </div>
           <h2 className="text-2xl font-bold text-[#0f172a] tracking-tight">
             {view === 'forgot' && 'Reset Password'}
@@ -528,7 +589,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               disabled={loading}
               className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl text-sm mt-6 hover:bg-[#1e40af] hover:shadow-lg hover:shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none"
             >
-              {loading ? 'Please wait...' : `Login Securely`}
+              {loading ? 'Please wait...' : `Login`}
             </button>
 
             <div className="mt-8 mb-6">
@@ -554,6 +615,18 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 Sign in with Google
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('isGuest', 'true');
+                window.location.href = '/';
+              }}
+              className="mt-3 w-full flex items-center justify-center gap-3 bg-slate-100 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-slate-200 hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
+            >
+              <User className="w-5 h-5 text-slate-500" />
+              Continue as Guest User
+            </button>
 
             <p className="text-center text-sm text-[#475569] mt-6">
               Don't have an account?{' '}
@@ -935,6 +1008,18 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 Sign in with Google
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('isGuest', 'true');
+                window.location.href = '/';
+              }}
+              className="mt-3 w-full flex items-center justify-center gap-3 bg-slate-100 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-slate-200 hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
+            >
+              <User className="w-5 h-5 text-slate-500" />
+              Continue as Guest User
+            </button>
 
             <p className="text-center text-sm text-[#475569] mt-6">
               Already have an account?{' '}

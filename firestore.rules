@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'rahulsah4534@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isTeacher() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+      );
+    }
+    
+    // 1. Users Security Check
+    match /users/{userId} {
+        allow read: if isSignedIn();
+        allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+        allow create: if isSignedIn();
+        allow delete: if isAdmin();
+    }
+
+    // 2. Settings (Only Admin can edit)
+    match /settings/{document=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+    
+    // 3. Exams
+    match /exams/{examId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin() || isTeacher();
+    }
+
+    function hasStudentId(studentId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('studentIds', []).hasAny([studentId]);
+    }
+
+    // 4. Results
+    match /results/{resultId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin() || isTeacher();
+    }
+
+    // 5. Result Summary
+    match /resultSummary/{summaryId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin() || isTeacher();
+    }
+
+    // 6. Fee Structure
+    match /feeStructure/{feeId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+
+    // 7. Student Fees
+    match /studentFees/{feeId} {
+        allow read: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+        allow write: if isAdmin();
+    }
+
+    // 8. Notices
+    match /notices/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    // 9. Admissions
+    match /admissions/{document=**} {
+        allow create: if true; 
+        allow read, update, delete: if isAdmin();
+    }
+
+    // 10. Transactions
+    match /transactions/{transactionId} {
+        allow read: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+        allow write: if isAdmin();
+    }
+
+    // 11. School Data
+    match /school_data/{document=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
+    // 12. Dev / Legacy Collections
+    match /financial_students/{document=**} {
+        allow read, write: if isAdmin();
+    }
+
+    match /financial_transactions/{document=**} {
+        allow read, write: if isAdmin();
+    }
+  }
+}

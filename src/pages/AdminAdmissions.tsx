@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '../firebase';
+import { formatBSDate, formatBSDateTime } from '../lib/nepaliDate';
+import { db, auth } from '../firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown, Settings, Plus, Download } from 'lucide-react';
 
 export default function AdminAdmissions() {
@@ -16,42 +18,50 @@ export default function AdminAdmissions() {
   const [formFields, setFormFields] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch Admission Data
-    const q = query(collection(db, 'admissions'), orderBy('submittedAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const records: any[] = [];
-      querySnapshot.forEach((doc) => {
-        records.push({ id: doc.id, ...doc.data() });
-      });
-      setAdmissions(records);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching admissions: ", error);
-      setLoading(false);
+    let unsubscribe = () => {};
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Fetch Admission Data
+        const q = query(collection(db, 'admissions'), orderBy('submittedAt', 'desc'));
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const records: any[] = [];
+          querySnapshot.forEach((docSnap) => {
+            records.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          setAdmissions(records);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching admissions: ", error);
+          setLoading(false);
+        });
+
+        // Fetch Config Fields
+        const fetchFormConfig = async () => {
+          const configDoc = await getDoc(doc(db, 'settings', 'admissionFormConfig'));
+          if (configDoc.exists() && configDoc.data().fields) {
+            setFormFields(configDoc.data().fields);
+          } else {
+            setFormFields([
+                { id: 'studentName', label: 'Student Full Name', type: 'text', required: true },
+                { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
+                { id: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
+                { id: 'parentName', label: 'Parent/Guardian Name', type: 'text', required: true },
+                { id: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
+                { id: 'email', label: 'Email Address', type: 'email', required: false },
+                { id: 'address', label: 'Residential Address', type: 'textarea', required: true },
+                { id: 'gradeAppliedFor', label: 'Grade Applied For', type: 'select', options: ['Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2'], required: true },
+                { id: 'previousSchool', label: 'Previous School Attended (If any)', type: 'text', required: false }
+            ]);
+          }
+        };
+        fetchFormConfig();
+      } else {
+        setAdmissions([]);
+        setLoading(false);
+      }
     });
 
-    // Fetch Config Fields
-    const fetchFormConfig = async () => {
-      const configDoc = await getDoc(doc(db, 'settings', 'admissionFormConfig'));
-      if (configDoc.exists() && configDoc.data().fields) {
-        setFormFields(configDoc.data().fields);
-      } else {
-        setFormFields([
-            { id: 'studentName', label: 'Student Full Name', type: 'text', required: true },
-            { id: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
-            { id: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
-            { id: 'parentName', label: 'Parent/Guardian Name', type: 'text', required: true },
-            { id: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
-            { id: 'email', label: 'Email Address', type: 'email', required: false },
-            { id: 'address', label: 'Residential Address', type: 'textarea', required: true },
-            { id: 'gradeAppliedFor', label: 'Grade Applied For', type: 'select', options: ['Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2'], required: true },
-            { id: 'previousSchool', label: 'Previous School Attended (If any)', type: 'text', required: false }
-        ]);
-      }
-    };
-    fetchFormConfig();
-
-    return () => unsubscribe();
+    return () => { unsubscribe(); unsubAuth(); };
   }, []);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -143,10 +153,7 @@ export default function AdminAdmissions() {
     if (!timestamp) return 'N/A';
     // Handle Firestore timestamp
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
+    return formatBSDateTime(date);
   };
 
   if (loading) {
@@ -173,7 +180,7 @@ export default function AdminAdmissions() {
       });
       // Date and Status
       const dateRaw = adm.submittedAt ? (adm.submittedAt.toDate ? adm.submittedAt.toDate() : new Date(adm.submittedAt)) : new Date();
-      rowData.push(`"${dateRaw.toLocaleDateString()}"`);
+      rowData.push(`"${formatBSDateTime(dateRaw)}"`);
       rowData.push(`"${adm.status || 'Pending'}"`);
       return rowData.join(',');
     });
@@ -188,7 +195,7 @@ export default function AdminAdmissions() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Admission_List_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `Admission_List_${formatBSDate(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

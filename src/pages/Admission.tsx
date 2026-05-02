@@ -3,6 +3,7 @@ import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { CheckCircle2, AlertCircle, Send, Loader2, Search, FileText, Settings, X, Plus, Save } from 'lucide-react';
 import { auth } from '../firebase';
+const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
 
 export default function Admission() {
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -13,11 +14,6 @@ export default function Admission() {
   // Form Config State
   const [isFormConfigOpen, setIsFormConfigOpen] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-
-  // Tracking state
-  const [searchPhone, setSearchPhone] = useState('');
-  const [trackedStatus, setTrackedStatus] = useState<any | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     // Check if user is admin
@@ -133,38 +129,6 @@ export default function Admission() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleTrackStatus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchPhone) return;
-    setIsSearching(true);
-    setTrackedStatus(null);
-    setStatus({ type: null, message: '' });
-
-    try {
-      const formattedPhone = searchPhone.startsWith('+977 ') ? searchPhone : `+977 ${searchPhone}`;
-      const q = query(collection(db, 'admissions'), where('contactNumber', '==', formattedPhone));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        // Find most recent application if multiple
-        const applications = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        applications.sort((a: any, b: any) => {
-          const tA = a.submittedAt?.toDate ? a.submittedAt.toDate().getTime() : 0;
-          const tB = b.submittedAt?.toDate ? b.submittedAt.toDate().getTime() : 0;
-          return tB - tA;
-        });
-        setTrackedStatus(applications[0]);
-      } else {
-        setStatus({ type: 'error', message: 'No application found with this phone number.' });
-      }
-    } catch (error) {
-      console.error("Error tracking status:", error);
-      setStatus({ type: 'error', message: 'Failed to search application status.' });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const handleAddField = () => {
     setFormFields([...formFields, { id: `field_${Date.now()}`, label: 'New Field', type: 'text', required: false, options: [] }]);
   };
@@ -196,7 +160,7 @@ export default function Admission() {
     }
   };
 
-  const logoUrl = "https://scontent-bom5-2.xx.fbcdn.net/v/t39.30808-1/449434102_992784866187268_1459281150796232207_n.jpg?stp=dst-jpg_p120x120_tt6&_nc_cat=108&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=1pELfyAs9iEQ7kNvwFKGlth&_nc_oc=Ado3AXGnO1tkaDoFFHD0b_RbyaDvwKJrUS3JXWUZpaNypo5PhqMDsre9ZEdlR0eyAAI&_nc_zt=24&_nc_ht=scontent-bom5-2.xx&_nc_gid=cSgG0s_7KYKgIQNALay2mg&_nc_ss=7a3a8&oh=00_Af3Q_Aa79RcWHN6hbfJop6RWm79F0m9oZilwAypG0k7-HQ&oe=69E68DAE";
+  const logoUrl = logoImage;
 
   if (isLoadingFields) {
     return (
@@ -241,58 +205,8 @@ export default function Admission() {
                 <Settings className="w-4 h-4"/> Edit Form Fields
               </button>
             )}
-
-            <form onSubmit={handleTrackStatus} className="flex flex-col items-end gap-1 bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm w-full sm:w-auto">
-              <span className="text-xs font-bold text-gray-600 mb-1">Track Application Status</span>
-              <div className="flex">
-                <input 
-                  type="text" 
-                  value={searchPhone}
-                  onChange={(e) => setSearchPhone(e.target.value.replace(/\D/g, '').slice(0,10))}
-                  placeholder="Enter Phone Number..." 
-                  className="px-2 py-1.5 text-sm border border-gray-300 rounded-l outline-none focus:border-blue-500 w-44"
-                />
-                <button type="submit" disabled={isSearching} className="bg-[#1e3a8a] text-white px-3 py-1.5 rounded-r hover:bg-[#1e40af] transition-colors flex items-center justify-center min-w-[40px]">
-                  {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
-
-        {trackedStatus && (
-          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex justify-between items-start mb-2 border-b border-blue-100 pb-2">
-              <h3 className="font-bold text-[#1e3a8a] flex items-center gap-2"><FileText className="w-4 h-4"/> Application Status</h3>
-              <button onClick={() => setTrackedStatus(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4"/></button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-bold">Applicant</p>
-                <p className="text-sm font-semibold text-gray-800">{trackedStatus.studentName}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-bold">Grade</p>
-                <p className="text-sm font-semibold text-gray-800">{trackedStatus.gradeAppliedFor}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-bold">Date Applied</p>
-                <p className="text-sm font-semibold text-gray-800">{trackedStatus.submittedAt?.toDate ? trackedStatus.submittedAt.toDate().toLocaleDateString() : 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-bold">Current Status</p>
-                <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold mt-1 ${
-                  trackedStatus.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
-                  trackedStatus.status === 'Contacted' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
-                  trackedStatus.status === 'Admitted' ? 'bg-green-100 text-green-800 border-green-200' : 
-                  'bg-red-100 text-red-800 border-red-200'
-                }`}>
-                  {trackedStatus.status || 'Pending'}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {status.type === 'success' && (
           <div className="mb-6 bg-[#d1fae5] border border-[#34d399] text-[#065f46] px-4 py-3 rounded-lg flex items-center gap-3">
@@ -380,16 +294,18 @@ export default function Admission() {
           ))}
         </div>
 
-        <div className="pt-4 border-t border-[#e5e7eb] flex justify-end">
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${isSubmitting ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Application'}
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
+        {!isAdmin && (
+          <div className="pt-4 border-t border-[#e5e7eb] flex justify-end">
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${isSubmitting ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Application'}
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </form>
 
       {/* Form Configuration Modal (Admin Only) */}
