@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CheckCircle2, Download, PieChart as PieChartIcon, Loader2, Search, User, ClipboardList } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import jsPDF from 'jspdf';
 import { toCanvas } from 'html-to-image';
@@ -10,179 +10,97 @@ import * as XLSX from 'xlsx';
 
 import { ReportCardTemplate } from '../components/admin/ReportCardTemplate';
 import { StudentResult } from '../data/resultsState';
+import { getStudentResults, getClassResults } from '../lib/resultService';
 
-const EXAM_TYPES = ['Terminal 1', 'Unit Test 1', 'Terminal 2', 'Final Exam'];
+const EXAM_TYPES = ["First Terminal Examination", "Second Terminal Examination", "Third Terminal Examination", "Final Examination"];
+const ACADEMIC_YEAR = "2026";
 
 export default function Result() {
   const [studentId, setStudentId] = useState('');
   const [results, setResults] = useState<StudentResult[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('Terminal 1');
+  const [activeTab, setActiveTab] = useState<string>('First Terminal Examination');
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchStudentId, setSearchStudentId] = useState('');
   const [userRole, setUserRole] = useState('student');
+  const [topperData, setTopperData] = useState<StudentResult | null>(null);
 
   const pdfRef = useRef<HTMLDivElement>(null);
 
-  const fetchResults = async (uid: string) => {
-     setLoading(true);
-     try {
-         let examsSnap;
-         try {
-             examsSnap = await getDocs(query(collection(db, 'exams'), where('published', '==', true)));
-         } catch (e: any) {
-             console.error("1. Failed exams: ", e);
-             throw new Error("fetching exams: " + e.message);
-         }
-         const publishedExamIds = new Set<string>();
-         const examStats: Record<string, { highestMarks?: Record<string, number>, classAverages?: Record<string, number> }> = {};
-         
-         examsSnap.forEach(doc => {
-            publishedExamIds.add(doc.id);
-            const data = doc.data();
-            examStats[doc.id] = {
-               highestMarks: data.highestMarks || {},
-               classAverages: data.classAverages || {}
-            };
-         });
-
-         if (publishedExamIds.size === 0) {
-             setResults([]);
-             setLoading(false);
-             return;
-         }
-
-         // 2. Fetch result summaries for user
-         let summarySnap;
-         try {
-             summarySnap = await getDocs(query(collection(db, 'resultSummary'), where('studentId', '==', uid)));
-         } catch (e: any) {
-             console.error("2. Failed summarySnap: ", e);
-             throw new Error("fetching summaries: " + e.message);
-         }
-         const summaryList: any[] = [];
-         summarySnap.forEach(doc => {
-             if (publishedExamIds.has(doc.data().examId)) {
-                 summaryList.push({ id: doc.id, ...doc.data() });
-             }
-         });
-
-         if (summaryList.length === 0) {
-             setResults([]);
-             setLoading(false);
-             return;
-         }
-
-         // 3. Fetch subjects (results) for these summaries
-         let resultsSnap;
-         try {
-             resultsSnap = await getDocs(query(collection(db, 'results'), where('studentId', '==', uid)));
-         } catch (e: any) {
-             console.error("3. Failed resultsSnap: ", e);
-             throw new Error("fetching results: " + e.message);
-         }
-         const resultsByExamId: Record<string, any> = {};
-         resultsSnap.forEach(doc => {
-             const sub = doc.data();
-             if (!resultsByExamId[sub.examId]) resultsByExamId[sub.examId] = {};
-             resultsByExamId[sub.examId][sub.subject] = {
-                 fullMarks: sub.fullMarks, obtained: sub.marks
-             };
-         });
-
-         const parsedData: StudentResult[] = summaryList.map(sum => ({
-              studentId: sum.studentId,
-              studentName: sum.studentName,
-              class: sum.class,
-              rollNo: sum.rollNo || '',
-              examType: sum.examType,
-              examId: sum.examId,
-              subjects: resultsByExamId[sum.examId] || {},
-              highestMarks: examStats[sum.examId]?.highestMarks || {},
-              classAverages: examStats[sum.examId]?.classAverages || {},
-              total: sum.total,
-              fullTotal: sum.fullTotal,
-              percentage: sum.percentage,
-              grade: sum.grade,
-              gpa: sum.gpa || 0,
-              rank: sum.rank || 0,
-              published: true, // We filtered by published
-              classTeacherRemark: sum.classTeacherRemark || ''
-         }));
-
-         setResults(parsedData);
-         if (parsedData.length > 0) {
-             setActiveTab(parsedData[parsedData.length - 1].examType);
-         }
-     } catch (err: any) {
-         console.error("Error retrieving results:", err);
-     } finally {
-         setLoading(false);
-     }
+  const fetchResults = async (rollNo: string, classId: string) => {
+    setLoading(true);
+    try {
+      const studentResults = await getStudentResults(rollNo, classId, [ACADEMIC_YEAR], EXAM_TYPES);
+      setResults(studentResults);
+      if (studentResults.length > 0) {
+        setActiveTab(studentResults[studentResults.length - 1].examType);
+      }
+    } catch (err: any) {
+      console.error("Error retrieving results:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    let unsubAuth = onAuthStateChanged(auth, async (user) => {
-       const role = localStorage.getItem('userRole') || 'student';
-       setUserRole(role);
-       let uidToUse = null;
-       
-       if (role === 'student') {
-           uidToUse = localStorage.getItem('studentId');
-           if (!uidToUse && user) {
-               uidToUse = user.uid; // fallback
-           }
-       } else {
-           // Admin or teacher
-           uidToUse = localStorage.getItem('adminSearchStudentId');
-       }
-       
-       if (!uidToUse && (!user || role !== 'student')) {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
+      const role = localStorage.getItem('userRole') || 'student';
+      setUserRole(role);
+
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const classId = userData.class ? String(userData.class) : null;
+          const rollNo = userData.studentId || userData.rollNo || null;
+          
+          if (classId && rollNo) {
+             setStudentId(rollNo);
+             await fetchResults(rollNo, classId);
+          } else {
+             setResults([]);
+             setLoading(false);
+          }
+        } else {
+            setResults([]);
             setLoading(false);
-            return;
-       }
-
-       if (user && role === 'student') {
-           // Ensure backfill of studentIds for the rule checks
-           try {
-               const uDoc = await getDoc(doc(db, 'users', user.uid));
-               if (uDoc.exists()) {
-                   const data = uDoc.data();
-                   if (!data.studentIds && data.children && data.children.length > 0) {
-                       const ids = data.children.map((c: any) => c.studentId);
-                       await updateDoc(doc(db, 'users', user.uid), { studentIds: ids });
-                   }
-               }
-           } catch {
-               // ignore
-           }
-       }
-
-       setStudentId(uidToUse || user?.uid || '');
-       if (uidToUse) {
-           await fetchResults(uidToUse);
-       }
+        }
+      } else {
+        setResults([]);
+        setLoading(false);
+      }
     });
 
-    return () => {
-       unsubAuth();
-    };
+    return () => unsubAuth();
   }, []);
+
+  const currentResult = results.find(r => r.examType === activeTab);
+
+  useEffect(() => {
+    const fetchTopper = async () => {
+      if (currentResult) {
+        const classResults = await getClassResults(currentResult.examType, currentResult.classId, ACADEMIC_YEAR);
+        const topper = classResults.find(r => r.rank === 1);
+        if (topper) {
+          setTopperData(topper);
+        }
+      }
+    };
+    fetchTopper();
+  }, [currentResult]);
+
 
   const handleAdminSearch = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!searchStudentId.trim()) return;
-      localStorage.setItem('adminSearchStudentId', searchStudentId.trim());
-      setStudentId(searchStudentId.trim());
-      fetchResults(searchStudentId.trim());
+      // Admin search is disabled for now.
   };
 
-  // Group results into dynamically available exam types to act as navigation
   const availableExams = useMemo(() => {
      return Array.from(new Set(results.map(r => r.examType)));
   }, [results]);
-
-  const currentResult = results.find(r => r.examType === activeTab);
 
   const getGradeInfo = (obtained: number | "AB", full: number) => {
      if (obtained === "AB") return { grade: "NG", gpa: 0, pass: false, text: "Absent" };
@@ -199,15 +117,19 @@ export default function Result() {
 
   const chartData = useMemo(() => {
      if (!currentResult) return [];
-     return Object.entries(currentResult.subjects).map(([sub, rawMarks]) => {
-         const marks: any = rawMarks;
+     const subjectEntries = Array.isArray(currentResult.subjects)
+        ? currentResult.subjects
+        : Object.values(currentResult.subjects);
+
+     return subjectEntries.map((subject) => {
+        const topperSubject = topperData?.subjects.find(s => s.name === subject.name);
          return {
-            subject: sub,
-            myMarks: marks.obtained === "AB" ? 0 : marks.obtained,
-            highestMarks: currentResult.highestMarks?.[sub] || (marks.obtained === "AB" ? 0 : marks.obtained)
+            subject: subject.name,
+            myMarks: subject.obtained === "AB" ? 0 : subject.obtained,
+            highestMarks: topperSubject ? (topperSubject.obtained === "AB" ? 0 : topperSubject.obtained) : 0
          };
      });
-  }, [currentResult]);
+  }, [currentResult, topperData]);
 
   const downloadPDFReport = async () => {
       if (!pdfRef.current || !currentResult) return;
@@ -230,45 +152,7 @@ export default function Result() {
   };
 
    const downloadClassResultExcel = async () => {
-      if (!currentResult) return;
-      try {
-         const summariesSnap = await getDocs(query(collection(db, 'resultSummary'), where('examId', '==', currentResult.examId)));
-         const resultsSnap = await getDocs(query(collection(db, 'results'), where('examId', '==', currentResult.examId)));
-         
-         const resultsByStudent: Record<string, any> = {};
-         resultsSnap.forEach(doc => {
-            const data = doc.data();
-            if (!resultsByStudent[data.studentId]) resultsByStudent[data.studentId] = {};
-            resultsByStudent[data.studentId][data.subject] = data.marks;
-         });
-
-         const excelData = summariesSnap.docs.map(doc => {
-             const data = doc.data();
-             return {
-                 "Student ID": data.studentId,
-                 "Student Name": data.studentName,
-                 "Class": data.class,
-                 "Total Marks": data.total,
-                 "Percentage": data.percentage,
-                 "GPA": data.gpa,
-                 "Grade": data.grade,
-                 "Rank": data.rank,
-                 ...resultsByStudent[data.studentId]
-             };
-         });
-         
-         excelData.sort((a, b) => (a.Rank || 999) - (b.Rank || 999));
-
-         const ws = XLSX.utils.json_to_sheet(excelData);
-         const wb = XLSX.utils.book_new();
-         XLSX.utils.book_append_sheet(wb, ws, "Class Result");
-         XLSX.writeFile(wb, `${currentResult.class}_${currentResult.examType}_Results.xlsx`);
-      } catch (err: any) {
-         console.error("Error downloading excel", err);
-         if (err.message.includes("permission")) {
-             alert("Permission Denied: You must be an admin to download class results.");
-         }
-      }
+       alert("This feature is under development.");
    };
 
   return (
@@ -281,7 +165,7 @@ export default function Result() {
             </div>
             <form onSubmit={handleAdminSearch} className="flex gap-2 w-full sm:w-auto">
                <input type="text" value={searchStudentId} onChange={(e) => setSearchStudentId(e.target.value)} placeholder="e.g. STU123" className="border border-gray-200 px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-[#1e3a8a]" />
-               <button type="submit" className="bg-[#1e3a8a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-800"><Search className="w-4 h-4"/> Search</button>
+               <button type="submit" className="bg-[#1e3a8a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-800" disabled><Search className="w-4 h-4"/> Search</button>
             </form>
          </div>
       )}
@@ -345,7 +229,7 @@ export default function Result() {
             {/* RESULT SUMMARY CARD */}
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 items-center">
                <div className="flex-1 text-center md:text-left w-full">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{currentResult.examType} | Class {currentResult.class}</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{currentResult.examType} | {currentResult.classId}</p>
                   <h2 className="text-2xl md:text-3xl font-black text-gray-900">{currentResult.studentName}</h2>
                   <p className="text-sm font-bold text-gray-500 mt-2">Rank: 🏆 {currentResult.rank} </p>
                </div>
@@ -367,7 +251,7 @@ export default function Result() {
                      <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">GPA</p>
                      <p className="text-2xl font-black text-amber-600">
                         {(() => {
-                             const subjects = Object.values(currentResult.subjects) as any[];
+                             const subjects = Array.isArray(currentResult.subjects) ? currentResult.subjects : Object.values(currentResult.subjects);
                              if (subjects.length === 0) return '0.0';
                              const totalGpa = subjects.reduce((acc, marks) => acc + getGradeInfo(marks.obtained, marks.fullMarks).gpa, 0);
                              return (totalGpa / subjects.length).toFixed(1);
@@ -392,14 +276,13 @@ export default function Result() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {Object.entries(currentResult.subjects).map(([subject, rawMarks]) => {
-                         const marks: any = rawMarks;
-                         const { grade, pass, gpa } = getGradeInfo(marks.obtained, marks.fullMarks);
+                      {(Array.isArray(currentResult.subjects) ? currentResult.subjects : Object.values(currentResult.subjects)).map((subject, index) => {
+                         const { grade, pass, gpa } = getGradeInfo(subject.obtained, subject.fullMarks);
                          return (
-                            <tr key={subject} className="hover:bg-blue-50/20">
-                              <td className="p-4 font-bold text-gray-800">{subject}</td>
-                              <td className="p-4 text-center text-gray-500 font-medium">{marks.fullMarks}</td>
-                              <td className="p-4 text-center font-black text-gray-900">{marks.obtained}</td>
+                            <tr key={index} className="hover:bg-blue-50/20">
+                              <td className="p-4 font-bold text-gray-800">{subject.name}</td>
+                              <td className="p-4 text-center text-gray-500 font-medium">{subject.fullMarks}</td>
+                              <td className="p-4 text-center font-black text-gray-900">{subject.obtained}</td>
                               <td className="p-4 text-center">
                                  <span className={`px-2 py-1 rounded text-xs font-bold ${
                                     grade.includes('A') ? 'bg-green-100 text-green-700' :
@@ -423,7 +306,7 @@ export default function Result() {
                          <td className="p-4 text-center">{currentResult.total}</td>
                          <td className="p-4 text-center">{currentResult.grade}</td>
                          <td className="p-4 text-center text-[#1e3a8a]">{(() => {
-                             const subjects = Object.values(currentResult.subjects) as any[];
+                             const subjects = Array.isArray(currentResult.subjects) ? currentResult.subjects : Object.values(currentResult.subjects);
                              if (subjects.length === 0) return '0.0';
                              const totalGpa = subjects.reduce((acc, marks) => acc + getGradeInfo(marks.obtained, marks.fullMarks).gpa, 0);
                              return (totalGpa / subjects.length).toFixed(1);

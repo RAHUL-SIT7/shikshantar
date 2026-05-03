@@ -20,6 +20,7 @@ import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import ClassResultView from './pages/admin/ClassResultView';
 
 import FeeStructure from './pages/FeeStructure';
 
@@ -91,6 +92,8 @@ export default function App() {
   }
 
   const isGuest = localStorage.getItem('isGuest') === 'true';
+  const EXAM_TYPES = ['First Terminal Examination', 'Second Terminal Examination', 'Third Terminal Examination', 'Final Examination'];
+  const DEFAULT_CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
   return (
     <Router>
@@ -130,6 +133,10 @@ export default function App() {
           <Route 
             path="user-approvals" 
             element={isAuthenticated && userRole === 'admin' ? <UserApprovals /> : <Navigate to="/" />} 
+          />
+           <Route 
+            path="admin/class-results"
+            element={isAuthenticated && userRole === 'admin' ? <ClassResultView examTypes={EXAM_TYPES} allClasses={DEFAULT_CLASSES} /> : <Navigate to="/" />}
           />
           <Route 
             path="profile" 

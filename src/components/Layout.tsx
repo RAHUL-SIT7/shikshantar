@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { formatBSDate, getBSYearMonthDate } from '../lib/nepaliDate';
-import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin } from 'lucide-react';
+import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin, BarChart2 } from 'lucide-react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, where, updateDoc, doc, getDoc, arrayUnion } from 'firebase/firestore';
@@ -221,6 +221,7 @@ export default function Layout({
       nav.push({ name: 'Teachers & Staff', href: '/user-approvals?filter=teacher', icon: Users, group: 2 });
       nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User, group: 2 });
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
+      nav.push({ name: 'Class Result View', href: '/admin/class-results', icon: BarChart2, group: 3 });
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
       nav.push({ name: 'Administrative User Management', href: '/user-approvals', icon: Shield, group: 5 });
       nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
@@ -347,7 +348,7 @@ export default function Layout({
                         to={item.href}
                         className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
                           location.pathname === item.href 
-                            ? 'bg-white/10 border-[#f97316]' 
+                            ? 'bg-white/10 border-[#1E3A5F]' 
                             : 'border-transparent hover:bg-white/5'
                         }`}
                       >
