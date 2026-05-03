@@ -7,6 +7,9 @@ import Gallery from './pages/Gallery';
 import AcademicCalendar from './pages/AcademicCalendar';
 import Events from './pages/Events';
 import NoticeBoard from './pages/NoticeBoard';
+import ContactUs from './pages/ContactUs';
+import FAQ from './pages/FAQ';
+import Alumni from './pages/Alumni';
 import Account from './pages/Account';
 import AccountAdmin from './pages/AccountAdmin';
 import Result from './pages/Result';
@@ -20,7 +23,6 @@ import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import ClassResultView from './pages/admin/ClassResultView';
 
 import FeeStructure from './pages/FeeStructure';
 
@@ -91,16 +93,12 @@ export default function App() {
     </div>;
   }
 
-  const isGuest = localStorage.getItem('isGuest') === 'true';
-  const EXAM_TYPES = ['First Terminal Examination', 'Second Terminal Examination', 'Third Terminal Examination', 'Final Examination'];
-  const DEFAULT_CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-
   return (
     <Router>
       <ScrollToTop />
       <Routes>
         <Route path="/login" element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
-        <Route path="/" element={(isAuthenticated || isGuest) ? <Layout isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} userRole={userRole} /> : <Navigate to="/login" />}>
+        <Route path="/" element={<Layout isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} userRole={userRole} />}>
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="facilities" element={<Facilities />} />
@@ -110,6 +108,9 @@ export default function App() {
           <Route path="admission" element={<Admission />} />
           <Route path="fee-structure" element={<FeeStructure />} />
           <Route path="notices" element={<NoticeBoard />} />
+          <Route path="contact" element={<ContactUs />} />
+          <Route path="faq" element={<FAQ />} />
+          <Route path="alumni" element={<Alumni />} />
           <Route 
             path="account" 
             element={isAuthenticated ? <Account /> : <Navigate to="/login" />} 
@@ -133,10 +134,6 @@ export default function App() {
           <Route 
             path="user-approvals" 
             element={isAuthenticated && userRole === 'admin' ? <UserApprovals /> : <Navigate to="/" />} 
-          />
-           <Route 
-            path="admin/class-results"
-            element={isAuthenticated && userRole === 'admin' ? <ClassResultView examTypes={EXAM_TYPES} allClasses={DEFAULT_CLASSES} /> : <Navigate to="/" />}
           />
           <Route 
             path="profile" 

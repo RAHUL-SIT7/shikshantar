@@ -828,7 +828,6 @@ export default function Home() {
       </motion.div>
 
       {/* Latest Notices Widget */}
-      {localStorage.getItem('isGuest') !== 'true' && (
       <section className="col-span-1 md:col-span-3 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
          <div className="flex justify-between items-center bg-gray-50 p-4 border-b border-gray-200">
             <h2 className="font-bold text-gray-800 flex items-center gap-2"><Megaphone className="w-5 h-5 text-blue-600"/> Latest Notices</h2>
@@ -851,7 +850,6 @@ export default function Home() {
             )}
          </div>
       </section>
-      )}
 
       {/* Recent Photos Widget */}
       {galleryImages.length > 0 && (

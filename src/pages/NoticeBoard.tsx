@@ -11,10 +11,9 @@ const CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7
 const TARGET_OPTIONS = ['All', 'Admin Only', 'Students Only', 'Teachers Only', ...CLASSES];
 
 export default function NoticeBoard() {
-  const isGuest = localStorage.getItem('isGuest') === 'true';
-  const role = isGuest ? 'guest' : (localStorage.getItem('userRole') || 'student');
+  const role = auth.currentUser ? (localStorage.getItem('userRole') || 'student') : 'guest';
   const studentClass = localStorage.getItem('studentClass') || '';
-  const currentUserId = auth.currentUser?.uid || localStorage.getItem('studentId') || 'guest';
+  const currentUserId = auth.currentUser?.uid || 'guest';
 
   const [allNotices, setAllNotices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -171,9 +170,15 @@ export default function NoticeBoard() {
 
   const markAsRead = async (id: string, currentReadBy: string[]) => {
       if (!currentReadBy?.includes(currentUserId) && role !== 'admin') {
-         await updateDoc(doc(db, 'notices', id), {
-             readBy: arrayUnion(currentUserId)
-         });
+         if (currentUserId !== 'guest') {
+             try {
+                 await updateDoc(doc(db, 'notices', id), {
+                     readBy: arrayUnion(currentUserId)
+                 });
+             } catch (err) {
+                 console.warn("Could not mark as read remotely, updating locally only.");
+             }
+         }
       }
   };
 

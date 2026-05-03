@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GraduationCap, Lock, Mail, User, Phone, MapPin, Calendar, BookOpen, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../firebase';
-import {
+import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendEmailVerification,
@@ -76,9 +76,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (email === 'admin@shikshantar.com') {
-        await setDoc(doc(db, "users", userCredential.user.uid), { role: "admin" }, { merge: true });
-      }
+      
       // Fetch user data from firestore
       const userSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
       if (userSnap.exists()) {
@@ -359,9 +357,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      if (result.user.email === 'admin@shikshantar.com') {
-        await setDoc(doc(db, "users", result.user.uid), { role: "admin" }, { merge: true });
-      }
+      
       const userRef = doc(db, 'users', result.user.uid);
       const userSnap = await getDoc(userRef);
       
