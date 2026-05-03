@@ -8,10 +8,10 @@ export default function ContactUs() {
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState({
     email: 'info@shikshantar.edu.np',
-    phone: '+977-9800000000',
-    address: 'Karjanha Municipality, Ward No. 05, Siraha',
-    mapEmbedUrl: '',
-    googleMapsUrl: 'https://maps.app.goo.gl/x6uoxM5BPQiBFRdB8',
+    phone: '+977-9807790805',
+    address: 'Bastipur-5, Siraha',
+    mapEmbedUrl: 'https://maps.google.com/maps?q=Bastipur-5,Siraha&t=&z=15&ie=UTF8&iwloc=&output=embed',
+    googleMapsUrl: 'https://maps.app.goo.gl/rfH2jLU3cSJ5SNoB8',
     facebookUrl: '',
     websiteUrl: ''
   });
@@ -163,14 +163,23 @@ export default function ContactUs() {
                   referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-100 flex-col gap-3 p-6 text-center">
-                  <MapPin className="w-8 h-8 opacity-50" /> 
-                  <span className="font-medium text-gray-500">No Map Embed URL provided.</span>
-                  {data.googleMapsUrl && (
-                    <a href={data.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm">
-                      Open in Google Maps
-                    </a>
-                  )}
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 group overflow-hidden">
+                  <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 z-10"></div>
+                    <img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1470&auto=format&fit=crop" className="w-full h-full object-cover opacity-80" alt="School map unavailable" />
+                  </div>
+                  <div className="relative z-20 flex flex-col items-center p-6 text-center">
+                    <div className="p-4 bg-white/20 backdrop-blur-md rounded-full text-white mb-4 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-bounce font-black">
+                      <MapPin className="w-10 h-10" /> 
+                    </div>
+                    <span className="font-black text-white text-2xl drop-shadow-md">No Map Embed Available</span>
+                    <p className="text-sm text-gray-200 mt-2 max-w-sm drop-shadow-sm font-medium">Get directions by clicking the button below, or add an embed URL in settings.</p>
+                    {data.googleMapsUrl && (
+                      <a href={data.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 transition-colors font-bold shadow-[0_0_20px_rgba(37,99,235,0.5)] flex items-center gap-2">
+                        <Globe className="w-4 h-4" /> Open in Google Maps
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

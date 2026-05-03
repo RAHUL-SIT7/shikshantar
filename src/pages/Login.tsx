@@ -397,14 +397,17 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       setIsAuthenticated(true);
       navigate('/');
     } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
-          setError('Google Login popup was closed before completing. Please try again.');
+      console.error(err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError('This custom domain is not authorized for Google Sign-In. Please log in to your Firebase Console -> Authentication -> Settings -> Authorized Domains, and add your current custom domain (e.g. shikshantar.academy.nepalghum.xyz).');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Google Login popup was closed before completing. Please try again.');
       } else if (err.code === 'auth/popup-blocked') {
-          setError('Google Login popup was blocked by your browser. Please allow popups for this site.');
+        setError('Google Login popup was blocked by your browser. Please allow popups for this site.');
       } else if (err.code === 'auth/operation-not-allowed') {
-          setError('Google Sign-In is not enabled on this project. Please contact the administrator.');
+        setError('Google Sign-In is not enabled on this project. Please contact the administrator.');
       } else {
-          setError(err.message || 'Error configuring Google login.');
+        setError(err.message || 'Error configuring Google login.');
       }
     } finally {
       setLoading(false);

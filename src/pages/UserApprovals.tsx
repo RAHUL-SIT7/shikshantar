@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye } from 'lucide-react';
+import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { doc, onSnapshot, collection, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -31,6 +31,7 @@ export default function UserApprovals() {
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
 
   useEffect(() => {
     let unsubUsers = () => {};
@@ -83,15 +84,16 @@ export default function UserApprovals() {
     setTimeout(() => setStatus({ type: null, message: '' }), 3000);
   };
 
-  const deleteUser = async (userId: string, name: string) => {
-    if (!window.confirm(`Permanently delete account for ${name}? This action cannot be undone.`)) return;
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
     try {
-      await deleteDoc(doc(db, 'users', userId));
-      setStatus({ type: 'success', message: 'User deleted successfully.' });
+      await deleteDoc(doc(db, 'users', userToDelete.id));
+      setStatus({ type: 'success', message: 'User profile deleted successfully.' });
     } catch (error) {
       setStatus({ type: 'error', message: 'Failed to delete user.' });
     }
-    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+    setUserToDelete(null);
+    setTimeout(() => setStatus({ type: null, message: '' }), 6000);
   };
 
   const getFilteredUsers = () => {
@@ -121,6 +123,7 @@ export default function UserApprovals() {
   };
 
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [showTempPassword, setShowTempPassword] = useState(false);
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -128,20 +131,59 @@ export default function UserApprovals() {
     role: 'teacher' as const,
     phone: '',
     class: '',
-    studentId: ''
+    studentId: '',
+    guardianName: '',
+    address: '',
+    section: ''
   });
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUser.email || !newUser.password) {
-      setStatus({ type: 'error', message: 'Email and password are mandatory for staff creation.' });
+    if (!newUser.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
+      setStatus({ type: 'error', message: 'A valid Email is mandatory.' });
       return;
     }
 
-    if (newUser.password.length < 6) {
-       setStatus({ type: 'error', message: 'Password must be at least 6 characters.' });
+    if (!newUser.password || newUser.password.length < 8 || !/[A-Z]/.test(newUser.password) || !/[a-z]/.test(newUser.password) || !/[0-9]/.test(newUser.password)) {
+       setStatus({ type: 'error', message: 'Password must be at least 8 characters long, and contain an uppercase letter, lowercase letter, and a number.' });
        return;
+    }
+
+    if (!newUser.fullName) {
+      setStatus({ type: 'error', message: 'Full Legal Name is mandatory.' });
+      return;
+    }
+
+    if (!newUser.phone || !/^(98|97)\d{8}$/.test(newUser.phone)) {
+      setStatus({ type: 'error', message: 'Phone number is mandatory, must be 10 digits and start with 98 or 97.' });
+      return;
+    }
+
+    if (!newUser.address) {
+      setStatus({ type: 'error', message: 'Address is mandatory.' });
+      return;
+    }
+
+    if (!newUser.guardianName) {
+      setStatus({ type: 'error', message: 'Guardian / Parent\'s Name is mandatory.' });
+      return;
+    }
+
+    if (newUser.role === 'student') {
+      if (!newUser.studentId) {
+        setStatus({ type: 'error', message: 'Student ID is mandatory for students.' });
+        return;
+      }
+      if (!newUser.class) {
+        setStatus({ type: 'error', message: 'Assigned Class is mandatory for students.' });
+        return;
+      }
+    } else {
+      if (!newUser.studentId) {
+        setStatus({ type: 'error', message: 'Staff ID is mandatory.' });
+        return;
+      }
     }
 
     setIsCreating(true);
@@ -158,9 +200,12 @@ export default function UserApprovals() {
         active: true,
         createdAt: new Date().toISOString()
       };
-      if (newUser.phone) userProfilePayload.phone = newUser.phone;
+      if (newUser.phone) userProfilePayload.phone = `+977-${newUser.phone}`;
       if (newUser.studentId) userProfilePayload.studentId = newUser.studentId;
       if (newUser.class) userProfilePayload.class = newUser.class;
+      if (newUser.guardianName) userProfilePayload.guardianName = newUser.guardianName;
+      if (newUser.address) userProfilePayload.address = newUser.address;
+      if (newUser.section) userProfilePayload.section = newUser.section;
 
       await setDoc(doc(db, 'users', docId), userProfilePayload);
       
@@ -169,7 +214,7 @@ export default function UserApprovals() {
 
       setStatus({ type: 'success', message: `${newUser.role.toUpperCase()} account created successfully. They can now log in.` });
       setIsCreatingUser(false);
-      setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '' });
+      setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '', guardianName: '', address: '', section: '' });
     } catch (error: any) {
       console.error(error);
       setStatus({ type: 'error', message: error.message || 'Failed to create user account. Email might be in use.' });
@@ -211,14 +256,14 @@ export default function UserApprovals() {
       </div>
 
       {status.type && (
-        <div className={`p-4 rounded-xl flex items-center justify-between text-sm font-bold shadow-md animate-in slide-in-from-top duration-300 ${
+        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[200] p-4 min-w-[300px] rounded-xl flex items-center justify-between text-sm font-bold shadow-2xl animate-in slide-in-from-top duration-300 ${
           status.type === 'success' ? 'bg-[#ecfdf5] text-[#065f46] border border-[#a7f3d0]' : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
           <div className="flex items-center gap-2">
-            {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            {status.message}
+            {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            <span>{status.message}</span>
           </div>
-          <button onClick={() => setStatus({type: null, message: ''})}><X className="w-4 h-4"/></button>
+          <button type="button" onClick={() => setStatus({type: null, message: ''})} className="ml-4 p-1 hover:bg-black/5 rounded"><X className="w-4 h-4"/></button>
         </div>
       )}
 
@@ -378,7 +423,7 @@ export default function UserApprovals() {
                           )}
 
                           <button 
-                            onClick={() => deleteUser(user.id, user.fullName || user.email || '')}
+                            onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '' })}
                             className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2"
                             title="Delete Account"
                           >
@@ -593,16 +638,25 @@ export default function UserApprovals() {
                     className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1"><Lock className="w-3 h-3" /> Temporary Password (Required)</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={newUser.password}
-                    onChange={e => setNewUser({...newUser, password: e.target.value})}
-                    placeholder="Set initial password"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
-                  />
+                  <div className="relative">
+                    <input 
+                      required
+                      type={showTempPassword ? "text" : "password"}
+                      value={newUser.password}
+                      onChange={e => setNewUser({...newUser, password: e.target.value})}
+                      placeholder="Set initial password"
+                      className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 pr-12 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowTempPassword(!showTempPassword)} 
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 focus:outline-none"
+                    >
+                      {showTempPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">System Role</label>
@@ -617,8 +671,9 @@ export default function UserApprovals() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Legal Name</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Legal Name (Required)</label>
                   <input 
+                    required
                     type="text" 
                     value={newUser.fullName}
                     onChange={e => setNewUser({...newUser, fullName: e.target.value})}
@@ -627,8 +682,9 @@ export default function UserApprovals() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Student ID / Staff ID</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Student ID / Staff ID (Required)</label>
                   <input 
+                    required
                     type="text" 
                     value={newUser.studentId}
                     onChange={e => setNewUser({...newUser, studentId: e.target.value})}
@@ -637,25 +693,64 @@ export default function UserApprovals() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Class (Students Only)</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Class (Required for Students)</label>
                   <input 
                     type="text" 
                     value={newUser.class}
                     onChange={e => setNewUser({...newUser, class: e.target.value})}
-                    placeholder="e.g. 10B"
+                    placeholder="e.g. 10"
                     disabled={newUser.role !== 'student'}
                     className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Phone</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Section/Division (Optional)</label>
                   <input 
                     type="text" 
-                    value={newUser.phone}
-                    onChange={e => setNewUser({...newUser, phone: e.target.value})}
-                    placeholder="Phone number"
+                    value={newUser.section}
+                    onChange={e => setNewUser({...newUser, section: e.target.value})}
+                    placeholder="e.g. A"
+                    disabled={newUser.role !== 'student'}
+                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Guardian / Parent's Name (Required)</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newUser.guardianName}
+                    onChange={e => setNewUser({...newUser, guardianName: e.target.value})}
+                    placeholder="Enter parent's name"
                     className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Address (Required)</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={newUser.address}
+                    onChange={e => setNewUser({...newUser, address: e.target.value})}
+                    placeholder="Enter permanent address"
+                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Phone (Required)</label>
+                  <div className="flex bg-gray-50 border-gray-100 border rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                    <div className="px-4 py-4 bg-gray-100 text-gray-500 font-bold text-sm border-r border-gray-200">
+                      +977
+                    </div>
+                    <input 
+                      required
+                      type="text" 
+                      value={newUser.phone}
+                      onChange={e => setNewUser({...newUser, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})}
+                      placeholder="98********"
+                      className="w-full bg-transparent px-5 py-4 text-sm font-bold text-gray-800 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -680,6 +775,40 @@ export default function UserApprovals() {
           </div>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {userToDelete && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-red-50 p-6 flex flex-col items-center border-b border-red-100">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-gray-900 text-center">Delete User Account</h3>
+              <p className="text-sm font-medium text-gray-600 text-center mt-2">
+                Are you sure you want to permanently delete the profile for <strong>{userToDelete.name}</strong>?
+              </p>
+            </div>
+            <div className="p-6 bg-red-50/30 text-xs font-bold text-red-800 text-center border-b border-red-100">
+              Note: This removes their profile from the database, but their login credentials must be manually deleted from your Firebase Auth Console if you want to completely block sign-ins.
+            </div>
+            <div className="p-6 flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => setUserToDelete(null)}
+                className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteUser}
+                className="flex-1 py-3 text-sm font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-200"
+              >
+                Delete Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

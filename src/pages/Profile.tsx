@@ -1,120 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, Camera, AlertCircle, CheckCircle2, LogOut, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Edit2, Lock, FileText, CheckCircle2, ChevronRight, User, GraduationCap, MonitorSmartphone, Calendar, CreditCard, LayoutDashboard, Flag, AlertCircle, FileDown, Check, X, Bell, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { updatePassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useNavigate } from 'react-router-dom';
+import AdminProfileView from './AdminProfileView';
 
 export default function Profile() {
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [dob, setDob] = useState('');
-  const [studentClass, setStudentClass] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const userRole = localStorage.getItem('userRole') || 'student';
+  if (userRole === 'admin') {
+    return <AdminProfileView />;
+  }
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [successToast, setSuccessToast] = useState('');
   
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  // User data state
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [fullName, setFullName] = useState('Aarav Sharma');
+  const [email, setEmail] = useState('aarav@gmail.com');
+  const [phone, setPhone] = useState('9841000000');
+  const [dob, setDob] = useState('15 Baisakh 2062 B.S.');
+  const [address, setAddress] = useState('Bastipur, Siraha');
+  const [gender, setGender] = useState('Male');
+  
+  // Academic Data
+  const [studentId, setStudentId] = useState('S101');
+  const [studentClass, setStudentClass] = useState('10');
+  const [section, setSection] = useState('A');
+  const [rollNo, setRollNo] = useState('05');
+  const [guardianName, setGuardianName] = useState('Ram Sharma');
+  const [guardianPhone, setGuardianPhone] = useState('9841000001');
+
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+
+  // Security state
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState('');
-  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
-  
-  const userRole = localStorage.getItem('userRole') || 'student';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchStudentData = async () => {
       if (auth.currentUser) {
         try {
+          setEmail(auth.currentUser.email || '');
           const docRef = doc(db, 'users', auth.currentUser.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-             const data = docSnap.data();
-             let fetchName = data.fullName || data.name || '';
-             let fetchPhone = data.phone || '';
-             let fetchAddress = data.address || '';
-             let fetchDob = data.dob || '';
-             let fetchClass = data.class || data.studentClass || data.role || '';
-             let fetchStudentId = data.studentId || '';
-             let fetchGuardianName = data.guardianName || '';
-             let fetchGuardianPhone = data.guardianPhone || '';
-
-             if (data.children && data.children.length > 0) {
-               fetchName = fetchName || data.children[0].name || '';
-               fetchPhone = fetchPhone || data.children[0].phone || '';
-               fetchAddress = fetchAddress || data.children[0].address || '';
-               fetchDob = fetchDob || data.children[0].dob || '';
-               fetchClass = fetchClass || data.children[0].studentClass || '';
-               fetchStudentId = fetchStudentId || data.children[0].studentId || '';
-             }
-             setName(fetchName || auth.currentUser.email || '');
-             setEmail(auth.currentUser.email || data.email || '');
-             setPhone(fetchPhone);
-             setAddress(fetchAddress);
-             setDob(fetchDob);
-             setStudentClass(fetchClass);
-             setStudentId(fetchStudentId);
-             setGuardianName(fetchGuardianName);
-             setGuardianPhone(fetchGuardianPhone);
-             setAvatarUrl(data.avatarUrl || '');
-          } else if (auth.currentUser) {
-            setEmail(auth.currentUser.email || '');
-            setName(auth.currentUser.email || '');
+            const data = docSnap.data();
+            setFullName(data.fullName || data.name || 'Aarav Sharma');
+            setPhone(data.phone || '');
+            setDob(data.dob || '15 Baisakh 2062 B.S.');
+            setAddress(data.address || 'Bastipur, Siraha');
+            setGender(data.gender || 'Male');
+            setAvatarUrl(data.avatarUrl || '');
+            
+            setStudentId(data.studentId || 'S101');
+            setStudentClass(data.class || '10');
+            setSection(data.section || 'A');
+            setRollNo(data.rollNo || '05');
+            setGuardianName(data.guardianName || 'Ram Sharma');
+            setGuardianPhone(data.guardianPhone || '9841000001');
           }
         } catch (e) {
-          console.error("Error fetching profile", e);
+          console.error("Error fetching student profile", e);
         }
       }
+      setLoading(false);
     };
-    fetchProfile();
+    fetchStudentData();
   }, []);
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setMessage('');
-    setLoading(true);
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
+    
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarUrl(objectUrl);
 
     try {
-      if (auth.currentUser) {
-        // Update avatar and name in Firestore
-        const docRef = doc(db, 'users', auth.currentUser.uid);
-        
-        const updateData: any = {
-          avatarUrl: avatarUrl,
-          fullName: name,
-          phone: phone,
-          address: address,
-          dob: dob,
-        };
-
-        if (userRole === 'student') {
-          updateData.class = studentClass;
-          updateData.studentId = studentId;
-          updateData.guardianName = guardianName;
-          updateData.guardianPhone = guardianPhone;
-        }
-
-        await updateDoc(docRef, updateData);
-
-        setMessage('Profile updated successfully!');
-      } else {
-        throw new Error('No authenticated user found');
-      }
+      const storage = getStorage();
+      const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setAvatarUrl(downloadURL);
+      
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, { avatarUrl: downloadURL });
+      showToast('Profile photo updated successfully');
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile.');
-    } finally {
-      setLoading(false);
+      console.error("Error uploading photo", err);
+      showToast('Error uploading photo');
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const handleSavePhone = async () => {
+    if (!auth.currentUser) return;
+    setSaving(true);
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, { phone });
+      setIsEditingPersonal(false);
+      showToast('Phone number updated successfully');
+    } catch (err: any) {
+      console.error("Error saving phone", err);
+      if (err.message?.includes('permissions')) {
+         showToast('Error: Missing or insufficient permissions.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(''), 3000);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwdError('');
     setPwdLoading(true);
@@ -124,29 +139,29 @@ export default function Profile() {
       if (!user) throw new Error('No authenticated user found');
       if (!user.email) throw new Error('User email not found');
       if (!currentPassword) throw new Error('Current password is required');
-      if (!password) throw new Error('New password cannot be empty');
-      if (password !== confirmPassword) throw new Error('New passwords do not match');
+      if (!newPassword) throw new Error('New password cannot be empty');
+      if (newPassword !== confirmPassword) throw new Error('New passwords do not match');
       
-      if (password.length < 8) throw new Error('New password must be at least 8 characters');
-      if (!/[A-Z]/.test(password)) throw new Error('New password must contain at least one uppercase letter');
-      if (!/[a-z]/.test(password)) throw new Error('New password must contain at least one lowercase letter');
-      if (!/[0-9]/.test(password)) throw new Error('New password must contain at least one number');
+      if (newPassword.length < 8) throw new Error('New password must be at least 8 characters');
+      if (!/[0-9]/.test(newPassword)) throw new Error('New password must contain at least one number');
+      if (!/[A-Z]/.test(newPassword)) throw new Error('New password must contain at least one uppercase letter');
+      if (!/[a-z]/.test(newPassword)) throw new Error('New password must contain at least one lowercase letter');
 
-      // Re-authenticate user
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       try {
         await reauthenticateWithCredential(user, credential);
-      } catch (authError: any) {
+      } catch (authErr) {
         throw new Error('Current password does not match.');
       }
 
-      await updatePassword(user, password);
+      await updatePassword(user, newPassword);
       
-      // Log out and redirect
-      await signOut(auth);
-      localStorage.removeItem('userRole');
-      window.location.href = '/login'; // hard redirect to wipe state and go to login
-
+      showToast('✓ Password changed successfully!');
+      setShowPasswordSection(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
     } catch (err: any) {
       setPwdError(err.message || 'Failed to update password.');
     } finally {
@@ -154,253 +169,341 @@ export default function Profile() {
     }
   };
 
+  const getInitials = (nameStr: string) => {
+    if (!nameStr) return 'A';
+    const parts = nameStr.split(' ').filter(Boolean);
+    if (parts.length === 0) return 'A';
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const evalPasswordStrength = (pwd: string) => {
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[!@#$]/.test(pwd)) score--;
+    
+    if (score <= 1) return { label: 'Weak', color: 'text-orange-500' };
+    if (score === 2) return { label: 'Fair', color: 'text-blue-500' };
+    return { label: 'Strong', color: 'text-emerald-500' };
+  };
+
+  const strength = evalPasswordStrength(newPassword);
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Loading Profile...</div>;
+  }
+
   return (
-    <div className="max-w-3xl mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="bg-[#1e3a8a] text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-        <h1 className="text-3xl font-black mb-2 flex items-center gap-3 relative z-10">
-          <User className="w-8 h-8 opacity-80" /> My Profile
-        </h1>
-        <p className="text-blue-200 font-medium relative z-10">Manage your avatar and security preferences.</p>
-      </div>
-
-      {(message || error) && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 font-bold shadow-sm ${message ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-           {message ? <CheckCircle2 className="w-5 h-5"/> : <AlertCircle className="w-5 h-5" />}
-           {message || error}
+    <div className="max-w-[1200px] mx-auto pb-12 animate-in fade-in duration-500 relative bg-[#FAFAFA]">
+      
+      {/* Toast */}
+      {successToast && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 font-bold animate-in slide-in-from-top-4">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          {successToast}
         </div>
       )}
 
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 relative z-10">
-        <form onSubmit={handleUpdateProfile} className="space-y-8">
-          
-          {/* Avatar Section */}
-          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-            <div className="relative group shrink-0">
-              <div className="w-24 h-24 rounded-full bg-gray-100 border-4 border-white shadow-lg overflow-hidden flex items-center justify-center">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-10 h-10 text-gray-300" />
-                )}
-              </div>
-            </div>
-            <div className="flex-1 w-full space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Avatar Image URL (Optional)</label>
-              <div className="relative">
-                <Camera className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="url"
-                  placeholder="https://example.com/my-photo.jpg"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+      {/* SECTION 1 - STUDENT HERO CARD */}
+      <div className="bg-gradient-to-r from-indigo-500 to-blue-500 rounded-2xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden mb-6 text-center md:text-left">
+         {/* Background decoration */}
+         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+         <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-indigo-300/30 rounded-full blur-3xl mb-[-100px] pointer-events-none"></div>
 
-          <hr className="border-gray-100" />
+         {/* Avatar & Upload */}
+         <div className="flex flex-col items-center gap-3 relative z-10 shrink-0">
+           <div className="w-[100px] h-[100px] rounded-full border-4 border-white bg-indigo-600 shadow-xl overflow-hidden flex items-center justify-center relative group">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl font-black text-white">{getInitials(fullName)}</span>
+              )}
+           </div>
+         </div>
 
-          {/* Details Section */}
-          <div className="space-y-4">
-             <div className="space-y-2">
-                <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Full Name</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Your Full Name"
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                 <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Email</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm font-bold text-gray-500 outline-none cursor-not-allowed"
-                      value={email}
-                      readOnly
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Phone</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Address</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Date of Birth</label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
-                    />
-                 </div>
-                 
-                 {userRole === 'student' && (
-                   <>
-                     <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Class</label>
-                        <input
-                          type="text"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                          value={studentClass}
-                          onChange={(e) => setStudentClass(e.target.value)}
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Student ID</label>
-                        <input
-                          type="text"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                          value={studentId}
-                          onChange={(e) => setStudentId(e.target.value)}
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Guardian Name</label>
-                        <input
-                          type="text"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                          value={guardianName}
-                          onChange={(e) => setGuardianName(e.target.value)}
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Guardian Phone</label>
-                        <input
-                          type="text"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:border-blue-500"
-                          value={guardianPhone}
-                          onChange={(e) => setGuardianPhone(e.target.value)}
-                        />
-                     </div>
-                   </>
-                 )}
-                 {(userRole === 'admin' || userRole === 'teacher') && (
-                   <div className="space-y-2">
-                     <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Role</label>
-                     <input
-                       type="text"
-                       className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm font-bold text-gray-500 outline-none cursor-not-allowed capitalize"
-                       value={userRole}
-                       readOnly
-                     />
-                   </div>
-                 )}
-             </div>
-          </div>
-
-          <div className="pt-2 flex flex-col md:flex-row gap-4 items-center">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 w-full px-8 py-3.5 bg-emerald-500 text-white font-black text-sm uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Profile</>}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPasswordModal(true)}
-              className="flex-1 w-full px-8 py-3.5 bg-white border-2 border-gray-200 text-gray-700 font-black text-sm uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-            >
-              <Lock className="w-4 h-4 text-gray-500" /> Change Password
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setShowPasswordModal(false)}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+         {/* Basic Info */}
+         <div className="flex-1 relative z-10 w-full">
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">{fullName}</h1>
             
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                 <Lock className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-gray-900">Change Password</h3>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Requires re-login</p>
-              </div>
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
+              <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm">
+                Class {studentClass} | Roll No: {rollNo}
+              </span>
+              <span className="bg-indigo-700/50 text-indigo-100 text-xs font-bold px-3 py-1 rounded-full">
+                S101
+              </span>
+              <span className="bg-indigo-700/50 text-indigo-100 text-xs font-bold px-3 py-1 rounded-full hidden sm:inline-flex">
+                Academic Year: 2083-2084 B.S.
+              </span>
             </div>
 
-            {pwdError && (
-              <div className="p-3 bg-red-50 text-red-700 text-sm font-bold rounded-xl mb-6 flex items-center gap-2 border border-red-200">
-                <AlertCircle className="w-4 h-4 shrink-0" /> {pwdError}
-              </div>
-            )}
+            {/* Status row */}
+            <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs font-bold text-white/90">
+               <div className="flex items-center gap-1.5">
+                 <span className="w-2 h-2 rounded-full bg-emerald-400 border border-emerald-200"></span> Active Session
+               </div>
+               <div className="flex items-center gap-1.5">
+                 <Calendar className="w-3.5 h-3.5 opacity-70" /> Member since: 1 Shrawan 2080 B.S.
+               </div>
+            </div>
+         </div>
+      </div>
 
-            <form onSubmit={handleChangePassword} className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Current Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">New Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={pwdLoading}
-                  className="w-full px-6 py-3.5 bg-blue-600 text-white font-black text-sm uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {pwdLoading ? 'Updating...' : <><LogOut className="w-4 h-4" /> Update & Logout</>}
-                </button>
-              </div>
-            </form>
+      {/* SECTION 3 - TWO COLUMN LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        
+        {/* LEFT COLUMN - Personal Information Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+             <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
+                👤 My Information
+             </h2>
+             {!isEditingPersonal && (
+               <button 
+                 onClick={() => setIsEditingPersonal(true)}
+                 className="text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 p-1.5 rounded"
+               >
+                 <Edit2 className="w-4 h-4" />
+               </button>
+             )}
+          </div>
+          <div className="p-6 flex-1">
+             {isEditingPersonal ? (
+               <div className="space-y-4">
+                  <div className="space-y-1.5">
+                     <label className="text-xs font-bold text-gray-500 uppercase">Phone Number</label>
+                     <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                  </div>
+                  
+                  {/* Read Only Context during edit */}
+                  <div className="pt-4 mt-2 border-t border-gray-100 opacity-60 pointer-events-none">
+                    <p className="text-[11px] text-gray-500 font-bold mb-2">LOCKED FIELDS</p>
+                    <div className="space-y-3">
+                       <div><p className="text-xs font-bold text-gray-400 uppercase">Full Name</p><p className="text-sm font-bold text-gray-800">{fullName}</p></div>
+                       <div><p className="text-xs font-bold text-gray-400 uppercase">Date of Birth</p><p className="text-sm font-bold text-gray-800">{dob}</p></div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 flex gap-3">
+                     <button onClick={handleSavePhone} disabled={saving} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                        {saving ? 'Saving...' : 'Save Changes'}
+                     </button>
+                     <button onClick={() => setIsEditingPersonal(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                     </button>
+                  </div>
+               </div>
+             ) : (
+               <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-4">
+                    <div className="bg-[#F8F8F8] p-3 rounded-lg border border-gray-100 flex items-start gap-2 cursor-not-allowed">
+                      <Lock className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase">Full Name</p>
+                        <p className="text-sm font-bold text-gray-800">{fullName}</p>
+                      </div>
+                    </div>
+                    <div className="bg-[#F8F8F8] p-3 rounded-lg border border-gray-100 flex items-start gap-2 cursor-not-allowed">
+                      <Lock className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase">Email</p>
+                        <p className="text-sm font-bold text-gray-800 truncate">{email || '-'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5">Phone Number</p>
+                      <p className="text-sm font-bold text-gray-900">{phone || '-'}</p>
+                    </div>
+                    <div className="bg-[#F8F8F8] p-3 rounded-lg border border-gray-100 flex items-start gap-2 cursor-not-allowed">
+                      <Lock className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase">Date of Birth</p>
+                        <p className="text-sm font-bold text-gray-800">{dob || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-[#F8F8F8] p-3 rounded-lg border border-gray-100 flex items-start gap-2 cursor-not-allowed">
+                      <Lock className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase">Gender</p>
+                        <p className="text-sm font-bold text-gray-800">{gender}</p>
+                      </div>
+                    </div>
+                    <div className="bg-[#F8F8F8] p-3 rounded-lg border border-gray-100 flex items-start gap-2 cursor-not-allowed">
+                      <Lock className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase">Address</p>
+                        <p className="text-sm font-bold text-gray-800">{address || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex items-start gap-2 mt-2">
+                    <span className="text-blue-500 font-bold shrink-0 mt-0.5">ⓘ</span>
+                    <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                      To update personal details such as Full Name or DOB, please contact the school office.
+                    </p>
+                  </div>
+               </div>
+             )}
           </div>
         </div>
-      )}
+
+        {/* RIGHT COLUMN - Academic Information Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+             <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
+                🎓 Academic Details
+             </h2>
+          </div>
+          <div className="p-6 flex-1 flex flex-col h-full bg-[#F8F8F8]/50">
+            <div className="grid grid-cols-2 gap-y-5 gap-x-4 mb-auto">
+               <div>
+                 <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Student ID</p>
+                 <p className="text-sm font-bold text-gray-800 bg-white border border-gray-200 px-2.5 py-1.5 rounded inline-block">{studentId}</p>
+               </div>
+               <div>
+                 <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Class</p>
+                 <p className="text-sm font-bold text-gray-800">{studentClass}</p>
+               </div>
+               <div>
+                 <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Section</p>
+                 <p className="text-sm font-bold text-gray-800">{section}</p>
+               </div>
+               <div>
+                 <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Roll Number</p>
+                 <p className="text-sm font-bold text-gray-800">{rollNo}</p>
+               </div>
+               <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Admission Date</p>
+                  <p className="text-sm font-bold text-gray-800">1 Shrawan 2080 B.S.</p>
+               </div>
+               <div>
+                 <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Board</p>
+                 <p className="text-sm font-bold text-gray-800">SEE (National)</p>
+               </div>
+            </div>
+
+            <div className="mt-6 pt-5 border-t border-gray-200">
+               <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Guardian Information</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Guardian Name</p>
+                    <p className="text-sm font-bold text-gray-800">{guardianName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Relation</p>
+                    <p className="text-sm font-bold text-gray-800">Father</p>
+                  </div>
+                  <div className="col-span-full">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1"><Lock className="w-3 h-3"/> Guardian Phone</p>
+                    <p className="text-sm font-bold text-gray-800">{guardianPhone}</p>
+                  </div>
+               </div>
+            </div>
+            
+            <div className="mt-6 text-center">
+               <p className="text-xs text-gray-400 font-medium">
+                 ⓘ Academic information is managed by school administration
+               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 4 - SECURITY CARD (Student) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        <div className="p-5 border-b border-gray-100 flex items-center gap-2">
+           <span className="text-lg">🔐</span>
+           <h2 className="text-[15px] font-bold text-gray-900">Password & Security</h2>
+        </div>
+        <div className="p-6">
+           {!showPasswordSection ? (
+             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+               <div>
+                  <h3 className="text-sm font-bold text-gray-900 mb-1">Account Password</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <p className="text-xs font-bold text-gray-500">Last changed: 30 days ago</p>
+                  </div>
+               </div>
+               <button 
+                 onClick={() => setShowPasswordSection(true)} 
+                 className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 w-full md:w-auto justify-center"
+               >
+                  🔑 Change Password
+               </button>
+             </div>
+           ) : (
+             <form onSubmit={handleUpdatePassword} className="bg-gray-50 border border-gray-100 p-5 rounded-xl space-y-4 max-w-lg">
+                {pwdError && (
+                  <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200">
+                    {pwdError}
+                  </div>
+                )}
+                <div className="space-y-1.5 relative">
+                   <label className="text-[11px] font-bold text-gray-500 uppercase">Current Password</label>
+                   <div className="relative">
+                     <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                     <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                       {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                     </button>
+                   </div>
+                </div>
+                <div className="space-y-1.5 relative">
+                   <label className="text-[11px] font-bold text-gray-500 uppercase">New Password</label>
+                   <div className="relative">
+                     <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                     <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                     </button>
+                   </div>
+                   
+                   {newPassword && (
+                     <div className="flex items-center justify-between pt-1 mb-2">
+                       <div className="flex gap-1">
+                         <div className={`w-10 h-1.5 rounded-full ${newPassword.length >= 8 ? 'bg-emerald-500' : 'bg-gray-200'}`}></div>
+                         <div className={`w-10 h-1.5 rounded-full ${/[A-Z]/.test(newPassword) ? 'bg-emerald-500' : 'bg-gray-200'}`}></div>
+                         <div className={`w-10 h-1.5 rounded-full ${/[0-9]/.test(newPassword) ? 'bg-emerald-500' : 'bg-gray-200'}`}></div>
+                         <div className={`w-10 h-1.5 rounded-full ${/[!@#$]/.test(newPassword) ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+                       </div>
+                       <span className={`text-[10px] font-black uppercase ${strength.color}`}>{strength.label}</span>
+                     </div>
+                   )}
+                   
+                   <div className="bg-white p-3 rounded border border-gray-100 mt-2">
+                     <ul className="text-[10px] space-y-1.5 font-bold text-gray-500">
+                       <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${newPassword.length >= 8 ? 'text-emerald-500' : 'text-gray-300'}`}/> At least 8 characters</li>
+                       <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[A-Z]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains uppercase letter</li>
+                       <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[0-9]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains number</li>
+                       <li className="flex gap-1.5"><X className={`w-3.5 h-3.5 ${/[!@#$]/.test(newPassword) ? 'text-red-500' : 'text-gray-300'}`} /> Cannot contain special character (!@#$)</li>
+                     </ul>
+                   </div>
+                </div>
+                <div className="space-y-1.5 mb-4 relative">
+                   <label className="text-[11px] font-bold text-gray-500 uppercase">Confirm Password</label>
+                   <div className="relative">
+                     <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                     </button>
+                   </div>
+                </div>
+                
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                   <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[A-Z]/.test(newPassword) || /[!@#$]/.test(newPassword)} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full sm:w-auto disabled:opacity-50">
+                      {pwdLoading ? 'Updating...' : 'Update Password'}
+                   </button>
+                   <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-auto text-center">
+                      Cancel
+                   </button>
+                </div>
+             </form>
+           )}
+        </div>
+      </div>
+
     </div>
   );
 }

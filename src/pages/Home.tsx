@@ -58,69 +58,81 @@ export default function Home() {
 
   useEffect(() => {
     // Determine data on load
-    const loadAdminData = async (user: any) => {
-      if (!user) return;
-      if (!isAdmin) return;
-      try {
-        // Fetch transactions
-        const txSnap = await getDocs(query(collection(db, 'transactions'), where('status', '==', 'SUCCESS')));
-        let collected = 0;
-        let tCollections: any[] = [];
-        let tTotal = 0;
-        const today = new Date();
+    const loadAdminData = (user: any) => {
+      if (!user) return () => {};
+      if (!isAdmin) return () => {};
+      
+      let unsubTx = () => {};
+      let unsubFees = () => {};
+      let unsubUsers = () => {};
 
-        txSnap.forEach(snap => {
-            const tx = snap.data();
-            collected += tx.amount || 0;
-            const txDate = new Date(tx.date);
-            if (txDate.toDateString() === today.toDateString()) {
-                tCollections.push({ id: snap.id, ...tx });
-                tTotal += tx.amount || 0;
-            }
-        });
+        // Fetch transactions
+        try {
+          unsubTx = onSnapshot(query(collection(db, 'transactions'), where('status', '==', 'SUCCESS')), (txSnap) => {
+            let collected = 0;
+            let tCollections: any[] = [];
+            let tTotal = 0;
+            const today = new Date();
+
+            txSnap.forEach(snap => {
+                const tx = snap.data();
+                collected += tx.amount || 0;
+                const txDate = new Date(tx.date);
+                if (txDate.toDateString() === today.toDateString()) {
+                    tCollections.push({ id: snap.id, ...tx });
+                    tTotal += tx.amount || 0;
+                }
+            });
+            setFeeCollected(collected);
+            setTodayCollections(tCollections);
+            setTodayTotal(tTotal);
+          }, (err) => console.log('Could not load transactions realtime'));
+        } catch (err: any) {}
 
         // Fetch student fees
-        const feesSnap = await getDocs(query(collection(db, 'studentFees'), where('status', '==', 'due')));
-        let pDues = 0;
-        const studentsWithDues = new Set();
-        
-        feesSnap.forEach(snap => {
-            const fee = snap.data();
-            pDues += Number(fee.dueAmount || 0);
-            studentsWithDues.add(fee.studentId);
-        });
-        const dCount = studentsWithDues.size;
+        try {
+          unsubFees = onSnapshot(query(collection(db, 'studentFees'), where('status', '==', 'due')), (feesSnap) => {
+            let pDues = 0;
+            const studentsWithDues = new Set();
+            
+            feesSnap.forEach(snap => {
+                const fee = snap.data();
+                pDues += Number(fee.dueAmount || 0);
+                studentsWithDues.add(fee.studentId);
+            });
+            const dCount = studentsWithDues.size;
 
-        // Set fallbacks exactly as requested if 0 (because of mock data constraints)
-        setFeeCollected(collected > 0 ? collected : 214000);
-        setPendingDues(pDues > 0 ? pDues : 26600);
-        setPendingDuesCount(dCount > 0 ? dCount : 8);
-        setTodayCollections(tCollections);
-        setTodayTotal(tTotal);
+            setPendingDues(pDues);
+            setPendingDuesCount(dCount);
+          }, (err) => console.log('Could not load student fees realtime'));
+        } catch (err: any) {}
 
         // Fetch users
-        const usersSnap = await getDocs(collection(db, 'users'));
-        let sCount = 0;
-        let tCount = 0;
-        usersSnap.forEach(snap => {
-           const data = snap.data();
-           if(data.role === 'student') sCount++;
-           if(data.role === 'teacher') tCount++;
-        });
-        setTotalStudents(sCount > 0 ? sCount : 148);
-        setTotalTeachers(tCount > 0 ? tCount : 12);
-        
-      } catch (err: any) {
-        if (err?.message?.includes('Missing or insufficient permissions')) {
-            console.log("Not authorized to load admin stats");
-        } else {
-            console.error("Error fetching admin stats", err);
-        }
-      }
+        try {
+          unsubUsers = onSnapshot(collection(db, 'users'), (usersSnap) => {
+            let sCount = 0;
+            let tCount = 0;
+            usersSnap.forEach(snap => {
+               const data = snap.data();
+               if(data.role === 'student' && data.status !== 'pending') sCount++;
+               if(data.role === 'teacher' && data.status !== 'pending') tCount++;
+            });
+            setTotalStudents(sCount);
+            setTotalTeachers(tCount);
+          }, (err) => console.log('Could not load users realtime'));
+        } catch(err: any) {}
+
+        return () => {
+          unsubTx();
+          unsubFees();
+          unsubUsers();
+        };
     };
     
+    let cleanupAdminData = () => {};
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-        loadAdminData(user);
+        cleanupAdminData();
+        cleanupAdminData = loadAdminData(user);
     });
     
     // Simulate loading for 0.5 seconds
@@ -131,6 +143,7 @@ export default function Home() {
     return () => {
         clearTimeout(timer);
         unsubAuth();
+        cleanupAdminData();
     };
   }, [isAdmin]);
 
@@ -213,7 +226,7 @@ export default function Home() {
         
         const qRecentAdmissions = query(collection(db, 'admissions'), orderBy('submittedAt', 'desc'));
         unsubRecentAdmissions = onSnapshot(qRecentAdmissions, (snap) => {
-           setRecentAdmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 5));
+           setRecentAdmissionsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         }, (err: any) => {
            if (err?.message?.includes('Missing or insufficient permissions')) {
              localStorage.removeItem('userRole');
@@ -305,13 +318,13 @@ export default function Home() {
     { name: 'Baisakh', expected: 300000, collected: 80000 },
   ];
   
-  const admissionsApproved = recentAdmissionsList.filter(a => a.status === 'Approved').length;
+  const admissionsApproved = recentAdmissionsList.filter(a => a.status === 'Admitted').length;
   const admissionsRejected = recentAdmissionsList.filter(a => a.status === 'Rejected').length;
   
   const admissionsChartData = [
-    { name: 'Approved', value: admissionsApproved > 0 ? admissionsApproved : 145, color: '#10b981' },
-    { name: 'Pending', value: pendingAdmissions.length > 0 ? pendingAdmissions.length : 3, color: '#f97316' },
-    { name: 'Rejected', value: admissionsRejected > 0 ? admissionsRejected : 7, color: '#ef4444' },
+    { name: 'Admitted', value: admissionsApproved > 0 ? admissionsApproved : 0, color: '#10b981' },
+    { name: 'Pending', value: pendingAdmissions.length > 0 ? pendingAdmissions.length : 0, color: '#f97316' },
+    { name: 'Rejected', value: admissionsRejected > 0 ? admissionsRejected : 0, color: '#ef4444' },
   ];
 
   if (isAdmin) {
@@ -439,7 +452,7 @@ export default function Home() {
                <div className="flex justify-between items-start mb-2">
                   <div>
                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-2">Pending Admissions</p>
-                     <h3 className="text-[32px] font-bold text-[#1a1a2e] leading-none mb-1">{pendingAdmissions.length > 0 ? pendingAdmissions.length : 3}</h3>
+                     <h3 className="text-[32px] font-bold text-[#1a1a2e] leading-none mb-1">{pendingAdmissions.length}</h3>
                      <p className="text-[12px] text-gray-500 font-medium">New applications waiting</p>
                   </div>
                   <div className="p-2 bg-orange-50 rounded-lg"><FileText className="w-5 h-5 text-[#f97316]" /></div>
@@ -563,7 +576,7 @@ export default function Home() {
                   <h3 className="text-[15px] font-bold text-[#333] border-l-4 border-orange-500 pl-2">📝 Recent Admissions</h3>
                </div>
                <div className="flex-1 p-0 flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {recentAdmissionsList.length > 0 ? recentAdmissionsList.map((adm, i) => (
+                  {recentAdmissionsList.length > 0 ? recentAdmissionsList.slice(0, 5).map((adm, i) => (
                      <div key={adm.id} className="p-3 border-b border-gray-50 hover:bg-gray-50 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-3 overflow-hidden">
                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 uppercase">
@@ -577,11 +590,11 @@ export default function Home() {
                         <div className="shrink-0 flex flex-col items-end gap-1">
                            {adm.status === 'Pending' ? (
                               <div className="flex gap-1">
-                                 <button onClick={() => handleAdmissionAction(adm.id, 'Approved')} className="p-1 px-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded text-[10px] font-bold border border-emerald-200 transition-colors">✓ Appr</button>
+                                 <button onClick={() => handleAdmissionAction(adm.id, 'Admitted')} className="p-1 px-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded text-[10px] font-bold border border-emerald-200 transition-colors">✓ Adm</button>
                                  <button onClick={() => handleAdmissionAction(adm.id, 'Rejected')} className="p-1 px-2 bg-red-50 text-red-600 hover:bg-red-100 rounded text-[10px] font-bold border border-red-200 transition-colors">✗ Rej</button>
                               </div>
                            ) : (
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${adm.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${adm.status === 'Admitted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                                  {adm.status}
                               </span>
                            )}

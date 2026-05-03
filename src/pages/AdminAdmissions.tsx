@@ -11,6 +11,7 @@ export default function AdminAdmissions() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [admissionToDelete, setAdmissionToDelete] = useState<{ id: string, name: string } | null>(null);
   
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
@@ -75,10 +76,11 @@ export default function AdminAdmissions() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this admission record?")) return;
+  const confirmDelete = async () => {
+    if (!admissionToDelete) return;
     try {
-      await deleteDoc(doc(db, 'admissions', id));
+      await deleteDoc(doc(db, 'admissions', admissionToDelete.id));
+      setAdmissionToDelete(null);
     } catch (error) {
       console.error("Error deleting record: ", error);
       alert("Failed to delete record.");
@@ -327,7 +329,7 @@ export default function AdminAdmissions() {
                           <button onClick={() => handleEditClick(admission)} className="p-2 text-blue-600 hover:bg-blue-50 rounded bg-blue-50/50 transition-colors tooltip relative group/btn flex items-center gap-1 font-bold text-xs">
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
-                          <button onClick={() => handleDelete(admission.id)} className="p-2 text-red-600 hover:bg-red-50 rounded bg-red-50/50 transition-colors tooltip flex items-center gap-1 font-bold text-xs">
+                          <button onClick={() => setAdmissionToDelete({ id: admission.id, name: admission.studentName || 'Unknown Student' })} className="p-2 text-red-600 hover:bg-red-50 rounded bg-red-50/50 transition-colors tooltip flex items-center gap-1 font-bold text-xs">
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
@@ -340,6 +342,37 @@ export default function AdminAdmissions() {
           </table>
         </div>
       )}
+      {/* Delete Confirmation Modal */}
+      {admissionToDelete && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-red-50 p-6 flex flex-col items-center border-b border-red-100">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-gray-900 text-center">Delete Admission Record</h3>
+              <p className="text-sm font-medium text-gray-600 text-center mt-2">
+                Are you sure you want to permanently delete the admission record for <strong>{admissionToDelete.name}</strong>?
+              </p>
+            </div>
+            <div className="p-6 flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => setAdmissionToDelete(null)}
+                className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 py-3 text-sm font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-200"
+              >
+                Delete Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

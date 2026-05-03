@@ -1,168 +1,510 @@
-import { useState, useEffect } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Edit2, Save, X, Plus, Trash2, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { HelpCircle, Search, Edit2, Trash2, Plus, ArrowUp, ArrowDown, ChevronDown, ChevronUp, MapPin, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+const initialFAQs = [
+  // ADMISSIONS
+  {
+    id: 1, category: "Admissions",
+    question: "What classes does Shikshantar Academy offer?",
+    answer: "Shikshantar Academy offers classes from Play Group to Class 10 (SEE). We follow the national curriculum set by the Government of Nepal under the Curriculum Development Centre (CDC).",
+    published: true, order: 1
+  },
+  {
+    id: 2, category: "Admissions",
+    question: "What is the admission process for new students?",
+    answer: "Parents can fill the online admission form on our website or visit the school office in person. Required documents include: birth certificate, previous school marksheet (if applicable), passport-size photo, and guardian's citizenship copy. After form submission, the admin team will contact you within 2-3 working days.",
+    published: true, order: 2
+  },
+  {
+    id: 3, category: "Admissions",
+    question: "What is the age requirement for Play Group admission?",
+    answer: "Children must be at least 3.5 years old (by Shrawan 1 of the academic year) to be eligible for Play Group admission. For Class 1, children must be at least 5 years old.",
+    published: true, order: 3
+  },
+  {
+    id: 4, category: "Admissions",
+    question: "Is there an entrance exam for admission?",
+    answer: "For Play Group to Class 5, there is no entrance exam. For Class 6 and above, a basic assessment in Nepali, English, and Mathematics is conducted. This is not a competitive exam but helps us understand the student's current level.",
+    published: true, order: 4
+  },
+  // FEES
+  {
+    id: 5, category: "Fee & Payment",
+    question: "What is the monthly fee structure?",
+    answer: "Fee structure for academic year 2083-2084 B.S.: Play Group: NRs. 600/month | Class 1-5: NRs. 800/month | Class 6-8: NRs. 1,200/month | Class 9-10: NRs. 1,800/month. Annual exam fee is charged separately once per year.",
+    published: true, order: 1
+  },
+  {
+    id: 6, category: "Fee & Payment",
+    question: "What payment methods are accepted?",
+    answer: "We accept Cash (at school fee office), eSewa, and Khalti digital payments. Bank transfer to our school account is also accepted. Please bring the transaction screenshot as proof for digital payments.",
+    published: true, order: 2
+  },
+  {
+    id: 7, category: "Fee & Payment",
+    question: "What happens if fee is not paid on time?",
+    answer: "Fees are due by the 15th of each month (B.S.). After 30 days of non-payment, the account is marked as defaulter. Parents will be contacted via phone. Students will not be allowed to sit for terminal exams if 3 or more months of fees are unpaid.",
+    published: true, order: 3
+  },
+  {
+    id: 8, category: "Fee & Payment",
+    question: "Is there any scholarship or fee concession available?",
+    answer: "Yes, Shikshantar Academy offers merit scholarships for students scoring above 90% in the Final Exam. Need-based concessions are also available for families facing financial hardship. Contact the school office with supporting documents to apply.",
+    published: true, order: 4
+  },
+  // ACADEMICS
+  {
+    id: 9, category: "Academics",
+    question: "What medium of instruction is used?",
+    answer: "Shikshantar Academy follows English medium instruction for most subjects. Nepali language and Social Studies are taught in Nepali. We follow the national curriculum prescribed by CDC, Nepal.",
+    published: true, order: 1
+  },
+  {
+    id: 10, category: "Academics",
+    question: "How many exams are held per year?",
+    answer: "We conduct 5 examinations per academic year: Unit Test 1, Unit Test 2, Terminal 1 (First Term), Terminal 2 (Second Term), and Final Exam (Annual Exam). Results are published on the student portal after each exam.",
+    published: true, order: 2
+  },
+  {
+    id: 11, category: "Academics",
+    question: "How can students check their exam results?",
+    answer: "Students can log into the Shikshantar Academy portal using their student ID and password. Results are published by the admin after each examination. A downloadable report card is also available once results are published.",
+    published: true, order: 3
+  },
+  {
+    id: 12, category: "Academics",
+    question: "What is the grading system used?",
+    answer: "We follow the Nepal government grading system: A+ (90-100%), A (80-89%), B+ (70-79%), B (60-69%), C+ (50-59%), C (40-49%), D (30-39%), NG/Fail (below 30%). Minimum pass marks is 35 out of 100.",
+    published: true, order: 4
+  },
+  // SCHOOL LIFE
+  {
+    id: 13, category: "School Life",
+    question: "What are the school timings?",
+    answer: "School hours: Sunday to Friday, 9:30 AM to 4:00 PM (local time). Saturday is a holiday. During winter months (Poush-Magh), school may open at 10:00 AM. Parents will be notified of any timing changes via the Notice Board on the portal.",
+    published: true, order: 1
+  },
+  {
+    id: 14, category: "School Life",
+    question: "What facilities does the school provide?",
+    answer: "Shikshantar Academy provides: well-equipped classrooms, a computer lab, a library, a science lab (for Class 8+), a playground, clean drinking water, and separate washroom facilities for boys and girls.",
+    published: true, order: 2
+  },
+  {
+    id: 15, category: "School Life",
+    question: "How are parents informed about school notices?",
+    answer: "All important notices are posted on the school portal's Notice Board. Parents can view notices by logging in with their child's account or by visiting the school. For urgent notices, WhatsApp messages are sent to guardian phone numbers on record.",
+    published: true, order: 3
+  },
+  // TECHNICAL/PORTAL
+  {
+    id: 16, category: "Portal & Technical",
+    question: "How do I get my student login credentials?",
+    answer: "Student login credentials (Student ID and default password) are provided by the school admin at the time of admission or at the start of the academic year. Contact the school office if you have not received your login details.",
+    published: true, order: 1
+  },
+  {
+    id: 17, category: "Portal & Technical",
+    question: "I forgot my password. What should I do?",
+    answer: "If you have forgotten your password, please contact the school admin directly. The admin can reset your password from the Administrative User Management section. You will be given a new temporary password to log in and change it.",
+    published: true, order: 2
+  },
+  {
+    id: 18, category: "Portal & Technical",
+    question: "Can parents access the student portal?",
+    answer: "Currently, parents can access the portal using their child's student credentials. A dedicated parent login feature is planned for the next academic year. Parents can view their child's results, fee status, and school notices this way.",
+    published: true, order: 3
+  }
+];
+
 export default function FAQ() {
-  const [faqs, setFaqs] = useState<{question: string, answer: string, id: string}[]>([]);
-  const [tempFaqs, setTempFaqs] = useState<{question: string, answer: string, id: string}[]>([]);
+  const [faqs, setFaqs] = useState(initialFAQs);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [openIds, setOpenIds] = useState<number[]>([]);
+  
+  const userRole = localStorage.getItem('userRole') || 'student';
+  const trueAdmin = userRole === 'admin';
+  const [previewAsStudent, setPreviewAsStudent] = useState(false);
+  const isAdmin = trueAdmin && !previewAsStudent;
+  
+  // Admin Filter States
+  const [adminStatusFilter, setAdminStatusFilter] = useState("All");
+  
+  // Modal Edit State
   const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [editingFaq, setEditingFaq] = useState<any>(null);
+  const [toast, setToast] = useState('');
 
-  const userRole = localStorage.getItem('userRole');
-  const isAdmin = userRole === 'admin';
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'faq'), (docSnap) => {
-      if (docSnap.exists()) {
-        const dbData = docSnap.data();
-        if (dbData.items) {
-          setFaqs(dbData.items);
-        }
-      }
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'settings/faq'));
-
-    return () => unsub();
-  }, []);
-
-  const handleEdit = () => {
-    setTempFaqs(faqs.length > 0 ? faqs : [{ id: Date.now().toString(), question: '', answer: '' }]);
-    setIsEditing(true);
+  const categories = ["All", "Admissions", "Fee & Payment", "Academics", "School Life", "Portal & Technical"];
+  
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
   };
 
-  const addFaq = () => {
-    setTempFaqs([...tempFaqs, { id: Date.now().toString(), question: '', answer: '' }]);
-  };
-
-  const removeFaq = (id: string) => {
-    setTempFaqs(tempFaqs.filter(f => f.id !== id));
-  };
-
-  const updateFaq = (id: string, field: 'question' | 'answer', value: string) => {
-    setTempFaqs(tempFaqs.map(f => f.id === id ? { ...f, [field]: value } : f));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const validFaqs = tempFaqs.filter(f => f.question.trim() !== '' && f.answer.trim() !== '');
-      await setDoc(doc(db, 'settings', 'faq'), { items: validFaqs });
-      setIsEditing(false);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'settings/faq');
-    } finally {
-      setSaving(false);
+  const toggleAccordion = (id: number) => {
+    if (openIds.includes(id)) {
+      setOpenIds(openIds.filter(i => i !== id));
+    } else {
+      setOpenIds([...openIds, id]);
     }
   };
 
+  const handleSaveModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingFaq.id) {
+      setFaqs(faqs.map(f => f.id === editingFaq.id ? editingFaq : f));
+      showToast("✓ FAQ saved successfully");
+    } else {
+      const newFaq = {
+        ...editingFaq,
+        id: Date.now(),
+        order: faqs.filter(f => f.category === editingFaq.category).length + 1
+      };
+      setFaqs([...faqs, newFaq]);
+      showToast("✓ FAQ added successfully");
+    }
+    setIsEditing(false);
+    setEditingFaq(null);
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("Delete this question? Students will no longer see it.")) {
+      setFaqs(faqs.filter(f => f.id !== id));
+    }
+  };
+
+  const handleToggleStatus = (id: number) => {
+    setFaqs(faqs.map(f => f.id === id ? { ...f, published: !f.published } : f));
+  };
+
+  const moveFaq = (id: number, direction: 'up' | 'down') => {
+    const f = faqs.find(x => x.id === id);
+    if (!f) return;
+    const catFaqs = faqs.filter(x => x.category === f.category).sort((a,b) => a.order - b.order);
+    const index = catFaqs.findIndex(x => x.id === id);
+    if (direction === 'up' && index > 0) {
+      const tempOrder = catFaqs[index].order;
+      catFaqs[index].order = catFaqs[index - 1].order;
+      catFaqs[index - 1].order = tempOrder;
+    } else if (direction === 'down' && index < catFaqs.length - 1) {
+      const tempOrder = catFaqs[index].order;
+      catFaqs[index].order = catFaqs[index + 1].order;
+      catFaqs[index + 1].order = tempOrder;
+    }
+    
+    // Merge back
+    const updated = faqs.map(x => {
+      const match = catFaqs.find(c => c.id === x.id);
+      return match ? match : x;
+    });
+    setFaqs(updated);
+  };
+
+  const filteredFAQs = faqs.filter(faq => {
+    const matchesSearch = 
+      faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = 
+      selectedCategory === "All" || 
+      faq.category === selectedCategory;
+    const matchesStatus = 
+      !isAdmin ? faq.published === true : 
+      (adminStatusFilter === "All" ? true :
+       adminStatusFilter === "Published" ? faq.published : !faq.published);
+    return matchesSearch && matchesCategory && matchesStatus;
+  }).sort((a,b) => a.order - b.order);
+
+  const getCategoryColor = (cat: string) => {
+    switch (cat) {
+      case 'Admissions': return 'bg-blue-100 text-blue-700';
+      case 'Fee & Payment': return 'bg-green-100 text-green-700';
+      case 'Academics': return 'bg-indigo-100 text-indigo-700';
+      case 'School Life': return 'bg-orange-100 text-orange-700';
+      case 'Portal & Technical': return 'bg-purple-100 text-purple-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Group by category for display
+  const groupedFAQs: { [key: string]: typeof filteredFAQs } = {};
+  filteredFAQs.forEach(f => {
+    if (!groupedFAQs[f.category]) groupedFAQs[f.category] = [];
+    groupedFAQs[f.category].push(f);
+  });
+
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-           <h1 className="text-3xl font-bold text-[#1e3a8a] flex items-center gap-3">
-             <HelpCircle className="w-8 h-8 text-[#f97316]" /> 
-             Frequently Asked Questions
-           </h1>
-           <p className="text-gray-500 mt-2">Find answers to common questions about admissions, fees, and more.</p>
-        </div>
-        {isAdmin && !isEditing && (
-          <button onClick={handleEdit} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition shrink-0">
-            <Edit2 className="w-4 h-4" /> Edit FAQs
-          </button>
+    <div className="min-h-screen bg-[#F5F6FA] pb-12 pt-6">
+      <div className="max-w-[1000px] mx-auto px-4">
+        
+        {toast && (
+          <div className="fixed top-4 right-4 z-50 bg-green-50 text-green-700 px-4 py-3 rounded shadow border border-green-200">
+            {toast}
+          </div>
         )}
-      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-        {isEditing ? (
-          <div className="space-y-6">
-            {tempFaqs.map((faq, index) => (
-              <div key={faq.id} className="p-4 border border-gray-200 rounded-xl relative bg-gray-50 group">
-                <button onClick={() => removeFaq(faq.id)} className="absolute -top-3 -right-3 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Trash2 className="w-4 h-4" />
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744] flex items-center gap-2">
+               <HelpCircle className="w-8 h-8 text-blue-600" />
+               Frequently Asked Questions
+            </h1>
+            <p className="text-gray-500 mt-1 md:text-base text-sm">Find answers to common questions about Shikshantar Academy</p>
+          </div>
+          {trueAdmin && (
+            <div className="flex flex-wrap gap-2">
+              <button 
+                onClick={() => setPreviewAsStudent(!previewAsStudent)} 
+                className={`text-sm font-bold px-3 py-1.5 rounded border transition-colors ${previewAsStudent ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-white text-gray-700 border-gray-300'}`}
+              >
+                {previewAsStudent ? 'Exit Preview' : 'Preview as Student'}
+              </button>
+              {!previewAsStudent && (
+                <button 
+                  onClick={() => { setEditingFaq({ category: 'Admissions', question: '', answer: '', published: true }); setIsEditing(true); }}
+                  className="bg-[#1a2744] text-white text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1 hover:bg-[#111a2f]"
+                >
+                  <Plus className="w-4 h-4" /> Add New Question
                 </button>
-                <div className="space-y-3">
-                   <div>
-                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Question {index + 1}</label>
-                     <input 
-                       type="text" 
-                       value={faq.question} 
-                       onChange={e => updateFaq(faq.id, 'question', e.target.value)} 
-                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white font-medium" 
-                       placeholder="e.g. What are the admission requirements?"
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Answer</label>
-                     <textarea 
-                       value={faq.answer} 
-                       onChange={e => updateFaq(faq.id, 'answer', e.target.value)} 
-                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-                       rows={3}
-                       placeholder="Enter the answer..."
-                     ></textarea>
-                   </div>
-                </div>
-              </div>
-            ))}
+              )}
+            </div>
+          )}
+        </div>
 
-            <button onClick={addFaq} className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-500 rounded-xl hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-2 font-medium">
-              <Plus className="w-5 h-5" /> Add New Question
-            </button>
-            
-            <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
-                <X className="w-4 h-4" /> Cancel
-              </button>
-              <button disabled={saving} onClick={handleSave} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50">
-                <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save FAQs'}
-              </button>
+        {/* SEARCH & FILTERS */}
+        {!isAdmin && (
+          <div className="mb-8">
+            <div className="relative mb-4">
+              <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Search questions..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+            </div>
+            {searchTerm && filteredFAQs.length === 0 && (
+              <p className="text-gray-500 p-4 text-center">No questions found for '{searchTerm}'. Contact us at +977 9807790805</p>
+            )}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${selectedCategory === cat ? 'bg-[#1a2744] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                >
+                  {cat} {cat !== 'All' && `(${faqs.filter(f => f.category === cat && (isAdmin || f.published)).length})`}
+                </button>
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {faqs.length === 0 ? (
-               <div className="text-center py-12 text-gray-500">
-                  <HelpCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p>No frequently asked questions added yet.</p>
+        )}
+
+        {/* ADMIN TOOLBAR */}
+        {isAdmin && (
+          <div className="bg-white p-4 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-6 flex flex-col md:flex-row gap-4 justify-between items-end">
+             <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+               <div className="flex flex-col">
+                 <label className="text-xs font-bold text-gray-500 uppercase mb-1">Filter Category</label>
+                 <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border border-gray-200 rounded p-2 text-sm bg-gray-50 min-w-[150px]">
+                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                 </select>
                </div>
-            ) : (
-               faqs.map((faq, index) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    key={faq.id} 
-                    className="border border-gray-200 rounded-xl overflow-hidden"
-                  >
-                    <button 
-                      onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
-                      className="w-full px-6 py-4 flex items-center justify-between text-left bg-white hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="font-semibold text-gray-900 pr-8">{faq.question}</span>
-                      {openId === faq.id ? <ChevronUp className="w-5 h-5 text-blue-600 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
-                    </button>
-                    <AnimatePresence>
-                      {openId === faq.id && (
-                        <motion.div 
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="px-6 pb-4 pt-1 text-gray-600 border-t border-gray-100 bg-gray-50/50 whitespace-pre-wrap leading-relaxed">
-                            {faq.answer}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-               ))
-            )}
+               <div className="flex flex-col">
+                 <label className="text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                 <select value={adminStatusFilter} onChange={e => setAdminStatusFilter(e.target.value)} className="border border-gray-200 rounded p-2 text-sm bg-gray-50 min-w-[120px]">
+                   <option value="All">All</option>
+                   <option value="Published">Published</option>
+                   <option value="Draft">Draft</option>
+                 </select>
+               </div>
+               <div className="flex flex-col w-full md:w-[250px]">
+                 <label className="text-xs font-bold text-gray-500 uppercase mb-1">Search</label>
+                 <div className="relative">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border border-gray-200 rounded p-2 pl-8 text-sm w-full bg-gray-50" />
+                 </div>
+               </div>
+             </div>
+             <button className="whitespace-nowrap px-4 py-2 border border-gray-200 text-gray-700 bg-white rounded font-semibold text-sm hover:bg-gray-50 w-full md:w-auto">
+               Export FAQ as PDF
+             </button>
           </div>
         )}
+
+        {/* FAQ LIST */}
+        <div className="space-y-8">
+          {Object.keys(groupedFAQs).map(catName => (
+            <div key={catName}>
+               {!isAdmin && <h2 className="text-sm font-bold text-[#1a2744] uppercase tracking-widest mb-3 flex items-center gap-2">
+                 📝 {catName.toUpperCase()} ({groupedFAQs[catName].length})
+               </h2>}
+               <div className="space-y-3">
+                 {groupedFAQs[catName].map(faq => (
+                   isAdmin ? (
+                     // ADMIN CARD
+                     <div key={faq.id} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 flex flex-col md:flex-row gap-4 relative">
+                        <div className="flex-1">
+                           <div className="flex justify-between items-start mb-2">
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${getCategoryColor(faq.category)}`}>
+                                {faq.category}
+                              </span>
+                              <div className="flex gap-2 text-gray-400">
+                                <button onClick={() => { setEditingFaq(faq); setIsEditing(true); }} className="hover:text-blue-600"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleDelete(faq.id)} className="hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                           </div>
+                           <h3 className="font-bold text-gray-900 mb-1">Q: {faq.question}</h3>
+                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">A: {faq.answer}</p>
+                           
+                           <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
+                              <button onClick={() => handleToggleStatus(faq.id)} className="flex items-center gap-1.5 text-xs font-bold">
+                                <div className={`w-2.5 h-2.5 rounded-full ${faq.published ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                <span className={faq.published ? 'text-gray-700' : 'text-gray-400'}>{faq.published ? 'Published' : 'Draft'}</span>
+                              </button>
+                              <span className="text-xs font-bold text-gray-400 border-l pl-6">Order: {faq.order}</span>
+                              <div className="flex gap-2 ml-auto">
+                                <button onClick={() => moveFaq(faq.id, 'up')} className="text-xs font-bold text-gray-500 hover:text-[#1a2744] flex items-center gap-1"><ArrowUp className="w-3.5 h-3.5"/> Move Up</button>
+                                <button onClick={() => moveFaq(faq.id, 'down')} className="text-xs font-bold text-gray-500 hover:text-[#1a2744] flex items-center gap-1"><ArrowDown className="w-3.5 h-3.5"/> Move Down</button>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                   ) : (
+                     // STUDENT ACCORDION
+                     <div key={faq.id} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.05)] overflow-hidden transition-colors hover:bg-[#EEF2FF]">
+                       <button 
+                         onClick={() => toggleAccordion(faq.id)} 
+                         className={`w-full p-4 flex gap-4 items-start text-left transition-colors ${openIds.includes(faq.id) ? 'border-l-4 border-[#1a2744]' : 'border-l-4 border-transparent'}`}
+                       >
+                         <span className="text-lg">❓</span>
+                         <span className={`flex-1 text-[15px] font-semibold mt-0.5 ${openIds.includes(faq.id) ? 'text-[#1a2744]' : 'text-gray-800'}`}>
+                           {faq.question}
+                         </span>
+                         {openIds.includes(faq.id) ? <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
+                       </button>
+                       <AnimatePresence>
+                         {openIds.includes(faq.id) && (
+                           <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                             <div className="p-4 pt-0 pl-12 pr-6 border-t border-transparent text-[#555] text-sm leading-[1.7] whitespace-pre-wrap">
+                               {faq.answer}
+                               
+                               <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2">
+                                  <span className="text-xs text-gray-400">💬 Still have questions?</span>
+                                  <button className="text-xs font-bold text-blue-600 border border-blue-200 bg-blue-50 px-3 py-1 rounded w-max">Contact School Office</button>
+                               </div>
+                             </div>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
+                     </div>
+                   )
+                 ))}
+               </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CONTACT CARD */}
+        {!isAdmin && (
+          <div className="mt-12 bg-[#1a2744] rounded-2xl p-6 md:p-8 text-center shadow-lg">
+             <h2 className="text-xl font-bold text-white mb-2">Still have questions? We're here to help!</h2>
+             <p className="text-white/70 text-sm mb-6 max-w-md mx-auto">If you couldn't find the answer to your question, please don't hesitate to reach out to our administration.</p>
+             <div className="flex flex-col md:flex-row justify-center gap-4">
+                <a href="tel:+9779807790805" className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg border border-white/30 text-white font-bold hover:bg-white/10 transition-colors text-sm">
+                  <Phone className="w-4 h-4" /> Call: +977 9807790805
+                </a>
+                <a href="mailto:info@shikshantar.edu.np" className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg border border-white/30 text-white font-bold hover:bg-white/10 transition-colors text-sm">
+                  <Mail className="w-4 h-4" /> Email School
+                </a>
+                <a href="https://maps.app.goo.gl/rfH2jLU3cSJ5SNoB8" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg border border-white/30 text-white font-bold hover:bg-white/10 transition-colors text-sm">
+                  <MapPin className="w-4 h-4" /> Bastipur-5, Siraha
+                </a>
+             </div>
+          </div>
+        )}
+
+        {/* ADMIN EDIT MODAL */}
+        {isEditing && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex flex-col items-center justify-center p-4">
+             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col h-auto max-h-screen">
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                  <h3 className="font-bold text-gray-900">{editingFaq.id ? 'Edit Question' : 'Add New Question'}</h3>
+                  <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-900"><Trash2 className="hidden"/><span className="text-xl leading-none">&times;</span></button>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                    <form id="faq-form" onSubmit={handleSaveModal} className="space-y-5">
+                       <div>
+                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Category</label>
+                         <select 
+                           value={editingFaq.category} 
+                           onChange={e => setEditingFaq({...editingFaq, category: e.target.value})}
+                           className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-blue-500 font-semibold text-gray-700 bg-white"
+                         >
+                           {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                         </select>
+                       </div>
+                       <div>
+                         <label className="flex justify-between text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                           <span>Question</span>
+                           <span className={editingFaq.question.length > 200 ? 'text-red-500' : 'text-gray-400'}>{editingFaq.question.length}/200</span>
+                         </label>
+                         <input 
+                           type="text" 
+                           required 
+                           value={editingFaq.question} 
+                           onChange={e => setEditingFaq({...editingFaq, question: e.target.value})}
+                           className="w-full p-2.5 border border-gray-200 rounded-lg outline-none focus:border-blue-500 font-semibold text-gray-900 bg-white"
+                         />
+                       </div>
+                       <div>
+                         <label className="flex justify-between text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                           <span>Answer</span>
+                           <span className={editingFaq.answer.length > 1000 ? 'text-red-500' : 'text-gray-400'}>{editingFaq.answer.length}/1000</span>
+                         </label>
+                         <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:border-blue-500">
+                           <div className="bg-gray-50 border-b border-gray-200 p-1 flex gap-1">
+                             <button type="button" className="p-1.5 text-gray-500 hover:bg-gray-200 rounded font-serif font-bold px-3">B</button>
+                             <button type="button" className="p-1.5 text-gray-500 hover:bg-gray-200 rounded">● List</button>
+                           </div>
+                           <textarea 
+                             required 
+                             rows={5}
+                             value={editingFaq.answer} 
+                             onChange={e => setEditingFaq({...editingFaq, answer: e.target.value})}
+                             className="w-full p-3 outline-none text-gray-800 text-sm leading-relaxed block bg-white resize-none"
+                           ></textarea>
+                         </div>
+                       </div>
+                       <div>
+                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Status</label>
+                         <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" checked={editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: true})} className="w-4 h-4 accent-[#1a2744]" />
+                              <span className="font-semibold text-gray-700 text-sm">Published ◉</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input type="radio" checked={!editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: false})} className="w-4 h-4 accent-[#1a2744]" />
+                              <span className="font-semibold text-gray-700 text-sm">Draft ○</span>
+                            </label>
+                         </div>
+                       </div>
+                    </form>
+                </div>
+                <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                   <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-white transition-colors">Cancel</button>
+                   <button type="submit" form="faq-form" className="px-5 py-2.5 rounded-lg bg-[#1a2744] text-white font-bold hover:bg-[#111a2f] transition-colors">Save Question</button>
+                </div>
+             </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
 }
+
