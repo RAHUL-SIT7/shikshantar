@@ -261,6 +261,12 @@ export default function Admin() {
            <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
                <Upload className="w-4 h-4"/> Excel Upload
            </button>
+           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+               <BookOpen className="w-4 h-4"/> History
+           </button>
+           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+               <FileSpreadsheet className="w-4 h-4"/> Report Cards
+           </button>
        </div>
 
        {/* Tab Contents */}
@@ -274,7 +280,7 @@ export default function Admin() {
                <>
                    {activeTab === 'upload' && (
                        <UploadTab 
-                           EXAM_TYPES={dynamicExamTypes} 
+                           EXAM_TYPES={EXAM_TYPES} 
                            allClasses={DEFAULT_CLASSES} 
                            data={data} 
                            setStatus={setStatus} 
@@ -285,7 +291,7 @@ export default function Admin() {
                    )}
                    {activeTab === 'manual' && (
                        <ManualEntryTab 
-                           EXAM_TYPES={dynamicExamTypes} 
+                           EXAM_TYPES={EXAM_TYPES} 
                            allClasses={DEFAULT_CLASSES} 
                            allSubjects={SUBJECTS}
                            data={data} 
@@ -293,6 +299,27 @@ export default function Admin() {
                            userRole={userRole} 
                            assignedClasses={assignedClasses} 
                            assignedSubjects={assignedSubjects} 
+                       />
+                   )}
+                   {activeTab === 'history' && (
+                       <ViewManageTab 
+                           EXAM_TYPES={dynamicExamTypes} 
+                           allClasses={DEFAULT_CLASSES} 
+                           data={data} 
+                           setStatus={setStatus} 
+                           userRole={userRole} 
+                           assignedClasses={assignedClasses} 
+                       />
+                   )}
+                   {activeTab === 'reportcards' && (
+                       <ReportCardsTab 
+                           EXAM_TYPES={dynamicExamTypes} 
+                           allClasses={DEFAULT_CLASSES} 
+                           data={data} 
+                           setStatus={setStatus} 
+                           userRole={userRole} 
+                           assignedClasses={assignedClasses} 
+
                        />
                    )}
                </>

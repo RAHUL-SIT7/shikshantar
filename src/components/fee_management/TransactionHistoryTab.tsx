@@ -293,11 +293,11 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
               <div ref={receiptRef} className="p-6 sm:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
                 
                 <div className="text-center mb-6 border-b border-gray-200 pb-6">
-                  <div className="w-16 h-16 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Receipt className="w-8 h-8" />
+                  <div className="mx-auto mb-3 flex items-center justify-center">
+                    <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
                   </div>
                   <h2 className="font-black text-xl text-[#1e3a8a] uppercase tracking-widest">Shikshantar Academy</h2>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">Siraha, Nepal</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>
                   <div className="mt-4 inline-block bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">
                      Payment Receipt
                   </div>

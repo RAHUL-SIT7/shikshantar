@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
-import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, IndianRupee, Users } from 'lucide-react';
+import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, Banknote, Users } from 'lucide-react';
 
 const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
 
@@ -13,6 +13,7 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
   const [filterClass, setFilterClass] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{key: 'class' | 'name' | 'id', direction: 'asc'|'desc'} | null>(null);
 
   const getStudentDue = (s: any) => {
       let totalDue = 0;
@@ -105,6 +106,20 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
   const activeMonths = MONTHS.slice(0, currentMonthIndex + 2); // Up to Ashad
 
 
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+     if (!sortConfig) return 0;
+     const dir = sortConfig.direction === 'asc' ? 1 : -1;
+     
+     if (sortConfig.key === 'class') {
+       const aNum = parseInt(a.class) || 0;
+       const bNum = parseInt(b.class) || 0;
+       if (aNum !== bNum) return (aNum - bNum) * dir;
+       return String(a.class).localeCompare(String(b.class)) * dir;
+     }
+
+     return String(a[sortConfig.key] || '').localeCompare(String(b[sortConfig.key] || '')) * dir;
+  });
+
   return (
     <div className="space-y-6">
        {/* Filters */}
@@ -126,7 +141,7 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
               onChange={e => setFilterClass(e.target.value)}
               className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-600 focus:outline-none shrink-0 min-h-[48px]"
             >
-              <option value="All">All</option>
+              <option value="All">Class: All</option>
               <option value="Play Group">Play Group</option>
               {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'].map(c => (
                 <option key={c} value={c}>Class {c}</option>
@@ -138,10 +153,10 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
               onChange={e => setFilterStatus(e.target.value)}
               className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-600 focus:outline-none shrink-0 min-h-[48px]"
             >
-              <option value="All">All</option>
-              <option value="Paid">Paid</option>
-              <option value="Due">Due</option>
-              <option value="Defaulter">Defaulter</option>
+              <option value="All">Payment Status: All</option>
+              <option value="Paid">Status: Paid</option>
+              <option value="Due">Status: Due</option>
+              <option value="Defaulter">Status: Defaulter</option>
             </select>
             
             <button onClick={exportCSV} className="bg-[#1e3a8a]/10 border border-[#1e3a8a] text-[#1e3a8a] rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-[#1e3a8a]/20 transition-colors shrink-0 flex gap-2 items-center min-h-[48px]">
@@ -155,9 +170,9 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
          <table className="w-full text-left whitespace-nowrap">
             <thead className="bg-[#1e3a8a]">
                <tr className="text-[10px] font-black text-white uppercase tracking-widest border-b border-gray-100">
-                  <th className="p-4 px-6">Student ID</th>
-                  <th className="p-4">Name</th>
-                  <th className="p-4">Class</th>
+                  <th className="p-4 px-6 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'id', direction: sortConfig?.key === 'id' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Student ID {sortConfig?.key === 'id' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'name', direction: sortConfig?.key === 'name' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Name {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'class', direction: sortConfig?.key === 'class' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Class {sortConfig?.key === 'class' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 text-right">Monthly Fee</th>
                   <th className="p-4 text-right">Due Amount</th>
                   <th className="p-4 text-center">Status</th>
@@ -165,16 +180,21 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-               {filteredStudents.map(s => (
+               {sortedStudents.map(s => (
                   <React.Fragment key={s.id}>
                     <tr className="hover:bg-blue-50/20 transition-colors group">
                        <td className="p-4 px-6">
                           <p className="text-[10px] font-mono text-gray-500 font-bold uppercase">{s.id}</p>
                        </td>
                        <td className="p-4 cursor-pointer" onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-800 text-sm">{s.name}</span>
-                            {expandedStudent === s.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                          <div className="flex flex-col gap-1">
+                             <div className="flex items-center gap-2">
+                               <span className="font-bold text-gray-800 text-sm">{s.name}</span>
+                               {expandedStudent === s.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                             </div>
+                             {s.scholarshipStatus === 'Provided' && (
+                                <span className="inline-block bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-purple-200 self-start">Scholarship Student</span>
+                             )}
                           </div>
                        </td>
                        <td className="p-4">
@@ -188,7 +208,7 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                        <td className="p-4 text-center">
                           <div className="flex items-center gap-1 justify-center">
                              <button onClick={() => onRecordPayment?.(s.id)} className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200" title="Collect">
-                               <IndianRupee className="w-4 h-4" />
+                               <Banknote className="w-4 h-4" />
                              </button>
                              <button onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Ledger">
                                <FileText className="w-4 h-4" />
@@ -252,13 +272,35 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
 
        {/* Mobile View */}
        <div className="md:hidden space-y-4">
-          {filteredStudents.map(s => (
+          <div className="flex justify-end px-2">
+             <select 
+               value={`${sortConfig?.key || ''}-${sortConfig?.direction || ''}`} 
+               onChange={e => {
+                  const [key, dir] = e.target.value.split('-');
+                  if(key && dir) setSortConfig({key: key as any, direction: dir as any});
+                  else setSortConfig(null);
+               }}
+               className="text-xs font-bold text-gray-500 bg-transparent border-none outline-none appearance-none"
+             >
+                <option value="-">Sort By</option>
+                <option value="class-asc">Class (Asc)</option>
+                <option value="class-desc">Class (Desc)</option>
+                <option value="name-asc">Name (Asc)</option>
+                <option value="name-desc">Name (Desc)</option>
+             </select>
+          </div>
+          {sortedStudents.map(s => (
              <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-4 cursor-pointer" onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)}>
                   <div className="flex justify-between items-start mb-2">
                      <div>
                         <p className="font-black text-lg text-gray-800 leading-tight">{s.name}</p>
-                        <p className="text-xs text-gray-500 font-bold uppercase mt-1">Class {s.class} • {s.id}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                           <p className="text-xs text-gray-500 font-bold uppercase">Class {s.class} • {s.id}</p>
+                           {s.scholarshipStatus === 'Provided' && (
+                             <span className="inline-block bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-purple-200">Scholarship</span>
+                           )}
+                        </div>
                      </div>
                      {getStatusBadge(s)}
                   </div>
@@ -290,7 +332,7 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                 
                 <div className="grid grid-cols-3 border-t border-gray-100 divide-x divide-gray-100">
                    <button onClick={() => onRecordPayment?.(s.id)} className="flex py-3 items-center justify-center gap-2 hover:bg-emerald-50 text-emerald-600 transition-colors">
-                      <IndianRupee className="w-5 h-5" />
+                      <Banknote className="w-5 h-5" />
                    </button>
                    <button onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)} className="flex py-3 items-center justify-center gap-2 hover:bg-blue-50 text-blue-600 transition-colors">
                       <FileText className="w-5 h-5" />

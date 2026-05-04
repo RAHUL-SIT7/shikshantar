@@ -243,8 +243,11 @@ export default function AdminAdmissions() {
                 <th className="p-4 cursor-pointer hover:bg-gray-100 group transition-colors" onClick={() => handleSort('parentName')}>
                   Parent Details {getSortIcon('parentName')}
                 </th>
-                <th className="p-4 w-40 cursor-pointer hover:bg-gray-100 group transition-colors" onClick={() => handleSort('status')}>
+                <th className="p-4 cursor-pointer hover:bg-gray-100 group transition-colors" onClick={() => handleSort('status')}>
                   Status {getSortIcon('status')}
+                </th>
+                <th className="p-4">
+                  Scholarship
                 </th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
@@ -257,14 +260,21 @@ export default function AdminAdmissions() {
                       <td className="p-4 text-xs text-gray-500 whitespace-nowrap align-top">
                         <div className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDate(admission.submittedAt)}</div>
                       </td>
-                      <td className="p-4 align-top space-y-2" colSpan={3}>
+                      <td className="p-4 align-top space-y-2" colSpan={4}>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-                          {Object.keys(editData).filter(key => !['id', 'status', 'submittedAt'].includes(key)).map(key => (
+                          {Object.keys(editData).filter(key => !['id', 'status', 'submittedAt', 'scholarshipStatus'].includes(key)).map(key => (
                             <div key={key}>
                               <label className="text-[0.6rem] uppercase text-gray-500 font-bold block mb-1">{formFields.find(f => f.id === key)?.label || key}</label>
                               <input type="text" value={editData[key] || ''} onChange={e => setEditData({...editData, [key]: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 outline-none focus:border-blue-500" />
                             </div>
                           ))}
+                          <div>
+                            <label className="text-[0.6rem] uppercase text-gray-500 font-bold block mb-1">Scholarship Status</label>
+                            <select value={editData.scholarshipStatus || 'Not Provided'} onChange={e => setEditData({...editData, scholarshipStatus: e.target.value})} className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 outline-none focus:border-blue-500">
+                              <option value="Not Provided">Not Provided</option>
+                              <option value="Provided">Provided</option>
+                            </select>
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 align-top border-l border-blue-100 text-center">
@@ -323,6 +333,11 @@ export default function AdminAdmissions() {
                           <option value="Admitted">✅ Admitted</option>
                           <option value="Rejected">❌ Rejected</option>
                         </select>
+                      </td>
+                      <td className="p-4 align-top">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${admission.scholarshipStatus === 'Provided' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {admission.scholarshipStatus || 'Not Provided'}
+                        </span>
                       </td>
                       <td className="p-4 align-top">
                         <div className="flex justify-center gap-2">

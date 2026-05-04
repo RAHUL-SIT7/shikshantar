@@ -112,7 +112,11 @@ const FeeStructure = () => {
           for (const s of students) {
               const studentClass = s.class || s.studentClass;
               const feeStruct = structMap.get(studentClass);
-              const tuitionFee = feeStruct && feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
+              let tuitionFee = feeStruct && feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
+
+              if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
+                 tuitionFee = Math.max(0, tuitionFee - Number(s.scholarshipAmount));
+              }
 
               const feeRef = doc(db, 'studentFees', `${s.id}_${selectedMonth}`);
               batch.set(feeRef, {

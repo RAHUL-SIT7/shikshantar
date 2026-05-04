@@ -49,9 +49,14 @@ export default function Account() {
            const sData: any = { id: userDoc.id, name: userDoc.data().fullName || userDoc.data().name, ...userDoc.data() };
            
            const structSnap = await getDocs(collection(db, 'feeStructure'));
-           const structs = structSnap.docs.map(d => ({ class: d.id, ...d.data() }));
+           const structs = structSnap.docs.map(d => ({ class: d.id, ...d.data() } as any));
            const structure = structs.find((s: any) => s.class === sData.class) || { tuitionFee: 1000, examFee: 500, annualFee: 12000 };
            
+           if (sData.scholarshipStatus === 'Provided' && sData.scholarshipAmount) {
+              const deduction = Number(sData.scholarshipAmount);
+              structure.tuitionFee = Math.max(0, structure.tuitionFee - deduction);
+           }
+
            const feesSnap = await getDocs(query(collection(db, 'studentFees'), where('studentId', '==', studentId)));
            const fees = feesSnap.docs.map(d => d.data());
            

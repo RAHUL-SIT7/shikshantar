@@ -215,8 +215,6 @@ export default function Layout({
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
       nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
     } else if (role === 'admin') {
-      nav.push({ name: 'Students', href: '/user-approvals?filter=student', icon: Users, group: 2 });
-      nav.push({ name: 'Teachers & Staff', href: '/user-approvals?filter=teacher', icon: Users, group: 2 });
       nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User, group: 2 });
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });

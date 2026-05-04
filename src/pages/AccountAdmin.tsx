@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Wallet, TrendingUp, AlertTriangle, Users, BookOpen, Clock, LogOut } from 'lucide-react';
+import { CreditCard, Wallet, TrendingUp, AlertTriangle, Users, BookOpen, Clock, LogOut, GraduationCap } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -9,6 +9,7 @@ import RecordPaymentTab from '../components/fee_management/RecordPaymentTab';
 import FeeStructure from './FeeStructure';
 import ReportsAnalyticsTab from '../components/fee_management/ReportsAnalyticsTab';
 import TransactionHistoryTab from '../components/fee_management/TransactionHistoryTab';
+import ScholarshipTab from '../components/fee_management/ScholarshipTab';
 
 export default function AccountAdmin() {
   const [activeTab, setActiveTab] = useState('student_ledger');
@@ -57,11 +58,19 @@ export default function AccountAdmin() {
           const mergedStudents = studentsList.map(s => {
               const studentFees = feesList.filter(f => f.studentId === s.id);
               const struct = structs.find(st => st.class === s.class);
+              let baseFee = struct?.tuitionFee ? Number(String(struct.tuitionFee).replace(/[^0-9.]/g, '')) : 1000;
+              
+              if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
+                 baseFee = Math.max(0, baseFee - Number(s.scholarshipAmount));
+              }
+
               return {
                  id: s.id,
                  name: s.fullName || s.name,
                  class: s.class,
-                 monthlyFee: struct?.tuitionFee || 1000,
+                 monthlyFee: baseFee,
+                 scholarshipStatus: s.scholarshipStatus,
+                 scholarshipAmount: s.scholarshipAmount,
                  guardianName: s.guardianName || 'Unknown',
                  guardianPhone: s.parentPhone || s.phone || '',
                  fees: studentFees // all fee records
@@ -98,6 +107,12 @@ export default function AccountAdmin() {
           const expectedTotal = collectedYear + outstanding;
           const rate = expectedTotal > 0 ? Math.round((collectedYear / expectedTotal) * 100) : 0;
 
+          let lastCollectionDate = 'N/A';
+          const sortedTx = [...txList].sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+          if (sortedTx.length > 0) {
+             lastCollectionDate = sortedTx[0].date || 'N/A';
+          }
+
           setStats({
              collectedThisMonth: collectedMonth, // Implement later
              totalOutstanding: outstanding,
@@ -105,7 +120,8 @@ export default function AccountAdmin() {
              collectedThisYear: collectedYear,
              collectionRate: Math.min(rate, 100),
              expectedThisMonth: 0,
-          });
+             lastCollectionDate
+          } as any);
 
       } catch (err: any) {
           if (err?.message?.includes('Missing or insufficient permissions')) {
@@ -136,12 +152,15 @@ export default function AccountAdmin() {
 
   const ALL_TABS = [
      { id: 'student_ledger', label: 'Student Ledger', roles: ['admin', 'teacher'] },
+     { id: 'scholarship_students', label: 'Scholarships', roles: ['admin', 'teacher'] },
      { id: 'record_payment', label: 'Record Payment', roles: ['admin'] },
      { id: 'fee_structure', label: 'Fee Structure', roles: ['admin'] },
      { id: 'history', label: 'Transaction History', roles: ['admin', 'teacher'] },
   ];
 
   const TABS = ALL_TABS.filter(t => t.roles.includes(userRole));
+
+  const scholarshipCount = studentsData.filter(s => s.scholarshipStatus === 'Provided').length;
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-10">
@@ -150,7 +169,7 @@ export default function AccountAdmin() {
       </div>
       
       {/* Top Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in zoom-in-95 duration-500">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in zoom-in-95 duration-500">
         {/* Card 1 */}
         <div className="bg-emerald-50 rounded-2xl p-4 md:p-5 border border-emerald-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-default flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
@@ -201,7 +220,22 @@ export default function AccountAdmin() {
             <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2 mb-1">
                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${stats.collectionRate}%` }}></div>
             </div>
-            <p className="text-[10px] text-blue-600 font-medium leading-tight">Current collection rate</p>
+            <p className="text-[10px] text-blue-600 font-medium leading-tight mt-1">Last Date: <span className="font-bold">{(stats as any).lastCollectionDate || 'N/A'}</span></p>
+          </div>
+        </div>
+
+        {/* Card 5 */}
+        <div 
+           className="bg-purple-50 rounded-2xl p-4 md:p-5 border border-purple-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-pointer flex flex-col justify-between"
+           onClick={() => setActiveTab('scholarship_students')}
+        >
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-[10px] md:text-xs text-purple-800 font-bold uppercase leading-tight tracking-wider">Scholarships</p>
+            <GraduationCap className="w-4 h-4 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-xl md:text-3xl font-black text-purple-900 tracking-tight">{scholarshipCount} Availed</p>
+            <p className="text-[10px] text-purple-600 font-medium mt-1">Total sponsored students</p>
           </div>
         </div>
       </div>
@@ -241,6 +275,7 @@ export default function AccountAdmin() {
                        <FeeStructure />
                      </div>
                  )}
+                 {activeTab === 'scholarship_students' && <ScholarshipTab studentsData={studentsData} />}
                  {activeTab === 'history' && <TransactionHistoryTab transactionsData={transactionsData} onRefresh={fetchFeeData} />}
              </>
          )}

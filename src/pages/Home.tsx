@@ -73,6 +73,10 @@ export default function Home() {
             let tCollections: any[] = [];
             let tTotal = 0;
             const today = new Date();
+            
+            const monthNames = ['Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Asoj', 'Kartik', 'Mangsir', 'Poush'];
+            const monthlySums: Record<string, number> = {};
+            monthNames.forEach(m => monthlySums[m] = 0);
 
             txSnap.forEach(snap => {
                 const tx = snap.data();
@@ -82,7 +86,28 @@ export default function Home() {
                     tCollections.push({ id: snap.id, ...tx });
                     tTotal += tx.amount || 0;
                 }
+                const monthIndex = txDate.getMonth();
+                const moName = monthNames[monthIndex];
+                if (moName) {
+                    monthlySums[moName] += tx.amount || 0;
+                }
             });
+            
+            setFeeChartData([
+              { name: 'Baisakh', expected: 300000, collected: monthlySums['Baisakh'] },
+              { name: 'Jestha', expected: 300000, collected: monthlySums['Jestha'] },
+              { name: 'Ashadh', expected: 300000, collected: monthlySums['Ashadh'] },
+              { name: 'Shrawan', expected: 300000, collected: monthlySums['Shrawan'] },
+              { name: 'Bhadra', expected: 300000, collected: monthlySums['Bhadra'] },
+              { name: 'Asoj', expected: 300000, collected: monthlySums['Asoj'] },
+              { name: 'Kartik', expected: 300000, collected: monthlySums['Kartik'] },
+              { name: 'Mangsir', expected: 300000, collected: monthlySums['Mangsir'] },
+              { name: 'Poush', expected: 300000, collected: monthlySums['Poush'] },
+              { name: 'Magh', expected: 300000, collected: monthlySums['Magh'] },
+              { name: 'Falgun', expected: 300000, collected: monthlySums['Falgun'] },
+              { name: 'Chaitra', expected: 300000, collected: monthlySums['Chaitra'] },
+            ]);
+
             setFeeCollected(collected);
             setTodayCollections(tCollections);
             setTodayTotal(tTotal);
@@ -307,16 +332,21 @@ export default function Home() {
   if (hour < 12) greeting = 'Morning';
   else if (hour < 17) greeting = 'Afternoon';
   
-  // Charts mock data
-  const feeChartData = [
-    { name: 'Kartik', expected: 300000, collected: 280000 },
-    { name: 'Mangsir', expected: 300000, collected: 260000 },
-    { name: 'Poush', expected: 300000, collected: 290000 },
-    { name: 'Magh', expected: 300000, collected: 250000 },
-    { name: 'Falgun', expected: 300000, collected: 275000 },
-    { name: 'Chaitra', expected: 300000, collected: 214000 },
-    { name: 'Baisakh', expected: 300000, collected: 80000 },
-  ];
+  // State for Chart Data
+  const [feeChartData, setFeeChartData] = useState([
+    { name: 'Baisakh', expected: 300000, collected: 0 },
+    { name: 'Jestha', expected: 300000, collected: 0 },
+    { name: 'Ashadh', expected: 300000, collected: 0 },
+    { name: 'Shrawan', expected: 300000, collected: 0 },
+    { name: 'Bhadra', expected: 300000, collected: 0 },
+    { name: 'Asoj', expected: 300000, collected: 0 },
+    { name: 'Kartik', expected: 300000, collected: 0 },
+    { name: 'Mangsir', expected: 300000, collected: 0 },
+    { name: 'Poush', expected: 300000, collected: 0 },
+    { name: 'Magh', expected: 300000, collected: 0 },
+    { name: 'Falgun', expected: 300000, collected: 0 },
+    { name: 'Chaitra', expected: 300000, collected: 0 }
+  ]);
   
   const admissionsApproved = recentAdmissionsList.filter(a => a.status === 'Admitted').length;
   const admissionsRejected = recentAdmissionsList.filter(a => a.status === 'Rejected').length;
@@ -512,17 +542,27 @@ export default function Home() {
          {/* Section 3: Charts */}
          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
              <div className="md:col-span-3 bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
-                <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-blue-600 pl-2">Fee Collection — 2083-2084 B.S.</h3>
+                <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-blue-600 pl-2">Fee Collection — {bsString}</h3>
                 <div className="flex-1 w-full min-h-0">
                    <ResponsiveContainer width="100%" height="100%">
                        <BarChart data={feeChartData} margin={{ top: 10, right: 10, left: 10, bottom: 5}}>
+                          <defs>
+                             <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#1e3a8a" stopOpacity={1}/>
+                             </linearGradient>
+                             <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={1}/>
+                             </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
-                          <YAxis yAxisId="left" orientation="left" stroke="#1e3a8a" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(val) => `₹${val/1000}k`} />
-                          <RechartsTooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}} />
-                          <Legend wrapperStyle={{fontSize: '12px', paddingTop: '10px'}} iconType="circle" />
-                          <Bar yAxisId="left" dataKey="expected" name="Expected" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={20} />
-                          <Bar yAxisId="left" dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280', fontWeight: 600 }} dy={10} />
+                          <YAxis yAxisId="left" orientation="left" stroke="#6B7280" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(val) => `NRs. ${val/1000}k`} />
+                          <RechartsTooltip cursor={{fill: '#f3f4f6', opacity: 0.4}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', padding: '12px'}} itemStyle={{fontWeight: 'bold'}} labelStyle={{color: '#374151', marginBottom: '8px', fontWeight: 'bold'}} />
+                          <Legend wrapperStyle={{fontSize: '12px', paddingTop: '20px', fontWeight: 600}} iconType="circle" />
+                          <Bar yAxisId="left" dataKey="expected" name="Expected" fill="url(#colorExpected)" radius={[6, 6, 0, 0]} barSize={16} />
+                          <Bar yAxisId="left" dataKey="collected" name="Collected" fill="url(#colorCollected)" radius={[6, 6, 0, 0]} barSize={16} />
                        </BarChart>
                    </ResponsiveContainer>
                 </div>

@@ -193,7 +193,7 @@ export default function Alumni() {
   const [formData, setFormData] = useState({
     name: '', graduationYear: '', batch: '', seeBand: '', currentStatus: '',
     organization: '', degree: '', location: '', quote: '', achievement: '',
-    category: 'Other', featured: false, photo: ''
+    category: 'Other', featured: false, photo: '', photoSource: 'url'
   });
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -275,13 +275,14 @@ export default function Alumni() {
     const total = alumni.length;
     const featured = alumni.filter(a => a.featured).length;
     const uniqueCats = new Set(alumni.map(a => a.category)).size;
+    const uniqueYears = new Set(alumni.map(a => a.year)).size;
     
     const catCounts: Record<string, number> = {};
     alumni.forEach(a => {
       catCounts[a.category] = (catCounts[a.category] || 0) + 1;
     });
     
-    return { total, featured, uniqueCats, catCounts };
+    return { total, featured, uniqueCats, uniqueYears, catCounts };
   }, [alumni]);
 
   return (
@@ -335,15 +336,15 @@ export default function Alumni() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-white/20 pt-8 mt-8">
             <div className="text-center md:border-r md:border-white/20 px-2">
-              <div className="text-3xl md:text-4xl font-black mb-1">8+</div>
+              <div className="text-3xl md:text-4xl font-black mb-1">{stats.uniqueYears > 8 ? stats.uniqueYears : '8+'}</div>
               <div className="text-xs font-bold text-blue-200 tracking-wider uppercase">Batches Graduated</div>
             </div>
             <div className="text-center md:border-r md:border-white/20 px-2">
-              <div className="text-3xl md:text-4xl font-black mb-1">200+</div>
+              <div className="text-3xl md:text-4xl font-black mb-1">{stats.total > 200 ? stats.total : stats.total + '+'}</div>
               <div className="text-xs font-bold text-blue-200 tracking-wider uppercase">Alumni Worldwide</div>
             </div>
             <div className="text-center md:border-r md:border-white/20 px-2">
-              <div className="text-3xl md:text-4xl font-black mb-1">15+</div>
+              <div className="text-3xl md:text-4xl font-black mb-1">{stats.featured > 15 ? stats.featured : '15+'}</div>
               <div className="text-xs font-bold text-blue-200 tracking-wider uppercase">District Toppers</div>
             </div>
             <div className="text-center px-2">
@@ -421,6 +422,13 @@ export default function Alumni() {
 
                    <div className="p-6 flex-1 flex flex-col">
                       <div className="flex items-center gap-4 mb-4">
+                        {a.photo ? (
+                          <img src={a.photo} alt={a.name} className="w-14 h-14 rounded-full object-cover border border-gray-200" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold text-xl shrink-0">
+                            {getInitials(a.name)}
+                          </div>
+                        )}
                         <div>
                           <h3 className="font-bold text-lg text-gray-900 leading-tight">{a.name}</h3>
                           <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mt-1 ${getCategoryBadgeStyles(a.category)}`}>
@@ -501,6 +509,13 @@ export default function Alumni() {
                    <div className="p-5 flex-1 flex flex-col border-b border-gray-100">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
+                          {a.photo ? (
+                            <img src={a.photo} alt={a.name} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold text-lg">
+                              {getInitials(a.name)}
+                            </div>
+                          )}
                           <div>
                             <h3 className="font-bold text-gray-900 leading-tight pr-6">{a.name}</h3>
                             <p className="text-xs text-gray-500 font-medium">{a.batch}</p>
@@ -654,6 +669,33 @@ export default function Alumni() {
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
                   <input type="text" placeholder="e.g. Kathmandu, Nepal" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                </div>
+
+                <div className="md:col-span-2 space-y-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                   <label className="block text-xs font-bold text-gray-500 uppercase">Alumni Photo</label>
+                   <div className="flex gap-4 mb-2">
+                     <button type="button" onClick={() => setFormData({...formData, photoSource: 'url'})} className={`text-xs font-bold px-3 py-1.5 rounded-full ${formData.photoSource !== 'device' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>Image URL</button>
+                     <button type="button" onClick={() => setFormData({...formData, photoSource: 'device'})} className={`text-xs font-bold px-3 py-1.5 rounded-full ${formData.photoSource === 'device' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>Upload from Device</button>
+                   </div>
+                   {formData.photoSource === 'device' ? (
+                     <input type="file" accept="image/*" onChange={(e) => {
+                       const file = e.target.files?.[0];
+                       if (file) {
+                         const reader = new FileReader();
+                         reader.onloadend = () => {
+                           setFormData({...formData, photo: reader.result as string});
+                         };
+                         reader.readAsDataURL(file);
+                       }
+                     }} className="w-full text-sm font-semibold file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                   ) : (
+                     <input type="text" placeholder="https://example.com/photo.jpg" value={formData.photo || ''} onChange={e => setFormData({...formData, photo: e.target.value})} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                   )}
+                   {formData.photo && (
+                     <div className="mt-2 h-20 w-20 rounded-full overflow-hidden border border-gray-200">
+                       <img src={formData.photo} alt="Preview" className="w-full h-full object-cover" />
+                     </div>
+                   )}
                 </div>
 
                 <div className="md:col-span-2">

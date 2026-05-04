@@ -6,7 +6,7 @@ import { db } from '../../firebase';
 
 export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRole, assignedClasses }: any) {
   const [filterClass, setFilterClass] = useState('');
-  const [filterExam, setFilterExam] = useState(EXAM_TYPES[0]);
+  const [filterExam, setFilterExam] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [editingRecord, setEditingRecord] = useState<StudentResult | null>(null);
@@ -15,8 +15,8 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
   const allowedClasses = userRole === 'admin' ? allClasses : assignedClasses;
 
   const filteredData = useMemo(() => {
-     let f = (data as StudentResult[]).filter(r => r.examType === filterExam);
-     if (filterClass) f = f.filter(r => r.class === filterClass);
+     let f = (data as StudentResult[]).filter(r => !filterExam || (r.examType && r.examType.toLowerCase().includes(filterExam.toLowerCase())));
+     if (filterClass) f = f.filter(r => String(r.class) === filterClass);
      else if (userRole === 'teacher') f = f.filter(r => allowedClasses.includes(String(r.class)));
 
      if (searchTerm) {
@@ -24,26 +24,44 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
          f = f.filter(r => (r.studentName?.toLowerCase().includes(s) || r.studentId?.toLowerCase().includes(s)));
      }
      
-     // Rank Assignment within the currently filtered set
+     // Rank Assignment within the currently filtered set (grouped by class and exam)
      let withStats = [...f];
-     withStats.sort((a, b) => b.total - a.total);
-
-     let currentRank = 1;
-     let prevTotal = -1;
-     let sameRankCount = 0;
-     withStats.forEach((r, idx) => {
-         if (r.total === prevTotal) {
-             r.rank = currentRank;
-             sameRankCount++;
-         } else {
-             currentRank += sameRankCount;
-             if (idx === 0) currentRank = 1;
-             r.rank = currentRank;
-             sameRankCount = 1;
-             prevTotal = r.total;
-         }
-     });
      
+     const groups: Record<string, StudentResult[]> = {};
+     withStats.forEach(r => {
+         const key = `${r.class}_${r.examType}`;
+         if (!groups[key]) groups[key] = [];
+         groups[key].push(r);
+     });
+
+     Object.values(groups).forEach(group => {
+         group.sort((a, b) => b.total - a.total);
+         let currentRank = 1;
+         let prevTotal = -1;
+         let sameRankCount = 0;
+         group.forEach((r, idx) => {
+             if (r.total === prevTotal) {
+                 r.rank = currentRank;
+                 sameRankCount++;
+             } else {
+                 if (idx === 0) {
+                     currentRank = 1;
+                 } else {
+                     currentRank += sameRankCount;
+                 }
+                 r.rank = currentRank;
+                 sameRankCount = 1;
+                 prevTotal = r.total;
+             }
+         });
+     });
+
+     withStats.sort((a, b) => {
+         if (a.class !== b.class) return String(a.class).localeCompare(String(b.class));
+         if (a.examType !== b.examType) return String(a.examType).localeCompare(String(b.examType));
+         return (a.rank || 0) - (b.rank || 0);
+     });
+
      return withStats;
   }, [data, filterClass, filterExam, searchTerm, allowedClasses, userRole]);
 
@@ -246,15 +264,37 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
      }
   };
 
+  const availableExamsForClass = useMemo(() => {
+      const types = new Set<string>();
+      if (!filterClass) {
+          EXAM_TYPES.forEach((e: string) => types.add(e));
+      }
+      data.forEach((d: any) => {
+          if (!filterClass || String(d.class) === filterClass) {
+              types.add(d.examType);
+          }
+      });
+      return Array.from(types);
+  }, [data, filterClass, EXAM_TYPES]);
+
   // Check if all in filtered view are published
   const allPublished = filteredData.length > 0 && filteredData.every(r => r.published);
 
   return (
     <div>
         <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
-            <select value={filterExam} onChange={e=>setFilterExam(e.target.value)} className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]">
-                {EXAM_TYPES.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
-            </select>
+            <div className="relative w-full md:w-auto">
+                <input 
+                   list="history-exams"
+                   value={filterExam} 
+                   onChange={e=>setFilterExam(e.target.value)} 
+                   placeholder="Search or Select Exam..."
+                   className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                />
+                <datalist id="history-exams">
+                    {availableExamsForClass.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
+                </datalist>
+            </div>
             <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]">
                 <option value="">All Permitted Classes</option>
                 {allowedClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
@@ -280,7 +320,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
         {classStats && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl mb-6 shadow-sm flex flex-wrap gap-6 items-center">
                 <div className="flex-1 min-w-[200px]">
-                   <h3 className="font-black text-[#1e3a8a] text-lg mb-2">Class Statistics ({filterClass || 'All Classes'})</h3>
+                   <h3 className="font-black text-[#1e3a8a] text-lg mb-2">Class Statistics ({filterClass ? `Class ${filterClass}` : 'All Classes'}{filterExam ? ` - ${filterExam}` : ''})</h3>
                    <div className="flex gap-4 text-sm font-bold text-gray-700">
                       <div><span className="text-gray-500 block text-xs">High</span> {classStats.max.toFixed(1)}%</div>
                       <div><span className="text-gray-500 block text-xs">Low</span> {classStats.min.toFixed(1)}%</div>
@@ -301,78 +341,98 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
             </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#f8fafc] border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
-                    <tr>
-                        <th className="p-4">Rank</th>
-                        <th className="p-4">Student</th>
-                        {allSubjectsForView.map(s => <th key={s} className="p-4 text-center">{s}</th>)}
-                        <th className="p-4 text-center">Total</th>
-                        <th className="p-4 text-center">%</th>
-                        <th className="p-4 text-center">Grade</th>
-                        <th className="p-4 text-center">Published</th>
-                        <th className="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {filteredData.map((std: StudentResult) => (
-                        <tr key={std.studentId} className="hover:bg-blue-50 transition-colors">
-                            <td className="p-4">
-                               <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center font-black text-gray-700 text-xs">{std.rank}</div>
-                            </td>
-                            <td className="p-4">
-                                <p className="font-black text-gray-900 uppercase">{std.studentName}</p>
-                                <p className="text-xs text-gray-500 font-bold">ID: {std.studentId} | Cls: {std.class}</p>
-                            </td>
-                            {allSubjectsForView.map(s => {
-                                const subject = std.subjects[s];
-                                if (!subject) return <td key={s} className="p-4 text-center">-</td>;
-                                const m = subject.obtained;
-                                const fm = subject.fullMarks;
-                                return (
-                                    <td key={s} className="p-4 text-center">
-                                       {m === 'AB' ? <span className="text-red-500 font-bold text-xs">AB</span> : (
-                                          <div>
-                                             <span className="font-black text-gray-800">{m}</span><br/>
-                                             <span className={`text-[10px] font-bold ${getGrade(m, fm).includes('F') || getGrade(m, fm).includes('NG') ? 'text-red-500' : 'text-gray-400'}`}>{getGrade(m, fm)}</span>
-                                          </div>
-                                       )}
-                                    </td>
-                                )
-                            })}
-                            <td className="p-4 text-center font-black text-gray-800">{std.total}</td>
-                            <td className="p-4 text-center font-black text-[#1e3a8a]">{std.percentage.toFixed(1)}%</td>
-                            <td className="p-4 text-center">
-                                <span className={`px-2 py-1 rounded-sm text-xs font-black ${
-                                   std.grade.includes('A') ? 'bg-green-100 text-green-700' : 
-                                   std.grade.includes('B') ? 'bg-blue-100 text-[#1e3a8a]' : 
-                                   std.grade.includes('C') ? 'bg-orange-100 text-orange-700' :
-                                   'bg-red-100 text-red-700'
-                                }`}>
-                                    {std.grade || '-'}
-                                </span>
-                            </td>
-                            <td className="p-4 text-center">
-                               {std.published ? 
-                                 <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded">✓ Published</span> :
-                                 <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded">Draft</span>
-                               }
-                            </td>
-                            <td className="p-4">
-                                <div className="flex items-center justify-center gap-2">
-                                    <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-[#1e3a8a] hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                    <button onClick={() => deleteRecord(std.studentId, std.examType)} className="p-2 bg-gray-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                    {filteredData.length === 0 && (
-                        <tr><td colSpan={allSubjectsForView.length + 8} className="p-10 text-center text-gray-400 font-bold">No results found for selected criteria.</td></tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
+        {filteredData.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 text-center text-gray-400 font-bold">
+                No results found for selected criteria.
+            </div>
+        ) : (
+            (Object.entries(
+                filteredData.reduce((acc, std) => {
+                    const key = `Class ${std.class} - ${std.examType}`;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(std);
+                    return acc;
+                }, {} as Record<string, StudentResult[]>)
+            ) as [string, StudentResult[]][]).map(([groupTitle, groupStudents]) => {
+                const groupSubjects = Array.from(new Set(groupStudents.flatMap(std => Object.keys(std.subjects))));
+                return (
+                <div key={groupTitle} className="mb-8 last:mb-0">
+                    <h4 className="font-black text-[#1e3a8a] text-md px-4 py-2 bg-blue-50 border border-blue-100 rounded-t-xl">
+                        {groupTitle}
+                    </h4>
+                    <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 border-t-0 overflow-x-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead className="bg-[#f8fafc] border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
+                                <tr>
+                                    <th className="p-4">Rank</th>
+                                    <th className="p-4">Student</th>
+                                    {groupSubjects.map(s => <th key={s} className="p-4 text-center">{s}</th>)}
+                                    <th className="p-4 text-center">Total</th>
+                                    <th className="p-4 text-center">%</th>
+                                    <th className="p-4 text-center">Grade</th>
+                                    <th className="p-4 text-center">Published</th>
+                                    <th className="p-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {groupStudents.map((std: StudentResult) => (
+                                    <tr key={`${std.studentId}_${std.examType}`} className="hover:bg-blue-50 transition-colors">
+                                        <td className="p-4">
+                                           <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center font-black text-gray-700 text-xs">{std.rank}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <p className="font-black text-gray-900 uppercase">{std.studentName}</p>
+                                            <p className="text-xs text-gray-500 font-bold">ID: {std.studentId} | Cls: {std.class} | Exam: {std.examType}</p>
+                                        </td>
+                                        {groupSubjects.map(s => {
+                                            const subject = std.subjects[s];
+                                            if (!subject) return <td key={s} className="p-4 text-center">-</td>;
+                                            const m = subject.obtained;
+                                            const fm = subject.fullMarks;
+                                            return (
+                                                <td key={s} className="p-4 text-center">
+                                                   {m === 'AB' ? <span className="text-red-500 font-bold text-xs">AB</span> : (
+                                                      <div>
+                                                         <span className="font-black text-gray-800">{m}</span><br/>
+                                                         <span className={`text-[10px] font-bold ${getGrade(m, fm).includes('F') || getGrade(m, fm).includes('NG') ? 'text-red-500' : 'text-gray-400'}`}>{getGrade(m, fm)}</span>
+                                                      </div>
+                                                   )}
+                                                </td>
+                                            )
+                                        })}
+                                        <td className="p-4 text-center font-black text-gray-800">{std.total}</td>
+                                        <td className="p-4 text-center font-black text-[#1e3a8a]">{std.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 text-center">
+                                            <span className={`px-2 py-1 rounded-sm text-xs font-black ${
+                                               std.grade.includes('A') ? 'bg-green-100 text-green-700' : 
+                                               std.grade.includes('B') ? 'bg-blue-100 text-[#1e3a8a]' : 
+                                               std.grade.includes('C') ? 'bg-orange-100 text-orange-700' :
+                                               'bg-red-100 text-red-700'
+                                            }`}>
+                                                {std.grade || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                           {std.published ? 
+                                             <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded">✓ Published</span> :
+                                             <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded">Draft</span>
+                                           }
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-[#1e3a8a] hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={() => deleteRecord(std.studentId, std.examType)} className="p-2 bg-gray-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                );
+            })
+        )}
 
         {/* Edit Modal */}
         {editingRecord && (

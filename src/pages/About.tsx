@@ -4,10 +4,10 @@ const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
 
 export default function About() {
   const [content, setContent] = useState({
-    aboutUs: 'Located in the heart of Karjanha Municipality, Ward No. 05, Siraha, Madhesh Province, Nepal, Shikshantar Academy is a premier educational institution dedicated to providing quality education from Playgroup to Class Ten (10). We foster an environment where academic excellence meets character building.',
-    mission: 'To provide a nurturing, safe, and innovative learning environment that empowers students to reach their full potential, develop critical thinking skills, and become responsible global citizens.',
-    vision: 'To be a center of excellence in education that inspires lifelong learning, creativity, and leadership among students in the Madhesh Province and beyond.',
-    history: 'Established with a vision to transform the educational landscape of Siraha, Shikshantar Academy has grown from a modest beginning into a leading institution. Over the years, we have consistently produced outstanding academic results and nurtured talents across various disciplines, becoming a trusted name for parents in the region.',
+    aboutUs: 'Established in the heart of Karjanha Municipality, Ward No. 05, Siraha, Shikshantar Academy is a distinguished educational institution committed to academic excellence and character development. From Playgroup through Class Ten, we cultivate an enriching environment that transforms students into confident, capable, and compassionate individuals.',
+    mission: 'To deliver a transformative educational experience in a safe, progressive, and nurturing environment, empowering students to maximize their academic potential, embrace critical thinking, and emerge as responsible global citizens.',
+    vision: 'To serve as a center of educational excellence across Madhesh Province and beyond, inspiring a lifelong passion for learning, unyielding creativity, and principled leadership in every student.',
+    history: 'Founded with a profound vision to elevate the educational landscape of Siraha, Shikshantar Academy has steadily evolved into a prestigious institution of learning. Through our unwavering dedication to pedagogical excellence, we have consistently nurtured top-tier talent and secured our standing as a trusted partner for parents investing in their children\'s future.',
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -18,7 +18,7 @@ export default function About() {
 
   useEffect(() => {
     const loadData = () => {
-      const rawData = localStorage.getItem('school_about_v2');
+      const rawData = localStorage.getItem('school_about_v3');
       if (rawData) {
         setContent(JSON.parse(rawData));
         setTempContent(JSON.parse(rawData));
@@ -28,7 +28,7 @@ export default function About() {
     loadData();
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'school_about_v2') {
+      if (e.key === 'school_about_v3') {
         loadData();
       }
     };
@@ -39,7 +39,7 @@ export default function About() {
 
   const handleSave = () => {
     setContent(tempContent);
-    localStorage.setItem('school_about_v2', JSON.stringify(tempContent));
+    localStorage.setItem('school_about_v3', JSON.stringify(tempContent));
     setIsEditing(false);
   };
 
@@ -49,172 +49,186 @@ export default function About() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col max-w-6xl mx-auto pb-12">
       {isAdmin && (
-        <div className="flex justify-end w-full">
+        <div className="flex justify-end w-full mb-6">
           {isEditing ? (
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="bg-[#10b981] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#059669] shadow">
-                <Save className="w-4 h-4"/> Save Editing
+            <div className="flex gap-3">
+              <button onClick={handleSave} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 shadow-md transition-all active:scale-95">
+                <Save className="w-4 h-4"/> Save Content
               </button>
-              <button onClick={handleCancel} className="bg-[#ef4444] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#b91c1c] shadow">
+              <button onClick={handleCancel} className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-rose-100 transition-all active:scale-95">
                 <X className="w-4 h-4"/> Cancel
               </button>
             </div>
           ) : (
-             <button onClick={() => setIsEditing(true)} className="bg-[#1e3a8a] text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-[#1e40af] shadow">
+             <button onClick={() => setIsEditing(true)} className="bg-[#1e3a8a] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#1e40af] shadow-md transition-all active:scale-95">
                 <Edit2 className="w-4 h-4"/> Edit Page Content
              </button>
           )}
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative">
 
-      <section className="col-span-1 md:col-span-3 bg-[#ffffff] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#1e3a8a]/10 text-[#1e3a8a] text-xs font-bold mb-4 border border-[#1e3a8a]/20 uppercase">
-            <Info className="w-3 h-3" />
-            About Us
+      {/* Hero Section */}
+      <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 relative overflow-hidden mb-8 group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
+        <div className="relative z-10 max-w-4xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-[#1e3a8a] text-xs font-black tracking-widest mb-6 uppercase">
+            <Info className="w-3.5 h-3.5" />
+            About Our Institution
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold leading-tight mb-2 text-[#1f2937]">
+          <h1 className="text-4xl md:text-5xl font-black leading-tight text-gray-900 mb-4 tracking-tight">
             Shikshantar Academy
           </h1>
-          <p className="text-sm font-bold text-[#f97316] uppercase tracking-wider mb-4">
-            "Empowering Minds, Shaping Futures"
+          <p className="text-lg md:text-xl font-bold text-[#f97316] mb-8">
+            Empowering Minds, Shaping Futures
           </p>
+          
           {isEditing ? (
             <textarea 
-              className="w-full text-sm text-[#6b7280] leading-relaxed p-3 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
-              rows={4}
+              className="w-full text-base text-gray-700 leading-relaxed p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[120px]"
               value={tempContent.aboutUs}
               onChange={(e) => setTempContent({...tempContent, aboutUs: e.target.value})}
             />
           ) : (
-            <p className="text-sm text-[#6b7280] max-w-3xl leading-relaxed whitespace-pre-wrap">
+            <p className="text-base md:text-lg text-gray-600 leading-relaxed whitespace-pre-wrap max-w-3xl">
               {content.aboutUs}
             </p>
           )}
-          <div className="mt-6">
+          
+          <div className="mt-8 pt-8 border-t border-gray-100 flex items-center">
             <a
               href="https://maps.app.goo.gl/n3Y7iLB1fry5cqtX9"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-lg text-sm font-bold inline-flex items-center gap-2 hover:bg-[#1e40af] transition-colors shadow-sm"
+              className="group/btn inline-flex items-center gap-2 px-6 py-3 bg-[#1e3a8a] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1e40af] hover:shadow-lg transition-all active:scale-95"
             >
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-4 w-4 transition-transform group-hover/btn:-translate-y-0.5" />
               Find Us on Map
             </a>
           </div>
         </div>
       </section>
 
-      {/* Mission & Vision */}
-      <div className="col-span-1 flex flex-col gap-5">
-        <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex-1">
-          <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex items-center gap-2">
-            <Target className="w-4 h-4 text-[#1e3a8a]" />
-            Our Mission
-          </div>
-          {isEditing ? (
-            <textarea 
-              className="w-full text-[0.8rem] text-[#1f2937] leading-relaxed p-2 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
-              rows={4}
-              value={tempContent.mission}
-              onChange={(e) => setTempContent({...tempContent, mission: e.target.value})}
-            />
-          ) : (
-            <p className="text-[0.8rem] text-[#1f2937] leading-relaxed">
-              {content.mission}
-            </p>
-          )}
-        </section>
-
-        <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] flex-1">
-          <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex items-center gap-2">
-            <Eye className="w-4 h-4 text-[#1e3a8a]" />
-            Our Vision
-          </div>
-          {isEditing ? (
-            <textarea 
-              className="w-full text-[0.8rem] text-[#1f2937] leading-relaxed p-2 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
-              rows={4}
-              value={tempContent.vision}
-              onChange={(e) => setTempContent({...tempContent, vision: e.target.value})}
-            />
-          ) : (
-            <p className="text-[0.8rem] text-[#1f2937] leading-relaxed">
-              {content.vision}
-            </p>
-          )}
-        </section>
-      </div>
-
-      {/* Values & History */}
-      <div className="col-span-1 md:col-span-2 flex flex-col gap-5">
-        <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
-          <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex items-center gap-2">
-            <Heart className="w-4 h-4 text-[#1e3a8a]" />
-            Core Values
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#f9fafb] p-3 rounded-lg border border-[#e5e7eb]">
-              <h4 className="text-[0.8rem] font-bold text-[#1f2937] mb-1">Excellence</h4>
-              <p className="text-[0.7rem] text-[#6b7280]">Striving for the highest standards in academics and character.</p>
+      {/* Grid Layout for the rest */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        {/* Mission & Vision Column */}
+        <div className="flex flex-col gap-8">
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex-1 relative overflow-hidden group">
+            <div className="w-12 h-12 bg-blue-50 text-[#1e3a8a] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all duration-300">
+               <Target className="w-6 h-6" />
             </div>
-            <div className="bg-[#f9fafb] p-3 rounded-lg border border-[#e5e7eb]">
-              <h4 className="text-[0.8rem] font-bold text-[#1f2937] mb-1">Integrity</h4>
-              <p className="text-[0.7rem] text-[#6b7280]">Fostering honesty, ethical behavior, and accountability.</p>
-            </div>
-            <div className="bg-[#f9fafb] p-3 rounded-lg border border-[#e5e7eb]">
-              <h4 className="text-[0.8rem] font-bold text-[#1f2937] mb-1">Respect</h4>
-              <p className="text-[0.7rem] text-[#6b7280]">Valuing diversity and treating everyone with dignity.</p>
-            </div>
-            <div className="bg-[#f9fafb] p-3 rounded-lg border border-[#e5e7eb]">
-              <h4 className="text-[0.8rem] font-bold text-[#1f2937] mb-1">Innovation</h4>
-              <p className="text-[0.7rem] text-[#6b7280]">Embracing modern teaching methodologies and technology.</p>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
-            <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex items-center gap-2">
-              <HistoryIcon className="w-4 h-4 text-[#1e3a8a]" />
-              Brief History
-            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-4">Our Mission</h2>
             {isEditing ? (
               <textarea 
-                className="w-full text-[0.8rem] text-[#1f2937] leading-relaxed p-2 border border-[#cbd5e1] rounded-lg focus:ring-2 focus:ring-[#1e3a8a]/20 outline-none"
-                rows={6}
-                value={tempContent.history}
-                onChange={(e) => setTempContent({...tempContent, history: e.target.value})}
+                className="w-full text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[100px]"
+                value={tempContent.mission}
+                onChange={(e) => setTempContent({...tempContent, mission: e.target.value})}
               />
             ) : (
-              <p className="text-[0.8rem] text-[#1f2937] leading-relaxed whitespace-pre-wrap">
-                {content.history}
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                {content.mission}
               </p>
             )}
           </section>
 
-          <section className="bg-[#1e293b] text-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4">
-              <img src={logoImage} alt="Background Logo" className="w-32 h-32 object-contain grayscale" />
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex-1 relative overflow-hidden group">
+            <div className="w-12 h-12 bg-orange-50 text-[#f97316] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[#f97316] group-hover:text-white transition-all duration-300">
+               <Eye className="w-6 h-6" />
             </div>
-            <div className="relative z-10">
-              <blockquote className="text-sm italic mb-4 leading-relaxed relative">
-                <span className="text-3xl text-white/20 absolute -top-3 -left-3 font-serif">"</span>
-                We are dedicated to shaping the leaders of tomorrow through holistic education.
-                <span className="text-3xl text-white/20 absolute -bottom-5 font-serif">"</span>
-              </blockquote>
-              <div className="mt-4">
-                <p className="font-extrabold text-white text-sm">Management Team</p>
-                <p className="text-xs text-[#f97316] font-medium">Shikshantar Academy</p>
-              </div>
-            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-4">Our Vision</h2>
+            {isEditing ? (
+              <textarea 
+                className="w-full text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[100px]"
+                value={tempContent.vision}
+                onChange={(e) => setTempContent({...tempContent, vision: e.target.value})}
+              />
+            ) : (
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                {content.vision}
+              </p>
+            )}
           </section>
         </div>
+
+        {/* History & Values Column */}
+        <div className="md:col-span-1 lg:col-span-2 flex flex-col gap-8">
+          
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                 <HistoryIcon className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Brief History</h2>
+            </div>
+            
+            {isEditing ? (
+              <textarea 
+                className="w-full text-sm text-gray-700 leading-relaxed p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[120px]"
+                value={tempContent.history}
+                onChange={(e) => setTempContent({...tempContent, history: e.target.value})}
+              />
+            ) : (
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed whitespace-pre-wrap">
+                {content.history}
+              </p>
+            )}
+          </section>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
+             <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
+                     <Heart className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900">Core Values</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                    <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Excellence</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">Striving for the highest standards in academics and character.</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                    <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Integrity</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">Fostering honesty, ethical behavior, and accountability.</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                    <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Respect</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">Valuing diversity and treating everyone with dignity.</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                    <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Innovation</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">Embracing modern teaching methodologies and technology.</p>
+                  </div>
+                </div>
+             </section>
+
+             <section className="bg-[#1a2744] text-white rounded-3xl p-8 shadow-lg flex flex-col justify-center relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#25375f] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
+                <div className="absolute -bottom-8 -right-8 opacity-5 transform rotate-[-20deg] scale-150 transition-transform duration-700 group-hover:scale-[1.6]">
+                  <img src={logoImage} alt="" className="w-48 h-48 object-contain grayscale" />
+                </div>
+                
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                  <div>
+                      <span className="text-5xl text-blue-400 opacity-50 font-serif leading-none block h-6">"</span>
+                      <blockquote className="text-lg md:text-xl font-medium italic mb-6 leading-relaxed relative z-10 text-blue-50 mt-2">
+                        We are dedicated to shaping the leaders of tomorrow through rigorous and holistic education.
+                      </blockquote>
+                  </div>
+                  <div>
+                    <div className="h-1 w-12 bg-[#f97316] rounded-full mb-4"></div>
+                    <p className="font-black text-white text-base tracking-wide uppercase">Management Team</p>
+                    <p className="text-sm text-blue-300 font-medium">Shikshantar Academy</p>
+                  </div>
+                </div>
+             </section>
+          </div>
+          
+        </div>
       </div>
-    </div>
     </div>
   );
 }

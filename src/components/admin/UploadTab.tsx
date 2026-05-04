@@ -6,7 +6,8 @@ import { doc, writeBatch, collection, getDocs, query, where, setDoc } from 'fire
 import { db } from '../../firebase';
 
 export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assignedClasses, assignedSubjects }: any) {
-  const [uploadExamType, setUploadExamType] = useState(EXAM_TYPES[0]);
+  const [examCategory, setExamCategory] = useState<'Test' | 'Terminal'>('Test');
+  const [uploadExamType, setUploadExamType] = useState('');
   const [uploadClass, setUploadClass] = useState('');
   const [previewData, setPreviewData] = useState<any[] | null>(null);
 
@@ -227,26 +228,46 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
   return (
     <div className="flex flex-col md:flex-row gap-6">
       <div className="flex-1">
-        <label className="block text-sm font-bold text-gray-700 mb-2">1. Select Exam Type</label>
-        <input 
-            list="upload-exam-types"
-            value={uploadExamType} 
-            onChange={e => setUploadExamType(e.target.value)} 
-            className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-            placeholder="Type or select exam..."
-        />
-        <datalist id="upload-exam-types">
-            {EXAM_TYPES.map((ex: string) => <option key={ex} value={ex} />)}
-        </datalist>
+        <label className="block text-sm font-bold text-gray-700 mb-2">1. Select Type</label>
+        <div className="flex gap-4 items-center mb-4 h-[42px]">
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setUploadExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                <span className="text-sm font-bold">Terminal</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setUploadExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                <span className="text-sm font-bold">Test</span>
+            </label>
+        </div>
 
-        <label className="block text-sm font-bold text-gray-700 mb-2">2. Select Class</label>
+        <label className="block text-sm font-bold text-gray-700 mb-2">2. Select Exam Name</label>
+        {examCategory === 'Terminal' ? (
+            <select 
+                value={uploadExamType} 
+                onChange={e => setUploadExamType(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none h-[42px]"
+            >
+                <option value="">-- Select Terminal --</option>
+                {EXAM_TYPES.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
+            </select>
+        ) : (
+            <input 
+                type="text"
+                value={uploadExamType} 
+                onChange={e => setUploadExamType(e.target.value)} 
+                className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none h-[42px]"
+                placeholder="e.g. Unit Test 1"
+            />
+        )}
+
+        <label className="block text-sm font-bold text-gray-700 mb-2">3. Select Class</label>
         <select value={uploadClass} onChange={e => setUploadClass(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none">
             <option value="">-- Select Class --</option>
             {allowedClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
             {allowedClasses.length === 0 && <option value="1">Class 1 (Default)</option>}
         </select>
 
-        <label className="block text-sm font-bold text-gray-700 mb-2">3. Upload File</label>
+        <label className="block text-sm font-bold text-gray-700 mb-2">4. Upload File</label>
         <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg transition-colors ${!uploadClass ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60' : 'bg-[#f9fafb] border-[#e5e7eb] cursor-pointer hover:bg-[#f3f4f6]'}`}>
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Upload className="w-8 h-8 text-[#6b7280] mb-2" />

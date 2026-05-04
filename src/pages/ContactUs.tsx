@@ -11,7 +11,7 @@ export default function ContactUs() {
     phone: '+977-9807790805',
     address: 'Bastipur-5, Siraha',
     mapEmbedUrl: 'https://maps.google.com/maps?q=Bastipur-5,Siraha&t=&z=15&ie=UTF8&iwloc=&output=embed',
-    googleMapsUrl: 'https://maps.app.goo.gl/rfH2jLU3cSJ5SNoB8',
+    googleMapsUrl: 'https://maps.app.goo.gl/q8YLvXQxb6aJyqHn9',
     facebookUrl: '',
     websiteUrl: ''
   });

@@ -62,6 +62,14 @@ export default function UserApprovals() {
     e.preventDefault();
     if (!editingUser) return;
 
+    if (editingUser.role === 'student' && editingUser.studentId) {
+      if (!/^SA\d+([A-Z]*\d*)*$/i.test(editingUser.studentId)) {
+        setStatus({ type: 'error', message: 'Student ID must follow the format SA[Class][Roll Number] (e.g., SA1001)' });
+        setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+        return;
+      }
+    }
+
     try {
       const { id, ...updateData } = editingUser;
       await updateDoc(doc(db, 'users', id), updateData as any);
@@ -134,7 +142,9 @@ export default function UserApprovals() {
     studentId: '',
     guardianName: '',
     address: '',
-    section: ''
+    section: '',
+    scholarshipStatus: 'Not Provided',
+    scholarshipAmount: 0
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -175,6 +185,10 @@ export default function UserApprovals() {
         setStatus({ type: 'error', message: 'Student ID is mandatory for students.' });
         return;
       }
+      if (!/^SA\d+([A-Z]*\d*)*$/i.test(newUser.studentId)) {
+        setStatus({ type: 'error', message: 'Student ID must follow the format SA[Class][Roll Number] (e.g., SA1001)' });
+        return;
+      }
       if (!newUser.class) {
         setStatus({ type: 'error', message: 'Assigned Class is mandatory for students.' });
         return;
@@ -206,6 +220,15 @@ export default function UserApprovals() {
       if (newUser.guardianName) userProfilePayload.guardianName = newUser.guardianName;
       if (newUser.address) userProfilePayload.address = newUser.address;
       if (newUser.section) userProfilePayload.section = newUser.section;
+
+      if (newUser.role === 'student') {
+        userProfilePayload.scholarshipStatus = newUser.scholarshipStatus;
+        if (newUser.scholarshipStatus === 'Provided') {
+          userProfilePayload.scholarshipAmount = Number(newUser.scholarshipAmount) || 0;
+        } else {
+          userProfilePayload.scholarshipAmount = 0;
+        }
+      }
 
       await setDoc(doc(db, 'users', docId), userProfilePayload);
       
@@ -402,6 +425,8 @@ export default function UserApprovals() {
                             >
                               Approve
                             </button>
+                          ) : user.role === 'admin' ? (
+                            <div className="px-3 py-1 bg-gray-100 text-gray-500 font-bold text-xs rounded-lg">Admin</div>
                           ) : (
                             <div className="flex gap-1">
                                <button 
@@ -422,13 +447,15 @@ export default function UserApprovals() {
                             </div>
                           )}
 
-                          <button 
-                            onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '' })}
-                            className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2"
-                            title="Delete Account"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {user.role !== 'admin' && (
+                            <button 
+                              onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '' })}
+                              className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2"
+                              title="Delete Account"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                        </div>
                     </td>
                   </tr>
@@ -518,8 +545,8 @@ export default function UserApprovals() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="bg-[#1e3a8a] text-white p-6 relative">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-[#1e3a8a] text-white p-6 relative shrink-0">
               <h2 className="text-xl font-black">Edit User Profile</h2>
               <p className="text-blue-200 text-xs font-medium">Updating identity of {editingUser.email}</p>
               <button 
@@ -530,7 +557,7 @@ export default function UserApprovals() {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateUser} className="p-8 space-y-6">
+            <form onSubmit={handleUpdateUser} className="p-8 space-y-6 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Full Name</label>
@@ -590,6 +617,34 @@ export default function UserApprovals() {
                 />
               </div>
 
+              {editingUser.role === 'student' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Scholarship Status</label>
+                    <select 
+                      value={editingUser.scholarshipStatus || 'Not Provided'}
+                      onChange={e => setEditingUser({...editingUser, scholarshipStatus: e.target.value})}
+                      className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
+                    >
+                      <option value="Not Provided">Not Provided</option>
+                      <option value="Provided">Provided</option>
+                    </select>
+                  </div>
+                  {editingUser.scholarshipStatus === 'Provided' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Discount Amount/Month (NRs.)</label>
+                      <input 
+                        type="number" 
+                        value={editingUser.scholarshipAmount || ''}
+                        onChange={e => setEditingUser({...editingUser, scholarshipAmount: Number(e.target.value)})}
+                        className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                        placeholder="e.g. 500"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-4 pt-4">
                 <button 
                   type="button"
@@ -613,19 +668,19 @@ export default function UserApprovals() {
       {/* Create User Modal */}
       {isCreatingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-[#1e3a8a] text-white p-6 relative">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="bg-[#1e3a8a] text-white p-6 relative shrink-0">
               <button 
                 onClick={() => setIsCreatingUser(false)} 
-                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/30 rounded-full transition-colors"
+                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/30 rounded-full transition-colors z-10"
               >
                 <X className="w-5 h-5"/>
               </button>
-              <h3 className="text-xl font-black">Register New System Profile</h3>
+              <h3 className="text-xl font-black pr-10">Register New System Profile</h3>
               <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Initialize account for student or staff</p>
             </div>
             
-            <form onSubmit={handleCreateUser} className="p-8 space-y-6">
+            <form onSubmit={handleCreateUser} className="p-8 space-y-6 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Email (Required)</label>
@@ -753,6 +808,34 @@ export default function UserApprovals() {
                   </div>
                 </div>
               </div>
+
+              {newUser.role === 'student' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Scholarship Status</label>
+                    <select 
+                      value={newUser.scholarshipStatus || 'Not Provided'}
+                      onChange={e => setNewUser({...newUser, scholarshipStatus: e.target.value})}
+                      className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none appearance-none"
+                    >
+                      <option value="Not Provided">Not Provided</option>
+                      <option value="Provided">Provided</option>
+                    </select>
+                  </div>
+                  {newUser.scholarshipStatus === 'Provided' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Discount Amount/Month (NRs.)</label>
+                      <input 
+                        type="number" 
+                        value={newUser.scholarshipAmount || ''}
+                        onChange={e => setNewUser({...newUser, scholarshipAmount: Number(e.target.value)})}
+                        className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none" 
+                        placeholder="e.g. 500"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-4 pt-4">
                 <button 
