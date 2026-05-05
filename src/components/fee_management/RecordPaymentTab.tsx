@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { formatBSDate } from '../../lib/nepaliDate';
+import { formatBSDate, formatBSDateYMD } from '../../lib/nepaliDate';
+import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
+import 'nepali-datepicker-reactjs/dist/index.css';
 import { Search, CheckCircle2, CheckSquare, Square, Banknote, CreditCard, Receipt, FileDown, Smartphone, Check, Plus, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
@@ -24,7 +26,7 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
   const [customAmount, setCustomAmount] = useState('');
   const [method, setMethod] = useState('Cash');
   const [remark, setRemark] = useState('');
-  const [bsDate, setBsDate] = useState(formatBSDate(new Date()));
+  const [bsDate, setBsDate] = useState(formatBSDateYMD(new Date()));
   
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
@@ -426,9 +428,15 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Receipt No</label>
                           <input type="text" value="Auto-generated" disabled className="w-full bg-gray-100 border-transparent rounded-lg px-3 py-2 text-xs font-bold text-gray-500" />
                         </div>
-                        <div>
+                        <div className="relative z-50 nepali-datepicker-container">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Date (B.S.)</label>
-                          <input type="text" value={bsDate} onChange={e => setBsDate(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:border-blue-500" />
+                          <NepaliDatePicker
+                            value={bsDate}
+                            onChange={value => setBsDate(value)}
+                            inputClassName="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:border-blue-500"
+                            className=""
+                            options={{ calenderLocale: 'ne', valueLocale: 'en' }}
+                          />
                         </div>
                      </div>
                    </div>
@@ -479,7 +487,8 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                    </div>
                    <div className="text-right">
                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Date</span>
-                     <span className="text-gray-800 font-bold">{receipt.bsDate}</span>
+                     <span className="text-gray-800 font-bold block">{receipt.bsDate} <span className="text-[10px] text-gray-400 font-normal ml-1 border pl-1 border-y-0 border-r-0 border-gray-300">B.S.</span></span>
+                      {receipt.date && <span className="block text-[10px] text-gray-500 mt-1 font-mono">{new Date(receipt.date).toLocaleDateString()} {new Date(receipt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                    </div>
                  </div>
 

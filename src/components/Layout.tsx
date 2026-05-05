@@ -190,7 +190,6 @@ export default function Layout({
     { name: 'Facilities', href: '/facilities', icon: Building, group: 4 },
     { name: 'Photo Gallery', href: '/gallery', icon: Image, group: 4 },
     { name: 'Academic Calendar', href: '/calendar', icon: Calendar, group: 4 },
-    { name: 'Fee Structure', href: '/fee-structure', icon: CreditCard, group: 4 },
     { name: 'Admission Form', href: '/admission', icon: FileText, group: 4 },
     { name: 'Alumni / Success', href: '/alumni', icon: GraduationCap, group: 4 },
     { name: 'FAQ', href: '/faq', icon: HelpCircle, group: 4 },
@@ -648,7 +647,6 @@ export default function Layout({
                 <ul className="space-y-2 text-sm opacity-90 font-medium">
                   <li><Link to="/about" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> About Us</Link></li>
                   <li><Link to="/admission" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Admission Form</Link></li>
-                  <li><Link to="/fee-structure" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Fee Structure</Link></li>
                   <li><Link to="/notices" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Notice Board</Link></li>
                   <li><Link to="/gallery" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Photo Gallery</Link></li>
                   <li><Link to="/alumni" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Alumni / Success</Link></li>

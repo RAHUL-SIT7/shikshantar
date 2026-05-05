@@ -87,6 +87,8 @@ const FeeStructure = () => {
   const [toastMessage, setToastMessage] = useState({ type: '', text: '' });
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkMonth, setBulkMonth] = useState('Shrawan');
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const isAdmin = localStorage.getItem('userRole') === 'admin';
 
@@ -111,21 +113,26 @@ const FeeStructure = () => {
           let batch = writeBatch(db);
           
           for (const s of students) {
-              const studentClass = s.class || s.studentClass;
-              const feeStruct = structMap.get(studentClass);
+              const rawClass = s.class || s.studentClass || '';
+              // Match "Class 1" or "1" depending on how they saved it
+              const formattedClass = ['PG', 'Nursery', 'LKG', 'UKG'].includes(rawClass) ? rawClass : `Class ${rawClass}`;
+              const feeStruct = structMap.get(formattedClass) || structMap.get(rawClass);
+
               let tuitionFee = feeStruct && feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
+              let otherFee = s.otherFee ? Number(s.otherFee) : 0; // Include otherFee from student if any
+              let totalFee = tuitionFee + otherFee;
 
               if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
-                 tuitionFee = Math.max(0, tuitionFee - Number(s.scholarshipAmount));
+                 totalFee = Math.max(0, totalFee - Number(s.scholarshipAmount));
               }
 
               const feeRef = doc(db, 'studentFees', `${s.id}_${selectedMonth}`);
               batch.set(feeRef, {
                   studentId: s.id,
                   month: selectedMonth,
-                  totalFee: tuitionFee,
+                  totalFee: totalFee,
                   paidAmount: 0,
-                  dueAmount: tuitionFee,
+                  dueAmount: totalFee,
                   status: 'due',
                   createdAt: new Date().toISOString()
               }, { merge: true });
@@ -172,6 +179,46 @@ const FeeStructure = () => {
     });
     return () => unsub();
   }, [editMode]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchStudents = async () => {
+        try {
+          const q = query(collection(db, 'users'), where('role', '==', 'student'));
+          const snapshot = await getDocs(q);
+          const studentsList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          setAllStudents(studentsList);
+        } catch(e) {
+          console.error("Failed to fetch students for autocomplete", e);
+        }
+      };
+      fetchStudents();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (searchTerm.trim().length > 1) {
+      setSearching(true);
+      const delayFn = setTimeout(() => {
+         const results = allStudents.filter((user: any) => 
+            (user.firstName && user.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (user.lastName && user.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+         );
+         setSearchResults(results);
+         if (results.length === 0) {
+            setDiscountMessage({ type: 'error', text: 'No students found matching your search.' });
+         } else {
+            setDiscountMessage({ type: '', text: '' });
+         }
+         setSearching(false);
+      }, 300);
+      return () => clearTimeout(delayFn);
+    } else {
+      setSearchResults([]);
+      setDiscountMessage({ type: '', text: '' });
+    }
+  }, [searchTerm, allStudents]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -232,33 +279,8 @@ const FeeStructure = () => {
     });
   };
 
-  const handleSearchStudents = async () => {
-    if (!searchTerm.trim()) return;
-    setSearching(true);
-    setSearchResults([]);
-    setSelectedStudent(null);
-    setDiscountMessage({ type: '', text: '' });
-    
-    try {
-      const q = query(collection(db, 'users'), where('role', '==', 'student'));
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((user: any) => 
-           (user.firstName && user.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-           (user.lastName && user.lastName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-           (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-      setSearchResults(results);
-      if (results.length === 0) {
-        setDiscountMessage({ type: 'error', text: 'No students found matching your search.' });
-      }
-    } catch (error) {
-      console.error("Error searching students", error);
-      setDiscountMessage({ type: 'error', text: 'Error searching for students.' });
-    } finally {
-      setSearching(false);
-    }
+  const handleSearchStudents = () => {
+     // Triggered manually if needed, but handled by effect now
   };
 
   const handleApplyDiscount = async () => {

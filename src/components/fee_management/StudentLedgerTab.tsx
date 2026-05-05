@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
-import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, Banknote, Users } from 'lucide-react';
+import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, Banknote, Users, Edit2, X, Save } from 'lucide-react';
+import { db } from '../../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
 
@@ -14,6 +16,23 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
   const [filterStatus, setFilterStatus] = useState('All');
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{key: 'class' | 'name' | 'id', direction: 'asc'|'desc'} | null>(null);
+  const [editingFee, setEditingFee] = useState<any | null>(null);
+  const [savingFee, setSavingFee] = useState(false);
+
+  const handleSaveFee = async () => {
+    if (!editingFee) return;
+    setSavingFee(true);
+    try {
+        await updateDoc(doc(db, 'users', editingFee.id), {
+           monthlyFee: Number(editingFee.monthlyFee),
+           otherFee: Number(editingFee.otherFee || 0)
+        });
+        setEditingFee(null);
+    } catch(err) {
+        console.error(err);
+    }
+    setSavingFee(false);
+  };
 
   const getStudentDue = (s: any) => {
       let totalDue = 0;
@@ -170,9 +189,11 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
             <thead className="bg-[#1e3a8a]">
                <tr className="text-[10px] font-black text-white uppercase tracking-widest border-b border-gray-100">
                   <th className="p-4 px-6 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'id', direction: sortConfig?.key === 'id' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Student ID {sortConfig?.key === 'id' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4">Roll No</th>
                   <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'name', direction: sortConfig?.key === 'name' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Name {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'class', direction: sortConfig?.key === 'class' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Class {sortConfig?.key === 'class' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 text-right">Monthly Fee</th>
+                  <th className="p-4 text-right">Other Fee</th>
                   <th className="p-4 text-right">Due Amount</th>
                   <th className="p-4 text-center">Status</th>
                   <th className="p-4 text-center">Actions</th>
@@ -184,6 +205,9 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                     <tr className="hover:bg-blue-50/20 transition-colors group">
                        <td className="p-4 px-6">
                           <p className="text-[10px] font-mono text-gray-500 font-bold uppercase">{s.id}</p>
+                       </td>
+                       <td className="p-4">
+                          <span className="text-sm font-bold text-gray-600">{s.rollNumber || '-'}</span>
                        </td>
                        <td className="p-4 cursor-pointer" onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)}>
                           <div className="flex flex-col gap-1">
@@ -200,10 +224,23 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                           <span className="text-sm font-bold text-gray-600">Class {s.class}</span>
                        </td>
                        <td className="p-4 text-right">
-                          <div className="flex flex-col items-end">
-                            {Number(s.scholarshipAmount) > 0 && <span className="text-[10px] text-emerald-600 font-bold tracking-widest line-through">रू {Number(s.monthlyFee) + Number(s.scholarshipAmount)}</span>}
-                            <span className="text-sm text-gray-800 font-black">रू {s.monthlyFee || 0}</span>
-                          </div>
+                          {editingFee?.id === s.id ? (
+                              <input type="number" className="w-20 text-right border rounded p-1 text-sm bg-white ml-auto block" value={editingFee.monthlyFee} onChange={e => setEditingFee({...editingFee, monthlyFee: e.target.value})} />
+                          ) : (
+                              <div className="flex flex-col items-end">
+                                {Number(s.scholarshipAmount) > 0 && <span className="text-[10px] text-emerald-600 font-bold tracking-widest line-through">रू {Number(s.monthlyFee) + Number(s.scholarshipAmount)}</span>}
+                                <span className="text-sm text-gray-800 font-black">रू {s.monthlyFee || 0}</span>
+                              </div>
+                          )}
+                       </td>
+                       <td className="p-4 text-right">
+                          {editingFee?.id === s.id ? (
+                              <input type="number" className="w-20 text-right border rounded p-1 text-sm bg-white ml-auto block" value={editingFee.otherFee || 0} onChange={e => setEditingFee({...editingFee, otherFee: e.target.value})} />
+                          ) : (
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm text-gray-800 font-black">रू {s.otherFee || 0}</span>
+                              </div>
+                          )}
                        </td>
                        <td className="p-4 text-right font-black text-red-500 text-sm">{getStudentDue(s) > 0 ? `रू ${getStudentDue(s).toLocaleString()}` : '-'}</td>
                        <td className="p-4 text-center">
@@ -211,24 +248,40 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                        </td>
                        <td className="p-4 text-center">
                           <div className="flex items-center gap-1 justify-center">
-                             <button onClick={() => onRecordPayment?.(s.id)} className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200" title="Collect">
-                               <Banknote className="w-4 h-4" />
-                             </button>
-                             <button onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Ledger">
-                               <FileText className="w-4 h-4" />
-                             </button>
-                             <button onClick={() => {
-                                 const unpaidMonths = s.fees?.filter((f: any) => f.status === 'due').map((f: any) => f.month) || [];
-                                 window.open(`https://wa.me/977${s.guardianPhone}?text=${encodeURIComponent(`Namaste ${s.guardianName} ji, Shikshantar Academy Siraha bata suchit garinchhau ki ${s.name} (Class ${s.class}) ko ${unpaidMonths.join(' ra ')} mahina ko fee baki chha. Kripaya school aaera tirna anurodh chha. Dhanyabad.`)}`, '_blank');
-                             }} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200" title="Remind">
-                               <Bell className="w-4 h-4" />
-                             </button>
+                             {editingFee?.id === s.id ? (
+                                <>
+                                 <button onClick={handleSaveFee} disabled={savingFee} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-transparent" title="Save">
+                                   <Save className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => setEditingFee(null)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent" title="Cancel">
+                                   <X className="w-4 h-4" />
+                                 </button>
+                                </>
+                             ) : (
+                                <>
+                                 <button onClick={() => setEditingFee({...s, otherFee: s.otherFee || 0})} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Edit Fee">
+                                   <Edit2 className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => onRecordPayment?.(s.id)} className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200" title="Collect">
+                                   <Banknote className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Ledger">
+                                   <FileText className="w-4 h-4" />
+                                 </button>
+                                 <button onClick={() => {
+                                     const unpaidMonths = s.fees?.filter((f: any) => f.status === 'due').map((f: any) => f.month) || [];
+                                     window.open(`https://wa.me/977${s.guardianPhone}?text=${encodeURIComponent(`Namaste ${s.guardianName} ji, Shikshantar Academy Siraha bata suchit garinchhau ki ${s.name} (Class ${s.class}) ko ${unpaidMonths.join(' ra ')} mahina ko fee baki chha. Kripaya school aaera tirna anurodh chha. Dhanyabad.`)}`, '_blank');
+                                 }} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200" title="Remind">
+                                   <Bell className="w-4 h-4" />
+                                 </button>
+                                </>
+                             )}
                           </div>
                        </td>
                     </tr>
                     {expandedStudent === s.id && (
                       <tr className="bg-gray-50/50">
-                        <td colSpan={8} className="p-4 px-6 border-b border-gray-100">
+                        <td colSpan={9} className="p-4 px-6 border-b border-gray-100">
                           <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
                              {MONTHS.map(m => {
                                const status = getMonthStatus(s, m);

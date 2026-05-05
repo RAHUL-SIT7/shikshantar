@@ -1,5 +1,14 @@
 import NepaliDate from 'nepali-date-converter';
 
+export const formatBSDateYMD = (date: Date | string | number): string => {
+  try {
+    const nd = new NepaliDate(new Date(date));
+    return nd.format('YYYY-MM-DD'); 
+  } catch(e) {
+    return new Date(date).toISOString().split('T')[0];
+  }
+}
+
 export const formatBSDate = (date: Date | string | number): string => {
   try {
     const nd = new NepaliDate(new Date(date));

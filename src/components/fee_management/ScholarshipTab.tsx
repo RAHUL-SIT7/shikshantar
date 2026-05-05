@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 
 export default function ScholarshipTab({ studentsData }: { studentsData: any[] }) {
   const [search, setSearch] = useState('');
+  const [filterClass, setFilterClass] = useState('All');
 
   // Filter only scholarship students
   const scholarshipStudents = studentsData.filter(s => s.scholarshipStatus === 'Provided');
@@ -19,12 +20,13 @@ export default function ScholarshipTab({ studentsData }: { studentsData: any[] }
 
   // Filter based on search (either student name or class)
   const matchesSearch = (student: any) => {
+    if (filterClass !== 'All' && student.class !== filterClass) return false;
+    
     if (!search) return true;
     const s = search.toLowerCase();
     return (
        (student.name && student.name.toLowerCase().includes(s)) ||
-       (student.id && student.id.toLowerCase().includes(s)) || 
-       (student.class && student.class.toLowerCase().includes(s))
+       (student.id && student.id.toLowerCase().includes(s))
     );
   };
 
@@ -48,17 +50,27 @@ export default function ScholarshipTab({ studentsData }: { studentsData: any[] }
          </div>
        </div>
 
-       <div className="flex justify-between items-center gap-4">
-         <div className="relative flex-1 max-w-sm">
+       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+         <div className="relative flex-1 w-full sm:max-w-sm">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Search by name, ID or class..." 
+              placeholder="Search by name or ID..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium text-sm"
             />
          </div>
+         <select 
+              value={filterClass}
+              onChange={e => setFilterClass(e.target.value)}
+              className="bg-white border w-full sm:w-auto border-gray-200 rounded-lg px-4 py-2 text-sm font-bold text-gray-600 focus:outline-none shrink-0 min-h-[40px]"
+            >
+              <option value="All">Class: All</option>
+              {['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map(c => (
+                <option key={c} value={c}>Class {c}</option>
+              ))}
+         </select>
        </div>
 
        {scholarshipStudents.length === 0 ? (
@@ -75,9 +87,6 @@ export default function ScholarshipTab({ studentsData }: { studentsData: any[] }
                <div key={className} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                  <div className="bg-purple-50 px-6 py-3 border-b border-purple-100 flex justify-between items-center">
                    <h3 className="font-black text-purple-900 uppercase tracking-wider text-sm">Class {className}</h3>
-                   <span className="bg-purple-200 text-purple-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                      {studentsInClass.length} Students
-                   </span>
                  </div>
                  <div className="overflow-x-auto">
                    <table className="w-full text-left whitespace-nowrap">

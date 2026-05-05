@@ -5,11 +5,16 @@ import { db } from '../../firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
+import 'nepali-datepicker-reactjs/dist/index.css';
+import NepaliDate from 'nepali-date-converter';
 
 export default function TransactionHistoryTab({ transactionsData, onRefresh }: { transactionsData: any[], onRefresh: () => void }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('All');
   const [filterMethod, setFilterMethod] = useState('All');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -34,18 +39,37 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                           tx.receipt?.toLowerCase().includes(searchTerm.toLowerCase()));
      const matchClass = filterClass === 'All' || tx.class === filterClass;
      const matchMethod = filterMethod === 'All' || tx.method === filterMethod;
-     return matchSearch && matchClass && matchMethod;
+     
+     let txDateStr = '';
+     if (tx.timestamp) {
+         try {
+             const d = new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp);
+             const nd = new NepaliDate(d);
+             txDateStr = nd.format("YYYY-MM-DD");
+         } catch(e) {}
+     }
+     
+     // Allow comparison by "YYYY-MM-DD"
+     const matchFromDate = !fromDate || (txDateStr && txDateStr >= fromDate);
+     const matchToDate = !toDate || (txDateStr && txDateStr <= toDate);
+
+     return matchSearch && matchClass && matchMethod && matchFromDate && matchToDate;
   });
 
   const totalFilteredAmount = filteredHistory.filter(tx => tx.status === 'SUCCESS').reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
 
   const exportCSV = () => {
-     const headers = ['Date', 'Receipt No', 'Student', 'Class', 'Amount', 'Method', 'Collected By', 'Status'];
+     const headers = ['Date (B.S.)', 'Date (A.D.)', 'Receipt No', 'Student', 'Class', 'Amount', 'Method', 'Collected By', 'Status'];
      const csvRows = [headers.join(',')];
      
      filteredHistory.forEach(tx => {
+        let adDate = '';
+        if (tx.timestamp) {
+            adDate = new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleString();
+        }
         csvRows.push([
            tx.date,
+           `"${adDate}"`,
            tx.receipt || tx.id,
            `"${tx.studentName || ''}"`,
            tx.class,
@@ -137,14 +161,28 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
          </div>
 
          <div className="flex gap-2 w-full md:w-auto overflow-x-auto custom-scrollbar pb-2 md:pb-0">
-            <div className="relative shrink-0">
-               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-               <input 
-                 type="text" 
-                 placeholder="Date Range (B.S.)"
-                 disabled 
-                 className="w-36 pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-500 cursor-not-allowed outline-none"
-               />
+            <div className="relative shrink-0 flex items-center gap-2">
+               <div className="relative z-50 nepali-datepicker-container">
+                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                 <NepaliDatePicker
+                   value={fromDate}
+                   onChange={value => setFromDate(value)}
+                   inputClassName="w-40 pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   className=""
+                   options={{ calenderLocale: 'ne', valueLocale: 'en' }}
+                 />
+               </div>
+               <span className="text-gray-400 font-bold text-xs">-</span>
+               <div className="relative z-50 nepali-datepicker-container">
+                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                 <NepaliDatePicker
+                   value={toDate}
+                   onChange={value => setToDate(value)}
+                   inputClassName="w-40 pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   className=""
+                   options={{ calenderLocale: 'ne', valueLocale: 'en' }}
+                 />
+               </div>
             </div>
 
             <select 
@@ -190,7 +228,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
          <table className="w-full text-left whitespace-nowrap min-w-[800px]">
             <thead className="bg-gray-50 border-b border-gray-100">
                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  <th className="p-4 px-6">Date (B.S.)</th>
+                  <th className="p-4 px-6">Date (B.S. & A.D.)</th>
                   <th className="p-4">Receipt No</th>
                   <th className="p-4">Student</th>
                   <th className="p-4">Class</th>
@@ -203,8 +241,15 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
             <tbody className="divide-y divide-gray-50">
                {filteredHistory.map(tx => (
                   <tr key={tx.id} className={`hover:bg-blue-50/20 transition-colors group ${tx.status === 'REFUNDED' ? 'opacity-50 line-through' : ''}`}>
-                     <td className="p-4 px-6 text-xs font-bold text-gray-700">
-                        {tx.date}
+                     <td className="p-4 px-6">
+                        <div className="flex flex-col">
+                           <span className="text-xs font-bold text-gray-700">{tx.date}</span>
+                           {tx.timestamp && (
+                              <span className="text-[10px] text-gray-400 font-medium mt-0.5" title="A.D. Date and Time">
+                                {new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleDateString()} {new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                           )}
+                        </div>
                      </td>
                      <td className="p-4 text-xs font-mono font-black text-[#1e3a8a] bg-blue-50/50 rounded-md px-2 py-1 inline-block mt-3">{(tx.receipt || tx.id).slice(-6).toUpperCase()}</td>
                      <td className="p-4 font-bold text-gray-800 text-sm">{tx.studentName} {tx.status === 'REFUNDED' && <span className="text-[10px] text-red-500 font-bold ml-2">REFUNDED</span>}</td>
@@ -261,7 +306,12 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                     </div>
                     <div className="text-right">
                       <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Date</span>
-                      <span className="text-gray-800 font-bold">{receipt.date}</span>
+                      <span className="text-gray-800 font-bold block">{receipt.date} <span className="text-[10px] text-gray-400 font-normal ml-1 border pl-1 border-y-0 border-r-0 border-gray-300">B.S.</span></span>
+                      {receipt.timestamp && (
+                        <span className="block text-[10px] text-gray-500 mt-1 font-mono">
+                           {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleDateString()} {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
                     </div>
                   </div>
 

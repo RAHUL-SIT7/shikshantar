@@ -136,7 +136,6 @@ export default function App() {
           <Route path="calendar" element={<AcademicCalendar />} />
           <Route path="events" element={<Events />} />
           <Route path="admission" element={<Admission />} />
-          <Route path="fee-structure" element={<FeeStructure />} />
           <Route path="notices" element={<NoticeBoard />} />
           <Route path="contact" element={<ContactUs />} />
           <Route path="faq" element={<FAQ />} />
