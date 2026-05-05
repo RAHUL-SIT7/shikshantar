@@ -6,6 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
 
@@ -14,6 +15,7 @@ export default function Account() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [feeStructure, setFeeStructure] = useState<any>(null);
   const [receipt, setReceipt] = useState<any>(null);
+  const [esewaQrData, setEsewaQrData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -126,6 +128,132 @@ export default function Account() {
       return totalPaid;
   };
 
+  const handleEsewa = async () => {
+    try {
+      if (totalDue <= 0) return;
+      const transaction_uuid = `${studentRecord.id}-${Date.now()}`;
+      const product_code = "EPAYTEST";
+      
+      const res = await fetch("/api/payment/esewa/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: totalDue, transaction_uuid, product_code })
+      });
+      
+      const { signature, message } = await res.json();
+      
+      if (!signature) {
+          setError("Failed to generate signature for eSewa.");
+          return;
+      }
+
+      // Create a hidden form and submit to eSewa sandbox
+      const form = document.createElement('form');
+      form.setAttribute('method', 'POST');
+      form.setAttribute('action', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form');
+      
+      const params = {
+        amount: totalDue,
+        tax_amount: "0",
+        total_amount: totalDue,
+        transaction_uuid: transaction_uuid,
+        product_code: product_code,
+        product_delivery_charge: "0",
+        product_service_charge: "0",
+        success_url: window.location.origin + "/success",
+        failure_url: window.location.origin + "/failure",
+        signed_field_names: "total_amount,transaction_uuid,product_code",
+        signature: signature
+      };
+
+      for (const key in params) {
+        const hiddenField = document.createElement('input');
+        hiddenField.setAttribute('type', 'hidden');
+        hiddenField.setAttribute('name', key);
+        hiddenField.setAttribute('value', params[key as keyof typeof params].toString());
+        form.appendChild(hiddenField);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      console.error(err);
+      setError("Payment initiation failed.");
+    }
+  };
+
+  const generateEsewaQR = async () => {
+    try {
+      if (totalDue <= 0) return;
+      const transaction_uuid = `${studentRecord.id}-${Date.now()}`;
+      const product_code = "EPAYTEST";
+      
+      const res = await fetch("/api/payment/esewa/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: totalDue, transaction_uuid, product_code })
+      });
+      
+      const { signature } = await res.json();
+      
+      if (!signature) {
+          setError("Failed to generate signature for eSewa.");
+          return;
+      }
+
+      // Construct properties for QR code text representation.
+      // E.g., we could encode a URI that contains the form POST data, or just the POST action URL with GET parameters.
+      setEsewaQrData({
+        url: "https://rc-epay.esewa.com.np/api/epay/main/v2/form",
+        amount: totalDue,
+        transaction_uuid,
+        product_code,
+        signature
+      });
+
+    } catch (err) {
+      console.error(err);
+      setError("Payment QR generation failed.");
+    }
+  };
+
+  const handleKhalti = async () => {
+    try {
+      if (totalDue <= 0) return;
+      
+      const reqBody = {
+        return_url: window.location.origin + "/success",
+        website_url: window.location.origin,
+        amount: totalDue * 100, // Amount in paisa
+        purchase_order_id: `KHL-${studentRecord.id}-${Date.now()}`,
+        purchase_order_name: `${studentRecord.name} Pending Dues`,
+        customer_info: {
+          name: studentRecord.name,
+          email: studentRecord.email || "student@school.com",
+          phone: "9800000000" // Requires valid phone
+        }
+      };
+
+      const res = await fetch("/api/payment/khalti/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reqBody)
+      });
+      
+      const data = await res.json();
+      
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+      } else {
+        console.error("Khalti Init Error:", data);
+        setError("Could not initiate Khalti payment. Please try again.");
+      }
+    } catch (err) {
+      console.error("Khalti catch err:", err);
+      setError("Khalti payment error.");
+    }
+  };
+
   const totalDue = getStudentDue();
   const totalPaid = getStudentPaidAmount();
   const annualTotal = feeStructure ? (feeStructure.annualFee || (feeStructure.tuitionFee * 12 + feeStructure.examFee)) : 10000;
@@ -146,9 +274,17 @@ export default function Account() {
                </h3>
                <p className="text-red-600 text-sm font-medium mt-1">Please visit school fee office to pay</p>
            </div>
-           <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md shadow-red-600/20 transition-colors whitespace-nowrap">
-              📞 Contact Fee Office
-           </button>
+           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+             <button onClick={handleEsewa} className="bg-[#60bb46] hover:bg-[#4ea835] text-white px-5 py-3 rounded-xl font-bold shadow-md shadow-[#60bb46]/20 transition-colors whitespace-nowrap">
+                Pay with eSewa
+             </button>
+             <button onClick={generateEsewaQR} className="bg-white text-[#60bb46] border border-[#60bb46] hover:bg-emerald-50 px-5 py-3 rounded-xl font-bold transition-colors whitespace-nowrap">
+                eSewa QR
+             </button>
+             <button onClick={handleKhalti} className="bg-[#5C2D91] hover:bg-[#4a2474] text-white px-5 py-3 rounded-xl font-bold shadow-md shadow-[#5C2D91]/20 transition-colors whitespace-nowrap">
+                Pay with Khalti
+             </button>
+           </div>
         </div>
       ) : (
         <div className="w-full bg-emerald-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between border border-emerald-200">
@@ -296,17 +432,46 @@ export default function Account() {
          </a>
       </div>
 
+      {/* eSewa QR Code Modal */}
+      {esewaQrData && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col p-8 text-center animate-in zoom-in-95 duration-200">
+             <div className="mb-6 flex justify-center">
+                <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa Logo" className="h-10" />
+             </div>
+             <h3 className="text-xl font-black text-gray-800 mb-2">Scan to Pay</h3>
+             <p className="text-sm font-bold text-gray-500 mb-6">Amount: <span className="text-[#60bb46]">NRs. {esewaQrData.amount}</span></p>
+             
+             <div className="bg-gray-50 p-2 inline-block rounded-xl mx-auto mb-6 border border-gray-100">
+                <img 
+                   src="https://i.postimg.cc/jd6J3mtF/image.png" 
+                   alt="eSewa QR Code" 
+                   className="w-[200px] h-[200px] object-contain rounded-lg"
+                />
+             </div>
+             
+             <p className="text-[10px] text-gray-400 font-medium mb-6 px-4">
+                Please scan the QR code above using your eSewa app. Make sure to enter your Admission ID in the remarks.
+             </p>
+
+             <button onClick={() => setEsewaQrData(null)} className="py-3 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm transition-colors hover:bg-gray-200">
+                Close
+             </button>
+          </div>
+        </div>
+      )}
+
       {receipt && (
          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
               <div ref={receiptRef} className="p-6 sm:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
                 
                 <div className="text-center mb-6 border-b border-gray-200 pb-6">
-                  <div className="w-16 h-16 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Receipt className="w-8 h-8" />
+                  <div className="mx-auto mb-3 flex items-center justify-center">
+                    <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
                   </div>
                   <h2 className="font-black text-xl text-[#1e3a8a] uppercase tracking-widest">Shikshantar Academy</h2>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">Siraha, Nepal</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>
                   <div className="mt-4 inline-block bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">
                      Payment Receipt
                   </div>
@@ -335,14 +500,17 @@ export default function Account() {
                     </div>
                   </div>
                   
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                     {receipt.months?.length > 0 && receipt.months.map((m: string) => (
-                       <div key={m} className="flex justify-between text-sm mb-2 pb-2 border-b border-blue-100 last:border-0 last:mb-0 last:pb-0">
-                         <span className="text-blue-800 font-bold">{m} Tuition</span>
-                         <span className="text-blue-900 font-black">रू {((receipt.amount || 0) / receipt.months.length).toLocaleString()}</span>
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+                     {receipt.months?.length > 0 ? receipt.months.map((m: string) => {
+                       const netPerMonth = (receipt.amount || 0) / receipt.months.length;
+                       return (
+                       <div key={m} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-blue-800 font-bold">{m} Tuition Fee</span>
+                           <span className="text-blue-900 font-black">रू {netPerMonth.toLocaleString()}</span>
+                         </div>
                        </div>
-                     ))}
-                     {!receipt.months?.length && (
+                     )}) : (
                         <div className="flex justify-between text-sm">
                          <span className="text-blue-800 font-bold">Tuition Payment</span>
                          <span className="text-blue-900 font-black">रू {(receipt.amount || 0).toLocaleString()}</span>

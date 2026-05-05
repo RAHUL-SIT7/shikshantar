@@ -169,7 +169,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCredential.user);
       } catch (err: any) {
-        if (err.code === 'auth/email-already-in-use') {
+        if (err.code === 'auth/email-already-in-use' || String(err.message).includes('auth/email-already-in-use')) {
           // It's a parent adding a 2nd/3rd child. Let's log them in and append!
           isExistingUser = true;
           try {
@@ -211,7 +211,11 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         }, 1500);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to complete registration.');
+      if (err.code === 'auth/email-already-in-use' || String(err.message).includes('auth/email-already-in-use')) {
+        setError('An account with this email address already exists. Please use a different email or log in.');
+      } else {
+        setError(err.message || 'Failed to complete registration.');
+      }
     } finally {
       setLoading(false);
     }

@@ -21,8 +21,8 @@ import UserApprovals from './pages/UserApprovals';
 import Profile from './pages/Profile';
 import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
 
 import FeeStructure from './pages/FeeStructure';
 
@@ -36,33 +36,56 @@ function ScrollToTop() {
   return null;
 }
 
+const localSessionId = localStorage.getItem('localSessionId') || Math.random().toString(36).substring(2, 15);
+localStorage.setItem('localSessionId', localSessionId);
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<string>('student');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unSubDoc: (() => void) | null = null;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Fetch role from Firestore for security
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
           if (user.email === 'rahulsah4534@gmail.com') {
             setUserRole('admin');
             localStorage.setItem('userRole', 'admin');
             try {
-              await setDoc(doc(db, 'users', user.uid), { role: 'admin', email: user.email }, { merge: true });
+              await setDoc(doc(db, 'users', user.uid), { role: 'admin', email: user.email, activeSessions: arrayUnion(localSessionId) }, { merge: true });
             } catch (e) {
               console.error("Failed to persist admin role:", e);
             }
           } else if (userDoc.exists()) {
-            const role = userDoc.data().role || 'student';
-            setUserRole(role);
-            localStorage.setItem('userRole', role);
+             const data = userDoc.data();
+             const role = data.role || 'student';
+             setUserRole(role);
+             localStorage.setItem('userRole', role);
+             try {
+               await setDoc(doc(db, 'users', user.uid), { activeSessions: arrayUnion(localSessionId) }, { merge: true });
+             } catch(e) {}
           } else {
             setUserRole('student');
             localStorage.setItem('userRole', 'student');
           }
+          
+          // Setup real-time listener for cross-device logout
+          unSubDoc = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+             if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.activeSessions && Array.isArray(data.activeSessions)) {
+                   if (!data.activeSessions.includes(localSessionId)) {
+                      // Session was revoked
+                      signOut(auth);
+                   }
+                }
+             }
+          });
         } catch (err) {
           console.error("Error fetching role:", err);
           if (user.email === 'rahulsah4534@gmail.com') {
@@ -77,11 +100,18 @@ export default function App() {
       } else {
         setIsAuthenticated(false);
         setUserRole('student');
+        if (unSubDoc) {
+           unSubDoc();
+           unSubDoc = null;
+        }
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+       unsubscribe();
+       if (unSubDoc) unSubDoc();
+    };
   }, []);
 
   if (loading) {

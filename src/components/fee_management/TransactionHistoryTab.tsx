@@ -153,7 +153,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
               className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-600 focus:outline-none shrink-0"
             >
               <option value="All">All Classes</option>
-              {['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'].map(c => (
+              {['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map(c => (
                 <option key={c} value={c}>Class {c}</option>
               ))}
             </select>
@@ -186,8 +186,8 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
        </div>
 
        {/* Desktop Table View */}
-       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto hidden md:block">
-         <table className="w-full text-left whitespace-nowrap min-w-max">
+       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto w-full">
+         <table className="w-full text-left whitespace-nowrap min-w-[800px]">
             <thead className="bg-gray-50 border-b border-gray-100">
                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   <th className="p-4 px-6">Date (B.S.)</th>
@@ -234,56 +234,6 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                )}
             </tbody>
          </table>
-       </div>
-
-       {/* Mobile Card List View */}
-       <div className="md:hidden space-y-4">
-          {filteredHistory.map((tx) => (
-            <div key={tx.id} className={`bg-white rounded-2xl p-0 shadow-sm border border-gray-100 overflow-hidden ${tx.status === 'REFUNDED' ? 'opacity-50' : ''}`}>
-               {/* Card Header triggers expand */}
-               <div className="p-4 cursor-pointer" onClick={() => setExpandedRow(expandedRow === tx.id ? null : tx.id)}>
-                 <div className="flex justify-between items-start mb-2">
-                   <div>
-                     <p className="font-mono text-[10px] font-black text-[#1e3a8a] bg-blue-50 px-2 py-0.5 rounded-full uppercase mb-1 inline-block">{(tx.receipt || tx.id).slice(-6).toUpperCase()}</p>
-                     <p className="font-black text-gray-800 text-sm leading-tight">{tx.studentName} {tx.status === 'REFUNDED' && <span className="text-[10px] text-red-500 ml-1">REFUNDED</span>}</p>
-                   </div>
-                   <div className="text-right flex flex-col items-end gap-1">
-                     <p className="font-black text-[#059669] text-lg">रू {(tx.amount||0).toLocaleString()}</p>
-                     {expandedRow === tx.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                   </div>
-                 </div>
-                 <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
-                   <span>{tx.date}</span>
-                   <span>{tx.method}</span>
-                 </div>
-               </div>
-               
-               {/* Expanded Details */}
-               {expandedRow === tx.id && (
-                 <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2">
-                   <div className="bg-gray-50 border-y border-gray-100 py-3 mb-4 mt-2">
-                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Collected By: <span className="text-gray-800">{tx.collectedBy}</span></p>
-                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Class: <span className="text-gray-800">{tx.class || '-'}</span></p>
-                     {tx.remarks && <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase">Remark: <span className="text-gray-800">{tx.remarks}</span></p>}
-                   </div>
-                   <div className="grid grid-cols-3 gap-2">
-                      <button onClick={() => setReceipt(tx)} className="py-2.5 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"><Printer className="w-3 h-3"/> Print</button>
-                      {tx.status !== 'REFUNDED' && (
-                          <>
-                              <button onClick={() => handleEdit(tx)} className="py-2.5 bg-orange-50 text-orange-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"><Edit2 className="w-3 h-3"/> Edit</button>
-                              <button onClick={() => handleRefund(tx)} className="py-2.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1"><CornerUpLeft className="w-3 h-3"/> Refund</button>
-                          </>
-                      )}
-                   </div>
-                 </div>
-               )}
-            </div>
-          ))}
-          {filteredHistory.length === 0 && (
-            <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-gray-100">
-               <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No transactions found</p>
-            </div>
-          )}
        </div>
 
        {/* Receipt Modal */}

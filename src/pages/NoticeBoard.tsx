@@ -7,8 +7,8 @@ import { Megaphone, Pin, AlertCircle, FileText, Calendar, Clock, Eye, Edit2, Tra
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
-const CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'].map(c => `Class ${c}`);
-const TARGET_OPTIONS = ['All', 'Admin Only', 'Students Only', 'Teachers Only', ...CLASSES];
+const CLASSES = ['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map(c => `Class ${c}`);
+const TARGET_OPTIONS = ['All', 'Admin Only', 'Students Only', 'Teachers Only', 'Guest User', ...CLASSES];
 
 export default function NoticeBoard() {
   const role = auth.currentUser ? (localStorage.getItem('userRole') || 'student') : 'guest';
@@ -32,7 +32,7 @@ export default function NoticeBoard() {
     date: new Date().toISOString().split('T')[0],
     validUntil: '',
     priority: 'Normal',
-    targets: ['All'],
+    targets: ['Admin Only'],
     isPinned: false,
     status: 'Published'
   });
@@ -81,8 +81,11 @@ export default function NoticeBoard() {
         
         if (role === 'teacher') {
            return n.targets?.includes('All') || n.targets?.includes('Teachers Only');
-        } else {
+        } else if (role === 'student') {
            return n.targets?.includes('All') || n.targets?.includes('Students Only') || n.targets?.includes(`Class ${studentClass}`);
+        } else {
+           // guest
+           return n.targets?.includes('Guest User');
         }
      });
   }
@@ -446,13 +449,23 @@ export default function NoticeBoard() {
                              key={opt}
                              onClick={() => {
                                  let newTargets = [...formData.targets];
-                                 if (opt === 'All') { newTargets = ['All']; }
+                                 if (opt === 'All') { 
+                                    newTargets = newTargets.filter(t => t === 'Guest User'); 
+                                    newTargets.push('All'); 
+                                 }
+                                 else if (opt === 'Guest User') {
+                                    if (newTargets.includes('Guest User')) {
+                                       newTargets = newTargets.filter(t => t !== 'Guest User');
+                                    } else {
+                                       newTargets.push('Guest User');
+                                    }
+                                 }
                                  else {
-                                    newTargets = newTargets.filter(t => t !== 'All'); // remove all if specific selected
+                                    newTargets = newTargets.filter(t => t !== 'All'); 
                                     if (newTargets.includes(opt)) newTargets = newTargets.filter(t => t !== opt);
                                     else newTargets.push(opt);
-                                    if (newTargets.length === 0) newTargets = ['All'];
                                  }
+                                 if (newTargets.length === 0) newTargets = ['Admin Only'];
                                  setFormData({...formData, targets: newTargets});
                              }}
                              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${formData.targets.includes(opt) ? 'bg-gray-800 text-white border-gray-800 scale-105' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}

@@ -142,8 +142,7 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
               className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-600 focus:outline-none shrink-0 min-h-[48px]"
             >
               <option value="All">Class: All</option>
-              <option value="Play Group">Play Group</option>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'].map(c => (
+              {['PG', 'Nursery', 'LKG', 'UKG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map(c => (
                 <option key={c} value={c}>Class {c}</option>
               ))}
             </select>
@@ -166,8 +165,8 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
        </div>
 
        {/* Main Table */}
-       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hidden md:block">
-         <table className="w-full text-left whitespace-nowrap">
+       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto w-full">
+         <table className="w-full text-left whitespace-nowrap min-w-[800px]">
             <thead className="bg-[#1e3a8a]">
                <tr className="text-[10px] font-black text-white uppercase tracking-widest border-b border-gray-100">
                   <th className="p-4 px-6 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'id', direction: sortConfig?.key === 'id' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Student ID {sortConfig?.key === 'id' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
@@ -198,9 +197,14 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
                           </div>
                        </td>
                        <td className="p-4">
-                          <span className="text-sm font-bold text-gray-600">{s.class}</span>
+                          <span className="text-sm font-bold text-gray-600">Class {s.class}</span>
                        </td>
-                       <td className="p-4 text-right text-sm text-gray-600">रू {s.monthlyFee || 0}</td>
+                       <td className="p-4 text-right">
+                          <div className="flex flex-col items-end">
+                            {Number(s.scholarshipAmount) > 0 && <span className="text-[10px] text-emerald-600 font-bold tracking-widest line-through">रू {Number(s.monthlyFee) + Number(s.scholarshipAmount)}</span>}
+                            <span className="text-sm text-gray-800 font-black">रू {s.monthlyFee || 0}</span>
+                          </div>
+                       </td>
                        <td className="p-4 text-right font-black text-red-500 text-sm">{getStudentDue(s) > 0 ? `रू ${getStudentDue(s).toLocaleString()}` : '-'}</td>
                        <td className="p-4 text-center">
                           {getStatusBadge(s)}
@@ -270,83 +274,6 @@ export default function StudentLedgerTab({ studentsData, onRecordPayment, onView
          </table>
        </div>
 
-       {/* Mobile View */}
-       <div className="md:hidden space-y-4">
-          <div className="flex justify-end px-2">
-             <select 
-               value={`${sortConfig?.key || ''}-${sortConfig?.direction || ''}`} 
-               onChange={e => {
-                  const [key, dir] = e.target.value.split('-');
-                  if(key && dir) setSortConfig({key: key as any, direction: dir as any});
-                  else setSortConfig(null);
-               }}
-               className="text-xs font-bold text-gray-500 bg-transparent border-none outline-none appearance-none"
-             >
-                <option value="-">Sort By</option>
-                <option value="class-asc">Class (Asc)</option>
-                <option value="class-desc">Class (Desc)</option>
-                <option value="name-asc">Name (Asc)</option>
-                <option value="name-desc">Name (Desc)</option>
-             </select>
-          </div>
-          {sortedStudents.map(s => (
-             <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 cursor-pointer" onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)}>
-                  <div className="flex justify-between items-start mb-2">
-                     <div>
-                        <p className="font-black text-lg text-gray-800 leading-tight">{s.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                           <p className="text-xs text-gray-500 font-bold uppercase">Class {s.class} • {s.id}</p>
-                           {s.scholarshipStatus === 'Provided' && (
-                             <span className="inline-block bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-purple-200">Scholarship</span>
-                           )}
-                        </div>
-                     </div>
-                     {getStatusBadge(s)}
-                  </div>
-                  {getStudentDue(s) > 0 && <p className="text-sm font-black text-red-600">Due: रू {getStudentDue(s).toLocaleString()}</p>}
-                </div>
-                
-                {expandedStudent === s.id && (
-                  <div className="px-4 pb-4 bg-gray-50 border-y border-gray-100">
-                    <p className="text-[10px] font-black uppercase text-gray-400 pt-3 pb-2 tracking-widest">12-Month Ledger</p>
-                    <div className="grid grid-cols-4 gap-2 mb-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                       {MONTHS.map(m => {
-                         const status = getMonthStatus(s, m);
-                         let bg = 'bg-gray-100 text-gray-400';
-                         if (status === 'green') bg = 'bg-emerald-100 text-emerald-700';
-                         if (status === 'red') bg = 'bg-red-100 text-red-700 font-bold';
-                         
-                         return (
-                           <div key={m} className={`flex flex-col items-center justify-center p-2 rounded-lg text-center ${bg}`}>
-                             <span className="text-[9px] font-bold uppercase tracking-wider">{m}</span>
-                             {status === 'green' && <span className="text-[10px] mt-0.5">✓</span>}
-                             {status === 'red' && <span className="text-[8px] mt-0.5">रू {s.monthlyFee}</span>}
-                             {status === 'grey' && <span className="text-[10px] mt-0.5">—</span>}
-                           </div>
-                         );
-                       })}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-3 border-t border-gray-100 divide-x divide-gray-100">
-                   <button onClick={() => onRecordPayment?.(s.id)} className="flex py-3 items-center justify-center gap-2 hover:bg-emerald-50 text-emerald-600 transition-colors">
-                      <Banknote className="w-5 h-5" />
-                   </button>
-                   <button onClick={() => setExpandedStudent(expandedStudent === s.id ? null : s.id)} className="flex py-3 items-center justify-center gap-2 hover:bg-blue-50 text-blue-600 transition-colors">
-                      <FileText className="w-5 h-5" />
-                   </button>
-                   <button onClick={() => {
-                       const unpaidMonths = s.fees?.filter((f: any) => f.status === 'due').map((f: any) => f.month) || [];
-                       window.open(`https://wa.me/977${s.guardianPhone}?text=${encodeURIComponent(`Namaste ${s.guardianName} ji, Shikshantar Academy Siraha bata suchit garinchhau ki ${s.name} (Class ${s.class}) ko ${unpaidMonths.join(' ra ')} mahina ko fee baki chha. Kripaya school aaera tirna anurodh chha. Dhanyabad.`)}`, '_blank');
-                   }} className="flex py-3 items-center justify-center gap-2 hover:bg-orange-50 text-orange-600 transition-colors">
-                      <Bell className="w-5 h-5" />
-                   </button>
-                </div>
-             </div>
-          ))}
-       </div>
     </div>
   );
 }

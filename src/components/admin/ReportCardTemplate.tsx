@@ -47,17 +47,17 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
     ];
 
     return (
-      <div ref={ref} className="bg-white p-8 w-[210mm] min-h-[297mm] mx-auto text-gray-900 font-sans relative flex flex-col shadow-lg" style={{boxSizing: 'border-box'}}>
+      <div ref={ref} className="bg-white p-4 w-[210mm] min-h-[297mm] mx-auto text-gray-900 font-sans relative flex flex-col shadow-lg" style={{boxSizing: 'border-box'}}>
          {/* Decorative Border Layer */}
-         <div className="absolute inset-4 border-[3px] border-[#1e3a8a] rounded-sm"></div>
-         <div className="absolute inset-5 border border-[#1e3a8a] opacity-50 rounded-sm"></div>
+         <div className="border-[3px] border-[#1e3a8a] rounded-sm flex-1 flex flex-col p-1 relative z-0">
+            <div className="border border-[#1e3a8a]/40 rounded-sm flex-1 flex flex-col relative z-0 overflow-hidden">
+               
+               {/* Background Watermark Logo */}
+               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.06]" />
+               </div>
 
-         {/* Background Watermark Logo */}
-         <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-            <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[500px] h-[500px] object-contain grayscale" />
-         </div>
-
-         <div className="relative z-10 flex flex-col h-full pt-4 px-4 flex-1">
+               <div className="relative z-10 flex flex-col h-full p-6 flex-1">
             
             {/* Header */}
             <div className="flex flex-row justify-between items-center mb-6 pb-4 border-b-2 border-[#1e3a8a]">
@@ -227,6 +227,8 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                   <p className="font-bold text-xs text-gray-800 uppercase tracking-widest w-full">Principal</p>
                </div>
             </div>
+         </div>
+         </div>
          </div>
       </div>
     );

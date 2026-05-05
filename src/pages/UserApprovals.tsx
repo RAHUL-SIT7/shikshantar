@@ -240,7 +240,11 @@ export default function UserApprovals() {
       setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '', guardianName: '', address: '', section: '' });
     } catch (error: any) {
       console.error(error);
-      setStatus({ type: 'error', message: error.message || 'Failed to create user account. Email might be in use.' });
+      let errMsg = error.message || 'Failed to create user account.';
+      if (error.code === 'auth/email-already-in-use' || String(error.message).includes('auth/email-already-in-use')) {
+         errMsg = 'An account with this email address already exists. Please use a different email.';
+      }
+      setStatus({ type: 'error', message: errMsg });
     } finally {
       setIsCreating(false);
     }

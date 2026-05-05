@@ -422,14 +422,29 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                    </div>
                  </div>
                  
-                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                    {receipt.months?.length > 0 && receipt.months.map((m: string) => (
-                      <div key={m} className="flex justify-between text-sm mb-2 pb-2 border-b border-blue-100 last:border-0 last:mb-0 last:pb-0">
-                        <span className="text-blue-800 font-bold">{m} Tuition</span>
-                        <span className="text-blue-900 font-black">रू {tuitionFee.toLocaleString()}</span>
+                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+                    {receipt.months?.length > 0 ? receipt.months.map((m: string) => {
+                      const netPerMonth = receipt.amount / receipt.months.length;
+                      const scholarship = Number(selectedStudent?.scholarshipAmount) || 0;
+                      const baseFee = netPerMonth + scholarship;
+                      return (
+                      <div key={m} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-800 font-bold">{m} Base Fee</span>
+                          <span className="text-blue-900">रू {baseFee.toLocaleString()}</span>
+                        </div>
+                        {scholarship > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-emerald-600 font-bold">Scholarship/Discount</span>
+                            <span className="text-emerald-700">- रू {scholarship.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm pt-1 mt-1 border-t border-blue-100/50">
+                          <span className="text-blue-900 font-black">Net Amount</span>
+                          <span className="text-blue-900 font-black">रू {netPerMonth.toLocaleString()}</span>
+                        </div>
                       </div>
-                    ))}
-                    {!receipt.months?.length && (
+                    )}) : (
                        <div className="flex justify-between text-sm">
                         <span className="text-blue-800 font-bold">Tuition Payment</span>
                         <span className="text-blue-900 font-black">रू {receipt.amount}</span>

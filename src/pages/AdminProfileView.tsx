@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Edit2, Lock, MonitorSmartphone, Shield, CheckCircle2, ChevronRight, CircleUserRound, Check, X, Activity, GraduationCap, LogOut, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Camera, Edit2, Lock, MonitorSmartphone, Shield, CheckCircle2, ChevronRight, CircleUserRound, Check, X, Activity, GraduationCap, LogOut, AlertCircle, Eye, EyeOff, FileText, Banknote, Settings } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +21,7 @@ export default function AdminProfileView() {
   const [gender, setGender] = useState('Male');
   
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
 
   // Security state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -33,6 +34,7 @@ export default function AdminProfileView() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -55,6 +57,16 @@ export default function AdminProfileView() {
           }
         } catch (e) {
           console.error("Error fetching admin profile", e);
+        }
+
+        try {
+          // Fetch real recent activity from transactions
+          const txSnap = await getDocs(query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(15)));
+          const txActs = txSnap.docs.map(d => ({ type: 'fee', id: d.id, ...d.data() }));
+          
+          setActivities(txActs);
+        } catch(e) {
+          // Ignore
         }
       }
       setLoading(false);
@@ -150,6 +162,26 @@ export default function AdminProfileView() {
       setPwdError(err.message || 'Failed to update password.');
     } finally {
       setPwdLoading(false);
+    }
+  };
+
+  const handleLogoutAllOtherDevices = async () => {
+    if (window.confirm("Are you sure you want to log out from all other devices? You will remain logged in on this device.")) {
+       if (auth.currentUser) {
+          try {
+            const localSessionId = localStorage.getItem('localSessionId');
+            if (localSessionId) {
+               await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                  activeSessions: [localSessionId]
+               });
+               setSuccessToast('Successfully logged out from all other active sessions.');
+            }
+          } catch(e) {
+             console.error(e);
+             setPwdError('Failed to logout other devices. Please try again.');
+          }
+       }
+       setTimeout(() => setSuccessToast(''), 4000);
     }
   };
 
@@ -509,7 +541,7 @@ export default function AdminProfileView() {
                     </div>
                  </div>
 
-                 <button className="mt-5 w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold px-4 py-2.5 rounded-lg flex justify-center items-center gap-2 transition-colors">
+                 <button onClick={handleLogoutAllOtherDevices} className="mt-5 w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold px-4 py-2.5 rounded-lg flex justify-center items-center gap-2 transition-colors">
                     <LogOut className="w-4 h-4" /> Logout All Other Devices
                  </button>
               </div>
@@ -529,49 +561,22 @@ export default function AdminProfileView() {
            <div className="relative pl-4 pr-4 py-2">
               <div className="absolute left-6 top-6 bottom-6 w-px bg-gray-200"></div>
               
-              <div className="relative flex gap-4 items-start mb-6">
-                 <div className="w-4 h-4 rounded-full border-2 border-white bg-emerald-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
-                 <div>
-                   <p className="text-sm font-bold text-gray-800">Recorded fee payment for Aarav Sharma (NRs. 1,800)</p>
-                   <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">Today, 3:15 PM</p>
-                 </div>
-              </div>
-
-              <div className="relative flex gap-4 items-start mb-6">
-                 <div className="w-4 h-4 rounded-full border-2 border-white bg-blue-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
-                 <div>
-                   <p className="text-sm font-bold text-gray-800">Published Terminal 1 results for Class 10</p>
-                   <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">Today, 2:30 PM</p>
-                 </div>
-              </div>
-
-              <div className="relative flex gap-4 items-start mb-6">
-                 <div className="w-4 h-4 rounded-full border-2 border-white bg-orange-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
-                 <div>
-                   <p className="text-sm font-bold text-gray-800">Approved admission: Sita Karki (Class 7)</p>
-                   <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">Yesterday, 11:00 AM</p>
-                 </div>
-              </div>
-
-              <div className="relative flex gap-4 items-start mb-6">
-                 <div className="w-4 h-4 rounded-full border-2 border-white bg-blue-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
-                 <div>
-                   <p className="text-sm font-bold text-gray-800">Posted notice: "School Holiday on 25 Baisakh"</p>
-                   <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">Yesterday, 10:30 AM</p>
-                 </div>
-              </div>
-
-              <div className="relative flex gap-4 items-start">
-                 <div className="w-4 h-4 rounded-full border-2 border-white bg-yellow-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
-                 <div>
-                   <p className="text-sm font-bold text-gray-800">Updated fee structure for Class 9-10</p>
-                   <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">2 days ago, 4:00 PM</p>
-                 </div>
-              </div>
+              {activities.slice(0,5).map((act, i) => (
+                <div className={`relative flex gap-4 items-start ${i < activities.slice(0,5).length - 1 ? 'mb-6' : ''}`} key={act.id}>
+                   <div className="w-4 h-4 rounded-full border-2 border-white bg-emerald-500 shadow-sm shrink-0 mt-1 relative z-10"></div>
+                   <div>
+                     <p className="text-sm font-bold text-gray-800">Recorded fee payment for {act.studentName} (NRs. {(act.amount||0).toLocaleString()})</p>
+                     <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase">{act.date} • {act.method}</p>
+                   </div>
+                </div>
+              ))}
+              {activities.length === 0 && (
+                <p className="text-gray-500 font-bold text-sm text-center italic py-4">No recent activity found.</p>
+              )}
            </div>
         </div>
         <div className="border-t border-gray-100 p-4">
-           <button className="text-sm font-bold text-[#1a2744] hover:text-blue-700 flex items-center gap-1 mx-auto">
+           <button onClick={() => setIsActivityLogOpen(true)} className="text-sm font-bold text-[#1a2744] hover:text-blue-700 flex items-center gap-1 mx-auto">
              View Full Activity Log <ChevronRight className="w-4 h-4" />
            </button>
         </div>
@@ -597,6 +602,56 @@ export default function AdminProfileView() {
             <p className="text-xl md:text-2xl font-black text-gray-900">2 <span className="text-xs text-gray-400 font-bold ml-1">exams</span></p>
          </div>
       </div>
+
+      {isActivityLogOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900">Activity Log</h3>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-0.5">Your recent system actions</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsActivityLogOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+             <div className="p-6 overflow-y-auto space-y-6">
+               <div className="relative border-l-2 border-gray-100 pl-6 ml-3 space-y-8">
+                 {activities.length > 0 ? activities.map(act => (
+                   <div className="relative" key={act.id}>
+                      <div className="absolute -left-[31px] top-1 rounded-full border-4 border-white bg-emerald-500 p-1.5 shadow-sm">
+                        <Banknote className="w-3 h-3 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">Recorded fee payment of रू {(act.amount||0).toLocaleString()} for {act.studentName}</p>
+                        <p className="text-[11px] font-bold text-gray-400 mt-0.5 uppercase tracking-wider">{act.date} • {act.method}</p>
+                      </div>
+                   </div>
+                 )) : (
+                   <p className="text-gray-500 font-bold text-sm text-center italic py-4">No recent activity found.</p>
+                 )}
+               </div>
+             </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+               <button 
+                 onClick={() => setIsActivityLogOpen(false)}
+                 className="px-5 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-300 transition-colors"
+               >
+                 Close
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

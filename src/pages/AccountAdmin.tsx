@@ -110,7 +110,7 @@ export default function AccountAdmin() {
           let lastCollectionDate = 'N/A';
           const sortedTx = [...txList].sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
           if (sortedTx.length > 0) {
-             lastCollectionDate = sortedTx[0].date || 'N/A';
+             lastCollectionDate = (sortedTx[0] as any).date || 'N/A';
           }
 
           setStats({
