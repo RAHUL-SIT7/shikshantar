@@ -357,7 +357,7 @@ export default function Account() {
                        isDue ? 'bg-red-50 border-red-200 text-red-600' : 
                        'bg-gray-50 border-gray-200 text-gray-400'
                     }`}>
-                       <p className="text-[9px] md:text-[11px] font-black uppercase tracking-tight w-full text-center truncate">{m.slice(0, 3)}.</p>
+                       <p className="text-[9px] md:text-[11px] font-black uppercase tracking-tight w-full text-center truncate">{m === 'Ashoj' ? 'ASO' : m.slice(0, 3)}.</p>
                        {isPaid ? (
                           <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">✓</div>
                        ) : isDue ? (

@@ -672,6 +672,26 @@ const FeeStructure = () => {
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchStudents()}
                   className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
+                {searchResults.length > 0 && !selectedStudent && (
+                  <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                    {searchResults.map((student) => (
+                      <div
+                        key={student.id}
+                        onClick={() => setSelectedStudent(student)}
+                        className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-slate-100 text-slate-900"
+                      >
+                        <div className="flex items-center">
+                          <span className="font-medium block truncate">
+                            {student.firstName} {student.lastName}
+                          </span>
+                          <span className="ml-2 text-slate-500 text-xs block truncate">
+                            ({student.email})
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleSearchStudents}
@@ -688,42 +708,7 @@ const FeeStructure = () => {
               </div>
             )}
 
-            {searchResults.length > 0 && !selectedStudent && (
-              <div className="border border-slate-200 rounded-lg overflow-hidden mb-6">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
-                    {searchResults.map((student) => (
-                      <tr key={student.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold mr-3">
-                              {student.firstName?.charAt(0) || <UserIcon className="h-4 w-4" />}
-                            </div>
-                            <div className="text-sm font-medium text-slate-900">{student.firstName} {student.lastName}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => setSelectedStudent(student)}
-                            className="text-[#1e3a8a] hover:text-[#1e40af]"
-                          >
-                            Select
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+ 
 
             {selectedStudent && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">

@@ -442,7 +442,7 @@ export default function Result() {
                   My Performance
                </h3>
                <div className="h-64 w-full">
-                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                 <ResponsiveContainer width="100%" height={256}>
                     <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                       <XAxis dataKey="subject" tick={{fontSize: 10}} interval={0} />
                       <YAxis tick={{fontSize: 12}} />

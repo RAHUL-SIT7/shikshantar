@@ -544,7 +544,7 @@ export default function Home() {
              <div className="md:col-span-3 bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
                 <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-blue-600 pl-2">Fee Collection — {bsString}</h3>
                 <div className="flex-1 w-full min-h-0">
-                   <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                   <ResponsiveContainer width="100%" height={280}>
                        <BarChart data={feeChartData} margin={{ top: 10, right: 10, left: 10, bottom: 5}}>
                           <defs>
                              <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
@@ -571,7 +571,7 @@ export default function Home() {
              <div className="md:col-span-2 bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
                 <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-orange-500 pl-2">Admissions This Year</h3>
                 <div className="flex-1 w-full min-h-0 relative">
-                   <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                   <ResponsiveContainer width="100%" height={256}>
                        <PieChart>
                           <Pie
                              data={admissionsChartData}
