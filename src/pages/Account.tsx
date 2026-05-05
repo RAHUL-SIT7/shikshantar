@@ -50,14 +50,17 @@ export default function Account() {
         if (userDoc.exists() && userDoc.data().role === 'student') {
            const sData: any = { id: userDoc.id, name: userDoc.data().fullName || userDoc.data().name, ...userDoc.data() };
            
-           const structSnap = await getDocs(collection(db, 'feeStructure'));
-           const structs = structSnap.docs.map(d => ({ class: d.id, ...d.data() } as any));
-           const structure = structs.find((s: any) => s.class === sData.class) || { tuitionFee: 1000, examFee: 500, annualFee: 12000 };
+           const settingsDoc = await getDoc(doc(db, 'settings', 'fee_structure'));
+           const structs = settingsDoc.exists() ? (settingsDoc.data().academic || []) : [];
+           const structure = structs.find((s: any) => s.className === sData.class) || { tuition: '1000', annual: '12000' };
+           let tuitionFeeNum = Number(String(structure.tuition || '1000').replace(/[^0-9.]/g, ''));
            
            if (sData.scholarshipStatus === 'Provided' && sData.scholarshipAmount) {
               const deduction = Number(sData.scholarshipAmount);
-              structure.tuitionFee = Math.max(0, structure.tuitionFee - deduction);
+              tuitionFeeNum = Math.max(0, tuitionFeeNum - deduction);
            }
+           structure.tuitionFee = tuitionFeeNum;
+           structure.annualFee = Number(String(structure.annual || '12000').replace(/[^0-9.]/g, ''));
 
            const feesSnap = await getDocs(query(collection(db, 'studentFees'), where('studentId', '==', studentId)));
            const fees = feesSnap.docs.map(d => d.data());
@@ -313,11 +316,16 @@ export default function Account() {
             
             {/* ANNUAL OVERVIEW CARD */}
             <div className="text-left md:text-right bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/10 shrink-0 min-w-[200px]">
-               <div className="flex justify-between items-center mb-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Annual Fee</p>
-                  <p className="text-xs font-black text-white px-2 py-0.5 rounded bg-white/10">NRs. {annualTotal.toLocaleString()}</p>
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-1 gap-2 md:gap-4">
+                  <div className="flex-1 w-full text-left md:text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Annual Fee</p>
+                      <p className="text-xs font-black text-white py-0.5">NRs. {annualTotal.toLocaleString()}</p>
+                  </div>
+                  <button onClick={() => window.print()} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1 shrink-0 md:ml-auto">
+                      <FileDown className="w-3 h-3"/> Statement
+                  </button>
                </div>
-               <div className="flex justify-between items-center mb-3">
+               <div className="flex justify-between items-center mb-3 mt-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Remaining Due</p>
                   <p className={`text-sm font-black ${totalDue > 0 ? 'text-red-400' : 'text-emerald-400'}`}>NRs. {totalDue.toLocaleString()}</p>
                </div>
@@ -501,8 +509,8 @@ export default function Account() {
                   </div>
                   
                   <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
-                     {receipt.months?.length > 0 ? receipt.months.map((m: string) => {
-                       const netPerMonth = (receipt.amount || 0) / receipt.months.length;
+                     {receipt.months?.length > 0 && receipt.months.map((m: string) => {
+                       const netPerMonth = (receipt.amount - (receipt.otherFees?.reduce((a: number, c: any) => a + Number(c.amount), 0) || 0)) / receipt.months.length;
                        return (
                        <div key={m} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
                          <div className="flex justify-between text-sm">
@@ -510,7 +518,16 @@ export default function Account() {
                            <span className="text-blue-900 font-black">रू {netPerMonth.toLocaleString()}</span>
                          </div>
                        </div>
-                     )}) : (
+                     )})}
+                     {receipt.otherFees?.length > 0 && receipt.otherFees.map((f: any, idx: number) => (
+                      <div key={idx} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-blue-800 font-bold">{f.name}</span>
+                           <span className="text-blue-900 font-black">रू {Number(f.amount).toLocaleString()}</span>
+                         </div>
+                      </div>
+                     ))}
+                     {(receipt.months?.length === 0 && receipt.otherFees?.length === 0) && (
                         <div className="flex justify-between text-sm">
                          <span className="text-blue-800 font-bold">Tuition Payment</span>
                          <span className="text-blue-900 font-black">रू {(receipt.amount || 0).toLocaleString()}</span>

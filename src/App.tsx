@@ -163,7 +163,7 @@ export default function App() {
           />
           <Route 
             path="user-approvals" 
-            element={isAuthenticated && userRole === 'admin' ? <UserApprovals /> : <Navigate to="/" />} 
+            element={isAuthenticated && (userRole === 'admin' || userRole === 'teacher') ? <UserApprovals /> : <Navigate to="/" />} 
           />
           <Route 
             path="profile" 

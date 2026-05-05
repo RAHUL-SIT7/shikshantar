@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
-import { Search, CheckCircle2, CheckSquare, Square, Banknote, CreditCard, Receipt, FileDown, Smartphone, Check } from 'lucide-react';
+import { Search, CheckCircle2, CheckSquare, Square, Banknote, CreditCard, Receipt, FileDown, Smartphone, Check, Plus, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { toPng } from 'html-to-image';
@@ -8,11 +8,19 @@ import jsPDF from 'jspdf';
 
 const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
 
+interface OtherFee {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 export default function RecordPaymentTab({ initialStudentId, studentsData, onRefresh }: { initialStudentId?: string, studentsData: any[], onRefresh: () => void }) {
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [otherFees, setOtherFees] = useState<OtherFee[]>([]);
   const [customAmount, setCustomAmount] = useState('');
   const [method, setMethod] = useState('Cash');
   const [remark, setRemark] = useState('');
@@ -48,12 +56,10 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
   };
 
   useEffect(() => {
-    // Auto-select student if passed
     if (initialStudentId && studentsData.length > 0) {
        const initialStud = studentsData.find(s => s.id === initialStudentId);
        if (initialStud) {
          setSelectedStudent(initialStud);
-         // Auto-select due months
          const dues = initialStud.fees?.filter((f: any) => f.status === 'due').map((f: any) => f.month) || [];
          setSelectedMonths(dues);
        }
@@ -70,10 +76,28 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
     
     setCustomAmount('');
     setRemark('');
+    setOtherFees([]);
+  };
+
+  const addOtherFee = () => {
+      setOtherFees([...otherFees, { id: Date.now().toString(), name: 'Late Fine', amount: 100 }]);
+  };
+
+  const removeOtherFee = (id: string) => {
+      setOtherFees(otherFees.filter(f => f.id !== id));
+  };
+
+  const updateOtherFee = (id: string, field: 'name' | 'amount', value: string | number) => {
+      setOtherFees(otherFees.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
 
   const tuitionFee = selectedStudent?.monthlyFee || 0;
-  const calculatedTotal = selectedMonths.length * tuitionFee;
+  const calculatedMonthsTotal = selectedMonths.reduce((acc, month) => {
+      const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === month);
+      return acc + (feeDoc ? Number(feeDoc.dueAmount || 0) : tuitionFee);
+  }, 0);
+  const otherFeesTotal = otherFees.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  const calculatedTotal = calculatedMonthsTotal + otherFeesTotal;
   const amountToCollect = customAmount !== '' ? Number(customAmount) : calculatedTotal;
   const balanceAfter = amountToCollect < calculatedTotal ? calculatedTotal - amountToCollect : 0;
 
@@ -94,7 +118,8 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
         category: 'Tuition Fee',
         recordedBy: 'Admin',
         remark,
-        months: selectedMonths
+        months: selectedMonths,
+        otherFees: otherFees
       };
       
       const batch = writeBatch(db);
@@ -112,20 +137,21 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
           collectedBy: 'Admin',
           status: 'SUCCESS',
           months: selectedMonths,
+          otherFees: otherFees,
           remarks: remark,
           timestamp: serverTimestamp()
       });
 
       // 2. Mark studentFees as paid
       selectedMonths.forEach(m => {
-          // Find the existing fee document if any, or create it
-          // the fee document ID in studentFees might be composite: studentId_month
+          const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === m);
+          const thisMonthFee = feeDoc ? Number(feeDoc.totalFee || feeDoc.dueAmount || 0) : tuitionFee;
           const feeRef = doc(db, 'studentFees', `${selectedStudent.id}_${m}`);
           batch.set(feeRef, {
               studentId: selectedStudent.id,
               month: m,
-              totalFee: tuitionFee,
-              paidAmount: tuitionFee,
+              totalFee: thisMonthFee,
+              paidAmount: thisMonthFee,
               dueAmount: 0,
               status: 'paid'
           }, { merge: true });
@@ -145,6 +171,7 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
       // reset form
       setSelectedStudent(null);
       setSelectedMonths([]);
+      setOtherFees([]);
       setCustomAmount('');
       setRemark('');
       setMethod('Cash');
@@ -175,20 +202,22 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
               placeholder="Search student by name, ID, or class..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
               className="w-full pl-14 pr-4 py-4 md:py-5 bg-gray-50 border border-gray-200 rounded-xl text-lg font-bold focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white transition-all outline-none"
             />
           </div>
           
-          {searchTerm && (
-            <div className="mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden absolute w-[calc(100%-3rem)] max-w-4xl z-50">
+          {(isSearchFocused || searchTerm) && (
+            <div className={`mt-2 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden absolute w-[calc(100%-3rem)] max-w-4xl z-50 transition-opacity duration-200 ${(isSearchFocused || searchTerm) ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
               {studentsData.filter(s => 
-                (s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 s.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 s.class?.toLowerCase().includes(searchTerm.toLowerCase()))
+                (String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 String(s.class || '').toLowerCase().includes(searchTerm.toLowerCase()))
               ).slice(0, 5).map(s => (
                 <div 
                   key={s.id} 
-                  onClick={() => handleStudentSelect(s)}
+                  onMouseDown={(e) => { e.preventDefault(); handleStudentSelect(s); }}
                   className="p-4 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-gray-50 last:border-0"
                 >
                   <div className="flex items-center gap-4">
@@ -208,9 +237,9 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                 </div>
               ))}
               {studentsData.filter(s => 
-                (s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 s.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 s.class?.toLowerCase().includes(searchTerm.toLowerCase()))
+                (String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 String(s.class || '').toLowerCase().includes(searchTerm.toLowerCase()))
               ).length === 0 && (
                 <div className="p-6 text-center text-gray-500 font-bold uppercase text-sm tracking-widest">No students found</div>
               )}
@@ -256,6 +285,8 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                      // Show only "due" months or months without any record yet (assumed unpaid)
                      if (feeDoc && feeDoc.status === 'paid') return null;
                      
+                     const displayFee = feeDoc ? Number(feeDoc.dueAmount || feeDoc.totalFee || 0) : tuitionFee;
+
                      return (
                         <div 
                           key={m}
@@ -275,7 +306,7 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                               <span className={`font-black uppercase tracking-widest ${isSelected ? 'text-emerald-800' : 'text-gray-700'}`}>{m} 2083</span>
                            </div>
                            <span className={`font-black ${isSelected ? 'text-emerald-700' : 'text-gray-500'}`}>
-                             रू {tuitionFee.toLocaleString()}
+                             रू {displayFee.toLocaleString()}
                            </span>
                         </div>
                      );
@@ -283,8 +314,53 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                  </div>
                  
                  <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
-                    <span className="font-black text-gray-500 uppercase tracking-widest text-sm">Selected Total:</span>
-                    <span className="font-black text-gray-800 text-xl">रू {calculatedTotal.toLocaleString()}</span>
+                    <span className="font-black text-gray-500 uppercase tracking-widest text-sm">Tuition Total:</span>
+                    <span className="font-black text-gray-800 text-xl">रू {calculatedMonthsTotal.toLocaleString()}</span>
+                 </div>
+                 
+                 <div className="mt-6 border-t border-gray-100 pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest">Other Fees / Fines</h3>
+                      <button onClick={addOtherFee} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition-colors flex gap-1 items-center">
+                         <Plus className="w-3 h-3" /> Add Item
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                       {otherFees.map(fee => (
+                         <div key={fee.id} className="flex gap-2 items-center">
+                            <input 
+                               type="text" 
+                               value={fee.name} 
+                               onChange={(e) => updateOtherFee(fee.id, 'name', e.target.value)} 
+                               placeholder="Description (e.g. Late Fine)"
+                               className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-[#1e3a8a] focus:border-[#1e3a8a] outline-none"
+                            />
+                            <div className="relative w-28">
+                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">रू</span>
+                               <input 
+                                  type="number" 
+                                  value={fee.amount} 
+                                  onChange={(e) => updateOtherFee(fee.id, 'amount', e.target.value)} 
+                                  className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm font-bold focus:ring-[#1e3a8a] focus:border-[#1e3a8a] outline-none"
+                               />
+                            </div>
+                            <button onClick={() => removeOtherFee(fee.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200">
+                               <Trash2 className="w-4 h-4" />
+                            </button>
+                         </div>
+                       ))}
+                       {otherFees.length === 0 && (
+                          <div className="text-center py-4 bg-gray-50 border border-gray-100 border-dashed rounded-xl">
+                            <p className="text-xs font-bold text-gray-400">No additional fees</p>
+                          </div>
+                       )}
+                    </div>
+                 </div>
+
+                 <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100 flex justify-between items-center">
+                    <span className="font-black text-blue-800 uppercase tracking-widest text-sm">Grand Total:</span>
+                    <span className="font-black text-blue-900 text-2xl">रू {calculatedTotal.toLocaleString()}</span>
                  </div>
                </div>
              </div>
@@ -423,8 +499,9 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                  </div>
                  
                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
-                    {receipt.months?.length > 0 ? receipt.months.map((m: string) => {
-                      const netPerMonth = receipt.amount / receipt.months.length;
+                    {receipt.months?.length > 0 && receipt.months.map((m: string) => {
+                      const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === m);
+                      const netPerMonth = feeDoc ? Number(feeDoc.totalFee || feeDoc.dueAmount || 0) : tuitionFee;
                       const scholarship = Number(selectedStudent?.scholarshipAmount) || 0;
                       const baseFee = netPerMonth + scholarship;
                       return (
@@ -444,7 +521,16 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                           <span className="text-blue-900 font-black">रू {netPerMonth.toLocaleString()}</span>
                         </div>
                       </div>
-                    )}) : (
+                    )})}
+                    {receipt.otherFees?.length > 0 && receipt.otherFees.map((f: any, idx: number) => (
+                      <div key={idx} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
+                         <div className="flex justify-between text-sm">
+                           <span className="text-blue-800 font-bold">{f.name}</span>
+                           <span className="text-blue-900 font-black">रू {Number(f.amount).toLocaleString()}</span>
+                         </div>
+                      </div>
+                    ))}
+                    {(receipt.months?.length === 0 && receipt.otherFees?.length === 0) && (
                        <div className="flex justify-between text-sm">
                         <span className="text-blue-800 font-bold">Tuition Payment</span>
                         <span className="text-blue-900 font-black">रू {receipt.amount}</span>

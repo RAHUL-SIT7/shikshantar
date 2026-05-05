@@ -452,15 +452,15 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
 
   return (
     <div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="flex flex-col justify-end">
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Type</label>
-               <div className="flex gap-4 items-center h-[42px]">
-                   <label className="flex items-center gap-2 cursor-pointer">
+               <div className="flex gap-4 items-center h-[42px] overflow-hidden">
+                   <label className="flex items-center gap-2 cursor-pointer shrink-0">
                        <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
                        <span className="text-sm font-bold">Terminal</span>
                    </label>
-                   <label className="flex items-center gap-2 cursor-pointer">
+                   <label className="flex items-center gap-2 cursor-pointer shrink-0">
                        <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
                        <span className="text-sm font-bold">Test</span>
                    </label>
@@ -503,9 +503,9 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
             </div>
             
             {selectedSubject === 'All Subjects' ? (
-               <div className="col-span-1 md:col-span-6 mt-2">
+               <div className="col-span-1 lg:col-span-4 mt-2">
                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subject Full Marks & Pass Marks</label>
-                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                   <div className="grid grid-cols-2 lg:col-span-4 lg:grid-cols-6 gap-3">
                        {dynamicSubjects.map((subj: string) => (
                            <div key={subj} className="bg-gray-50 p-2 rounded-lg border flex flex-col gap-2">
                                <div className="text-xs font-bold text-gray-700 truncate">{subj}</div>
@@ -525,7 +525,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                </div>
             ) : (
                 selectedSubject && (
-                   <div className="col-span-1 md:col-span-6 flex gap-4 mt-2">
+                   <div className="col-span-1 lg:col-span-4 flex gap-4 mt-2">
                       <div className="flex-1">
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Marks</label>
                          <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-bold text-[#1e3a8a]" />

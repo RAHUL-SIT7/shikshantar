@@ -85,13 +85,15 @@ const FeeStructure = () => {
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [generatingFees, setGeneratingFees] = useState(false);
   const [toastMessage, setToastMessage] = useState({ type: '', text: '' });
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkMonth, setBulkMonth] = useState('Shrawan');
 
   const isAdmin = localStorage.getItem('userRole') === 'admin';
 
   const applyBulkFee = async () => {
-      if (!window.confirm(`Are you sure you want to generate fee statements for all students? This will apply tuition fees based on the fee structure to all students.`)) return;
-      
+      if (!bulkMonth) return;
       setGeneratingFees(true);
+      setShowBulkModal(false);
       setToastMessage({ type: '', text: '' });
       try {
           // 1. Fetch all students
@@ -103,8 +105,7 @@ const FeeStructure = () => {
           data.academic.forEach(s => structMap.set(s.className, s));
 
           // 3. Batch commit fees for a specific month
-          const selectedMonth = window.prompt("Enter the month to generate fee for (e.g. Shrawan, Bhadra, Ashoj...):", "Poush");
-          if (!selectedMonth) { setGeneratingFees(false); return; }
+          const selectedMonth = bulkMonth;
 
           let count = 0;
           let batch = writeBatch(db);
@@ -310,7 +311,7 @@ const FeeStructure = () => {
             )}
             
             <button
-               onClick={applyBulkFee}
+               onClick={() => setShowBulkModal(true)}
                disabled={generatingFees}
                className="flex justify-center items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
             >
@@ -781,6 +782,38 @@ const FeeStructure = () => {
           </div>
         </div>
       )}
+
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Monthly Bills</h3>
+              <p className="text-sm text-gray-600 mb-6">Select the academic month to configure pending fee records for all students.</p>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Select Month</label>
+                <select
+                  value={bulkMonth}
+                  onChange={(e) => setBulkMonth(e.target.value)}
+                  className="block w-full border border-slate-300 rounded-lg p-2.5 focus:ring-emerald-500 focus:border-emerald-500 font-bold"
+                >
+                   {['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                   ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                 <button onClick={() => setShowBulkModal(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                    Cancel
+                 </button>
+                 <button onClick={applyBulkFee} disabled={generatingFees} className="px-4 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-50">
+                    {generatingFees ? 'Generating...' : 'Generate Bills'}
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
     </div>
   );
 };

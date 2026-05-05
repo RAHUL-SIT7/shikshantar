@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { doc, onSnapshot, collection, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, updateDoc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -148,6 +148,51 @@ export default function UserApprovals() {
   });
   const [isCreating, setIsCreating] = useState(false);
 
+  const generateInitialFee = async (userId: string, studentClass: string, scholarshipStatus: string, scholarshipAmount: number) => {
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'fee_structure'));
+      if (!settingsDoc.exists()) return;
+      const data = settingsDoc.data();
+      const feeStruct = data.academic?.find((s: any) => s.className === studentClass);
+      
+      if (feeStruct) {
+        let tuitionFee = feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
+        let admissionFee = feeStruct.admission ? Number(feeStruct.admission.replace(/[^0-9.]/g, '')) : 0;
+        
+        if (scholarshipStatus === 'Provided' && scholarshipAmount) {
+           tuitionFee = Math.max(0, tuitionFee - Number(scholarshipAmount));
+        }
+
+        // Generate Admission Fee
+        if (admissionFee > 0) {
+           await setDoc(doc(db, 'studentFees', `${userId}_Admission`), {
+               studentId: userId,
+               month: 'Admission Fee',
+               totalFee: admissionFee,
+               paidAmount: 0,
+               dueAmount: admissionFee,
+               status: 'due',
+               createdAt: new Date().toISOString()
+           });
+        }
+        
+        // Generate current month's tuition fee (e.g. Baisakh as generic initial month, or current month mapping)
+        // Taking a simplistic approach: We'll create exactly one "Initial Month" tuition fee OR Baisakh
+        await setDoc(doc(db, 'studentFees', `${userId}_Baisakh`), {
+            studentId: userId,
+            month: 'Baisakh',
+            totalFee: tuitionFee,
+            paidAmount: 0,
+            dueAmount: tuitionFee,
+            status: 'due',
+            createdAt: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.error("Failed to generate initial fee:", e);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
@@ -231,6 +276,10 @@ export default function UserApprovals() {
       }
 
       await setDoc(doc(db, 'users', docId), userProfilePayload);
+      
+      if (newUser.role === 'student' && newUser.class) {
+         await generateInitialFee(docId, newUser.class, newUser.scholarshipStatus, Number(newUser.scholarshipAmount) || 0);
+      }
       
       // Immediately sign out the secondary auth so it can be used again cleanly
       await secondaryAuth.signOut();
@@ -420,6 +469,9 @@ export default function UserApprovals() {
                               onClick={async () => {
                                 try {
                                   await updateDoc(doc(db, 'users', user.id), { status: 'active' });
+                                  if (user.role === 'student' && user.class) {
+                                     await generateInitialFee(user.id, user.class, user.scholarshipStatus || 'Not Provided', Number(user.scholarshipAmount) || 0);
+                                  }
                                   setStatus({ type: 'success', message: 'User approved securely.' });
                                 } catch (e) {
                                   setStatus({ type: 'error', message: 'Failed to approve.' });

@@ -113,7 +113,7 @@ export default function ReportsAnalyticsTab() {
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[400px]">
              <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Class-wise Collection Breakdown</h3>
-             <ResponsiveContainer width="100%" height="100%">
+             <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={classData}>
                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                    <XAxis dataKey="class" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12, fontWeight: 700}}/>
@@ -128,7 +128,7 @@ export default function ReportsAnalyticsTab() {
           
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[400px]">
              <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Payment Method Distribution</h3>
-             <ResponsiveContainer width="100%" height="100%">
+             <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                    <Pie data={methodData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value">
                       {methodData.map((entry, index) => (

@@ -54,7 +54,7 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                
                {/* Background Watermark Logo */}
                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.06]" />
+                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.03]" />
                </div>
 
                <div className="relative z-10 flex flex-col h-full p-6 flex-1">

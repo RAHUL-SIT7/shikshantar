@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, Wallet, TrendingUp, AlertTriangle, Users, BookOpen, Clock, LogOut, GraduationCap } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 import StudentLedgerTab from '../components/fee_management/StudentLedgerTab';
 import RecordPaymentTab from '../components/fee_management/RecordPaymentTab';
@@ -35,8 +35,8 @@ export default function AccountAdmin() {
           setLoading(true);
           
           // 1. Fetch structures
-          const strucSnap = await getDocs(collection(db, 'feeStructure'));
-          const structs = strucSnap.docs.map(d => ({ class: d.id, ...d.data() })) as any[];
+          const settingsDoc = await getDoc(doc(db, 'settings', 'fee_structure'));
+          const structs = settingsDoc.exists() ? (settingsDoc.data().academic || []) : [];
           setFeeStructures(structs);
 
           // 2. Fetch students
@@ -57,8 +57,8 @@ export default function AccountAdmin() {
           // Merge into studentData
           const mergedStudents = studentsList.map(s => {
               const studentFees = feesList.filter(f => f.studentId === s.id);
-              const struct = structs.find(st => st.class === s.class);
-              let baseFee = struct?.tuitionFee ? Number(String(struct.tuitionFee).replace(/[^0-9.]/g, '')) : 1000;
+              const struct = structs.find((st: any) => st.className === s.class);
+              let baseFee = struct?.tuition ? Number(String(struct.tuition).replace(/[^0-9.]/g, '')) : 1000;
               
               if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
                  baseFee = Math.max(0, baseFee - Number(s.scholarshipAmount));
