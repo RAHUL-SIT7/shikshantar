@@ -306,10 +306,7 @@ export default function NoticeBoard() {
                return (
                  <div 
                     key={notice.id} 
-                    className={`bg-white rounded-xl shadow-sm border transition-all overflow-hidden relative cursor-pointer
-                       ${isUrgent ? 'border-red-200 hover:border-red-300' : 'border-gray-200 hover:border-blue-200'}
-                       ${isExpanded ? 'ring-2 ring-blue-500' : ''}
-                    `}
+                    className={`bg-white rounded-xl shadow-sm border transition-all overflow-hidden relative cursor-pointer ${isUrgent ? 'border-red-200 hover:border-red-300' : 'border-gray-200 hover:border-blue-200'} ${isExpanded ? 'ring-2 ring-blue-500' : ''} `}
                     onClick={() => {
                         if (!isExpanded) {
                            setExpandedNoticeId(notice.id);
@@ -363,7 +360,7 @@ export default function NoticeBoard() {
                              {role === 'admin' && (
                                 <div className="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                                    <button onClick={() => openNoticePanel(notice)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-sm font-bold transition-colors"><Edit2 className="w-4 h-4"/> Edit</button>
-                                   <button onClick={() => handleDuplicate(notice)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded text-sm font-bold transition-colors"><Copy className="w-4 h-4"/> Duplicate</button>
+                                   <button onClick={() => handleDuplicate(notice)} className="flex items-center gap-1.5 px-3 py-1.5 text-primary text-gray-600 hover:bg-gray-100 rounded text-sm font-bold transition-colors"><Copy className="w-4 h-4"/> Duplicate</button>
                                    <button onClick={() => handleDelete(notice.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-sm font-bold transition-colors ml-auto"><Trash2 className="w-4 h-4"/> Delete</button>
                                 </div>
                              )}
@@ -393,7 +390,7 @@ export default function NoticeBoard() {
          <div className="fixed inset-0 z-50 flex justify-end bg-gray-900/40 backdrop-blur-sm animate-in fade-in-0">
             <div className="bg-white w-full md:w-[600px] h-full shadow-2xl flex flex-col animate-in slide-in-from-right-full duration-300">
                {/* Header */}
-               <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0 bg-gray-50">
+               <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0 text-primary">
                   <h2 className="text-lg font-bold text-gray-900">{editingId ? 'Edit Notice' : 'Create New Notice'}</h2>
                   <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
                      <X className="w-5 h-5" />
@@ -426,12 +423,12 @@ export default function NoticeBoard() {
                   </div>
 
                   {/* Priority & Pins row */}
-                  <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex flex-wrap gap-4 p-4 border-primary text-primary rounded-xl border border-gray-100">
                      <div className="flex-1 min-w-[150px]">
                          <label className="block text-sm font-bold text-gray-700 mb-2">Priority Level</label>
                          <div className="flex bg-white rounded-lg border border-gray-200 overflow-hidden">
-                             <button onClick={() => setFormData({...formData, priority: 'Normal'})} className={`flex-1 py-1.5 text-sm font-bold ${formData.priority === 'Normal' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>Normal</button>
-                             <button onClick={() => setFormData({...formData, priority: 'Urgent'})} className={`flex-1 py-1.5 text-sm font-bold ${formData.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'text-gray-500 hover:bg-gray-50'}`}>Urgent</button>
+                             <button onClick={() => setFormData({...formData, priority: 'Normal'})} className={`flex-1 py-1.5 text-sm font-bold ${formData.priority === 'Normal' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:opacity-90'}`}>Normal</button>
+                             <button onClick={() => setFormData({...formData, priority: 'Urgent'})} className={`flex-1 py-1.5 text-sm font-bold ${formData.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'text-gray-500 hover:opacity-90'}`}>Urgent</button>
                          </div>
                      </div>
                      <div className="flex items-center gap-3 w-full md:w-auto md:ml-auto">

@@ -190,14 +190,14 @@ export default function Admin() {
   if (userRole === 'teacher' && !isTeacherSetupDone) {
       return (
           <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-10">
-              <h2 className="text-2xl font-black text-[#1e3a8a] mb-2 text-center">Teacher Initial Setup</h2>
+              <h2 className="text-2xl font-black text-primary mb-2 text-center">Teacher Initial Setup</h2>
               <p className="text-gray-500 text-center mb-8">Please configure your assigned classes and subjects. You will only be able to manage results for these selections.</p>
               
               <div className="mb-6">
                  <label className="font-bold block mb-3 text-gray-700 uppercase tracking-widest text-sm">Assigned Classes</label>
                  <div className="flex flex-wrap gap-2">
                     {DEFAULT_CLASSES.map(c => (
-                        <button key={c} onClick={() => handleTeacherClassToggle(c)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedClasses.includes(c) ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Class {c}</button>
+                        <button key={c} onClick={() => handleTeacherClassToggle(c)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedClasses.includes(c) ? 'bg-[var(--primary)] text-white' : 'bg-white text-gray-600 hover:opacity-90'}`}>Class {c}</button>
                     ))}
                  </div>
               </div>
@@ -205,12 +205,12 @@ export default function Admin() {
                  <label className="font-bold block mb-3 text-gray-700 uppercase tracking-widest text-sm">Assigned Subjects</label>
                  <div className="flex flex-wrap gap-2">
                     {SUBJECTS.map(s => (
-                        <button key={s} onClick={() => handleTeacherSubjectToggle(s)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedSubjects.includes(s) ? 'bg-[#10b981] text-white border-[#10b981]' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{s}</button>
+                        <button key={s} onClick={() => handleTeacherSubjectToggle(s)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedSubjects.includes(s) ? 'bg-[#10b981] text-white border-[#10b981]' : 'bg-white text-gray-600 hover:opacity-90'}`}>{s}</button>
                     ))}
                  </div>
               </div>
 
-              <button onClick={teacherSetupSave} disabled={assignedClasses.length === 0 || assignedSubjects.length === 0} className={`w-full py-4 rounded-xl font-black text-lg transition-transform active:scale-95 shadow-md ${assignedClasses.length > 0 && assignedSubjects.length > 0 ? 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              <button onClick={teacherSetupSave} disabled={assignedClasses.length === 0 || assignedSubjects.length === 0} className={`w-full py-4 rounded-xl font-black text-lg transition-transform active:scale-95 shadow-md ${assignedClasses.length > 0 && assignedSubjects.length > 0 ? '- text-white hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
                   Save Configuration
               </button>
           </div>
@@ -255,16 +255,16 @@ export default function Admin() {
 
        {/* Tabs Header */}
        <div className="flex overflow-x-auto bg-white rounded-xl border border-gray-200 p-2 gap-2 shadow-sm font-bold scrollbar-hide">
-           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <Edit2 className="w-4 h-4"/> Manual Entry
            </button>
-           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <Upload className="w-4 h-4"/> Excel Upload
            </button>
-           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <BookOpen className="w-4 h-4"/> History
            </button>
-           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? 'bg-[#1e3a8a] text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}>
+           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <FileSpreadsheet className="w-4 h-4"/> Report Cards
            </button>
        </div>
@@ -273,7 +273,7 @@ export default function Admin() {
        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[500px]">
            {loading ? (
               <div className="flex flex-col items-center justify-center p-20 text-gray-400">
-                  <Loader2 className="w-10 h-10 animate-spin mb-4 text-[#1e3a8a]" />
+                  <Loader2 className="w-10 h-10 animate-spin mb-4 text-primary" />
                   <p className="font-bold">Loading Academic Data...</p>
               </div>
            ) : (

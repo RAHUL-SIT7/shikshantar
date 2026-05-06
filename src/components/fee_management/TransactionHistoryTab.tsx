@@ -5,6 +5,7 @@ import { db } from '../../firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
 import 'nepali-datepicker-reactjs/dist/index.css';
 import NepaliDate from 'nepali-date-converter';
@@ -13,10 +14,18 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('All');
   const [filterMethod, setFilterMethod] = useState('All');
+  const [filterCollectedBy, setFilterCollectedBy] = useState('All');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<any>(null);
+  const [editModalTx, setEditModalTx] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editRemarks, setEditRemarks] = useState('');
+  const [refundModalTx, setRefundModalTx] = useState<any>(null);
+  const [refundPassword, setRefundPassword] = useState('');
+  const [showMonthlySummary, setShowMonthlySummary] = useState(false);
+  
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const downloadReceipt = async () => {
@@ -27,10 +36,41 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (receiptRef.current.offsetHeight * pdfWidth) / receiptRef.current.offsetWidth;
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Receipt_${receipt.id}.pdf`);
+      pdf.save(`Receipt_${receipt.receipt || receipt.receiptNo || receipt.id}.pdf`);
     } catch (err) {
       console.error('Failed to generate PDF', err);
     }
+  };
+
+  const generatePDFReport = () => {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      pdf.setFontSize(18);
+      pdf.text('Transaction History Report', 14, 22);
+      pdf.setFontSize(11);
+      pdf.setTextColor(100);
+      pdf.text(`Generated on: ${formatBSDate(new Date())}`, 14, 30);
+      
+      const head = [['Date (B.S.)', 'Receipt No', 'Student Name', 'Class', 'Amount', 'Method', 'Status']];
+      const body = filteredHistory.map(tx => [
+          tx.date,
+          tx.receipt || tx.id,
+          tx.studentName,
+          tx.class,
+          `NRs. ${tx.amount}`,
+          tx.method,
+          tx.status
+      ]);
+
+      autoTable(pdf, {
+          startY: 40,
+          head: head,
+          body: body,
+          theme: 'striped',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [30, 58, 138] }, // Blue-900 color
+      });
+
+      pdf.save(`Transaction_Report_${formatBSDate(new Date())}.pdf`);
   };
 
   const filteredHistory = transactionsData.filter(tx => {
@@ -39,6 +79,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                           tx.receipt?.toLowerCase().includes(searchTerm.toLowerCase()));
      const matchClass = filterClass === 'All' || tx.class === filterClass;
      const matchMethod = filterMethod === 'All' || tx.method === filterMethod;
+     const matchCollectedBy = filterCollectedBy === 'All' || tx.collectedBy === filterCollectedBy;
      
      let txDateStr = '';
      if (tx.timestamp) {
@@ -49,14 +90,19 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
          } catch(e) {}
      }
      
-     // Allow comparison by "YYYY-MM-DD"
      const matchFromDate = !fromDate || (txDateStr && txDateStr >= fromDate);
      const matchToDate = !toDate || (txDateStr && txDateStr <= toDate);
 
-     return matchSearch && matchClass && matchMethod && matchFromDate && matchToDate;
+     return matchSearch && matchClass && matchMethod && matchFromDate && matchToDate && matchCollectedBy;
   });
 
   const totalFilteredAmount = filteredHistory.filter(tx => tx.status === 'SUCCESS').reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  const totalRefunded = filteredHistory.filter(tx => tx.status === 'REFUNDED').reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  
+  const methodsBreakdown = filteredHistory.filter(tx => tx.status === 'SUCCESS').reduce((acc: any, tx) => {
+      acc[tx.method] = (acc[tx.method] || 0) + (Number(tx.amount) || 0);
+      return acc;
+  }, {});
 
   const exportCSV = () => {
      const headers = ['Date (B.S.)', 'Date (A.D.)', 'Receipt No', 'Student', 'Class', 'Amount', 'Method', 'Collected By', 'Status'];
@@ -91,57 +137,53 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
      document.body.removeChild(a);
   };
 
-  const handleEdit = async (tx: any) => {
-    // Basic frontend safety
-    const newAmount = prompt("Enter new amount (leave empty to skip):", String(tx.amount));
-    const newMethod = prompt("Enter new method (Cash, Khalti, etc) or skip:", tx.method);
-    const reason = prompt("Enter reason for editing this transaction:");
-    if (reason && newAmount) {
-       try {
-           const batch = writeBatch(db);
-           const txRef = doc(db, 'transactions', tx.id);
-           batch.update(txRef, {
-               amount: Number(newAmount),
-               method: newMethod || tx.method,
-               remarks: (tx.remarks ? tx.remarks + ' | ' : '') + `Edited: ${reason}`
-           });
-           await batch.commit();
-           onRefresh();
-       } catch (err) {
-           console.error(err);
-           alert("Failed to edit transaction");
-       }
-    }
+  const handleEditSubmit = async () => {
+     if (!editAmount || !editModalTx) return;
+     try {
+         const batch = writeBatch(db);
+         const txRef = doc(db, 'transactions', editModalTx.id);
+         batch.update(txRef, {
+             amount: Number(editAmount),
+             remarks: (editModalTx.remarks ? editModalTx.remarks + '\n' : '') + `Edited: ${editRemarks}`
+         });
+         await batch.commit();
+         setEditModalTx(null);
+         onRefresh();
+     } catch (err) {
+         console.error(err);
+         alert("Failed to edit transaction");
+     }
   };
 
-  const handleRefund = async (tx: any) => {
-      if (confirm(`Are you sure you want to refund NRs. ${tx.amount} to ${tx.studentName}?`)) {
-          try {
-             const batch = writeBatch(db);
-             
-             // 1. Mark transaction as refunded
-             const txRef = doc(db, 'transactions', tx.id);
-             batch.update(txRef, { status: 'REFUNDED' });
+  const handleRefundSubmit = async () => {
+      if (refundPassword !== 'admin123') {
+         alert("Incorrect authentication password.");
+         return;
+      }
+      if (!refundModalTx) return;
+      try {
+         const batch = writeBatch(db);
+         const txRef = doc(db, 'transactions', refundModalTx.id);
+         batch.update(txRef, { status: 'REFUNDED' });
 
-             // 2. Revert studentFees to 'due'
-             if (tx.months && Array.isArray(tx.months)) {
-                 tx.months.forEach((m: string) => {
-                     const feeRef = doc(db, 'studentFees', `${tx.studentId}_${m}`);
-                     // This is a naive reversal; it assumes the full tuition was due.
-                     // In a real app, fee structure calculation would be more robust.
-                     batch.update(feeRef, {
-                         status: 'due',
-                         paidAmount: 0
-                     });
+         if (refundModalTx.months && Array.isArray(refundModalTx.months)) {
+             refundModalTx.months.forEach((m: string) => {
+                 const feeRef = doc(db, 'studentFees', `${refundModalTx.studentId}_${m}`);
+                 batch.update(feeRef, {
+                     status: 'due',
+                     paidAmount: 0,
+                     transactions: [] 
                  });
-             }
+             });
+         }
 
-             await batch.commit();
-             onRefresh();
-          } catch(err) {
-             console.error("Refund failed", err);
-             alert("Failed to refund payment");
-          }
+         await batch.commit();
+         setRefundModalTx(null);
+         setRefundPassword('');
+         onRefresh();
+      } catch(err) {
+         console.error("Refund failed", err);
+         alert("Failed to refund payment");
       }
   };
 
@@ -156,7 +198,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
              placeholder="Search receipt no or student..."
              value={searchTerm}
              onChange={e => setSearchTerm(e.target.value)}
-             className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white transition-all outline-none"
+             className="w-full pl-10 pr-4 py-2.5 border-primary text-primary border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none"
            />
          </div>
 
@@ -167,7 +209,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                  <NepaliDatePicker
                    value={fromDate}
                    onChange={value => setFromDate(value)}
-                   inputClassName="w-40 pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   inputClassName="w-40 pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:-"
                    className=""
                    options={{ calenderLocale: 'ne', valueLocale: 'en' }}
                  />
@@ -183,7 +225,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                  <NepaliDatePicker
                    value={toDate}
                    onChange={value => setToDate(value)}
-                   inputClassName="w-40 pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   inputClassName="w-40 pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 outline-none focus:ring-2 focus:-"
                    className=""
                    options={{ calenderLocale: 'ne', valueLocale: 'en' }}
                  />
@@ -218,25 +260,58 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
               <option value="Khalti">Khalti</option>
             </select>
 
+             <select 
+              value={filterCollectedBy}
+              onChange={e => setFilterCollectedBy(e.target.value)}
+              className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-600 focus:outline-none shrink-0"
+            >
+              <option value="All">Collected By: All</option>
+              <option value="Admin">Admin</option>
+              <option value="Principal">Principal</option>
+              <option value="Custom">Custom</option>
+            </select>
+
             <button onClick={exportCSV} className="bg-orange-50 border border-orange-100 text-orange-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-orange-100 transition-colors shrink-0 flex gap-2 items-center">
-               <Download className="w-4 h-4"/> Export
+               <Download className="w-4 h-4"/> CSV
+            </button>
+            <button onClick={generatePDFReport} className="bg-blue-50 border border-blue-100 text-blue-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-blue-100 transition-colors shrink-0 flex gap-2 items-center">
+               <Printer className="w-4 h-4"/> PDF
             </button>
          </div>
        </div>
 
        {/* Summary Bar */}
-       <div className="bg-[#1e3a8a] text-white p-4 rounded-xl shadow-md flex justify-between items-center animate-in fade-in">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#93c5fd]">Showing {filteredHistory.length} transactions</p>
-          <div className="text-right">
-             <p className="text-[10px] font-bold uppercase tracking-widest text-[#93c5fd] mb-0.5">Total Amount</p>
-             <p className="text-xl font-black">NRs. {totalFilteredAmount.toLocaleString()}</p>
-          </div>
+       <div className="bg-primary text-white p-4 rounded-xl shadow-md grid grid-cols-2 md:grid-cols-4 gap-4 items-center animate-in fade-in">
+           <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#93c5fd]">Results</p>
+              <p className="text-lg font-black">{filteredHistory.length} txns</p>
+           </div>
+           <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#93c5fd]">Collected</p>
+              <p className="text-xl font-black text-emerald-400">NRs. {totalFilteredAmount.toLocaleString()}</p>
+           </div>
+           <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#93c5fd]">Refunded</p>
+              <p className="text-xl font-black text-red-400">NRs. {totalRefunded.toLocaleString()}</p>
+           </div>
+           <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#93c5fd]">Methods Breakdown</p>
+              <div className="text-xs font-medium space-y-1">
+                 {Object.entries(methodsBreakdown).map(([method, amount]: any) => (
+                    <div key={method} className="flex justify-between">
+                       <span>{method}</span>
+                       <span className="font-bold">NRs. {amount.toLocaleString()}</span>
+                    </div>
+                 ))}
+                 {Object.keys(methodsBreakdown).length === 0 && <span className="opacity-50">No data</span>}
+              </div>
+           </div>
        </div>
 
        {/* Desktop Table View */}
        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto w-full">
          <table className="w-full text-left whitespace-nowrap min-w-[800px]">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="text-primary border-b border-gray-100">
                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   <th className="p-4 px-6">Date (B.S. & A.D.)</th>
                   <th className="p-4">Receipt No</th>
@@ -261,7 +336,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                            )}
                         </div>
                      </td>
-                     <td className="p-4 text-xs font-mono font-black text-[#1e3a8a] bg-blue-50/50 rounded-md px-2 py-1 inline-block mt-3">{(tx.receipt || tx.id).slice(-6).toUpperCase()}</td>
+                     <td className="p-4 text-xs font-mono font-black text-primary bg-blue-50/50 rounded-md px-2 py-1 inline-block mt-3">{(tx.receipt || tx.id).slice(-6).toUpperCase()}</td>
                      <td className="p-4 font-bold text-gray-800 text-sm">{tx.studentName} {tx.status === 'REFUNDED' && <span className="text-[10px] text-red-500 font-bold ml-2">REFUNDED</span>}</td>
                      <td className="p-4 text-xs font-black text-gray-500">{tx.class || '-'}</td>
                      <td className="p-4 text-right font-black text-[#059669] text-sm">रू {(tx.amount||0).toLocaleString()}</td>
@@ -274,8 +349,9 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                            <button onClick={() => setReceipt(tx)} className="p-2 bg-transparent text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Reprint Receipt"><Printer className="w-4 h-4"/></button>
                            {tx.status !== 'REFUNDED' && (
                                <>
-                                   <button onClick={() => handleEdit(tx)} className="p-2 bg-transparent text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200" title="Edit"><Edit2 className="w-4 h-4"/></button>
-                                   <button onClick={() => handleRefund(tx)} className="p-2 bg-transparent text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200" title="Refund/Cancel"><CornerUpLeft className="w-4 h-4"/></button>
+                                   <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Namaste, we have received a payment of NRs. ${tx.amount} for ${tx.studentName}. Receipt No: ${tx.receipt || tx.id}. Thank you.`)}`, '_blank')} className="p-2 bg-transparent text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-200" title="Send WhatsApp">📱</button>
+                                   <button onClick={() => { setEditModalTx(tx); setEditAmount(String(tx.amount)); setEditRemarks(''); }} className="p-2 bg-transparent text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-200" title="Edit"><Edit2 className="w-4 h-4"/></button>
+                                   <button onClick={() => setRefundModalTx(tx)} className="p-2 bg-transparent text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200" title="Refund/Cancel"><CornerUpLeft className="w-4 h-4"/></button>
                                </>
                            )}
                         </div>
@@ -301,7 +377,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                   <div className="mx-auto mb-3 flex items-center justify-center">
                     <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
                   </div>
-                  <h2 className="font-black text-xl text-[#1e3a8a] uppercase tracking-widest">Shikshantar Academy</h2>
+                  <h2 className="font-black text-xl text-primary uppercase tracking-widest">Shikshantar Academy</h2>
                   <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>
                   <div className="mt-4 inline-block bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">
                      Payment Receipt
@@ -309,7 +385,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-xl">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-primary p-4 rounded-xl">
                     <div>
                       <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Receipt No</span>
                       <span className="text-gray-800 font-mono font-black">{receipt.receipt || receipt.id}</span>
@@ -340,13 +416,13 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                      {receipt.months?.length > 0 && receipt.months.map((m: string) => (
                        <div key={m} className="flex justify-between text-sm mb-2 pb-2 border-b border-blue-100 last:border-0 last:mb-0 last:pb-0">
                          <span className="text-blue-800 font-bold">{m} Tuition</span>
-                         <span className="text-blue-900 font-black">रू {receipt.amount / receipt.months.length}</span>
+                         <span className="text-blue-900 font-black">NRs. {receipt.amount / receipt.months.length}</span>
                        </div>
                      ))}
                      {!receipt.months?.length && (
                         <div className="flex justify-between text-sm">
                          <span className="text-blue-800 font-bold">Tuition Payment</span>
-                         <span className="text-blue-900 font-black">रू {receipt.amount}</span>
+                         <span className="text-blue-900 font-black">NRs. {receipt.amount}</span>
                        </div>
                      )}
                   </div>
@@ -354,7 +430,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                   <div className="mt-6 border-t border-b border-gray-200 py-4 divide-y divide-gray-100">
                     <div className="flex justify-between items-center pb-3">
                       <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Total Paid</span>
-                      <span className="text-2xl font-black text-gray-800">रू {(receipt.amount || 0).toLocaleString()}</span>
+                      <span className="text-2xl font-black text-gray-800">NRs. {(receipt.amount || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pt-3 mt-1 text-sm">
                       <span className="font-bold text-gray-500">Method: <span className="text-gray-800">{receipt.method}</span></span>
@@ -378,11 +454,63 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
                    📱 Send WhatsApp Confirmation
                 </button>
                 <div className="flex gap-3">
-                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 bg-gray-50 border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">Close</button>
+                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-primary text-primary border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">Close</button>
                    <button onClick={downloadReceipt} className="flex-1 py-3 bg-blue-600 text-white border border-blue-600 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg flex justify-center items-center gap-2 hover:bg-blue-700 transition-colors"><FileDown className="w-4 h-4"/> Download A5 PDF</button>
                 </div>
               </div>
            </div>
+         </div>
+       )}
+
+       {/* Edit Modal */}
+       {editModalTx && (
+         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white max-w-sm w-full rounded-2xl p-6 shadow-2xl">
+               <h3 className="text-lg font-black text-gray-800 mb-4 uppercase tracking-widest border-b pb-2">Edit Transaction</h3>
+               <div className="space-y-4">
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Receipt No</label>
+                     <p className="text-sm font-mono font-bold">{editModalTx.receipt || editModalTx.id}</p>
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">New Amount (NRs.)</label>
+                     <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Reason for edit</label>
+                     <textarea value={editRemarks} onChange={e => setEditRemarks(e.target.value)} placeholder="E.g., Amount was entered incorrectly" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none" rows={3}></textarea>
+                  </div>
+               </div>
+               <div className="flex gap-3 mt-6">
+                  <button onClick={() => setEditModalTx(null)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 font-bold rounded-xl text-sm">Cancel</button>
+                  <button onClick={handleEditSubmit} className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700">Save Changes</button>
+               </div>
+            </div>
+         </div>
+       )}
+
+       {/* Refund Modal */}
+       {refundModalTx && (
+         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white max-w-sm w-full rounded-2xl p-6 shadow-2xl">
+               <h3 className="text-lg font-black text-red-600 mb-2 uppercase tracking-widest flex items-center gap-2"><CornerUpLeft className="w-5 h-5"/> Process Refund</h3>
+               <p className="text-xs text-gray-500 mb-4 font-medium leading-relaxed">This will revert the payment and mark associated months as due. This action requires administrative authentication.</p>
+               
+               <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4 text-sm">
+                  <p className="font-bold text-red-800">Student: {refundModalTx.studentName}</p>
+                  <p className="font-black text-red-900 text-lg">Amount: NRs. {refundModalTx.amount}</p>
+               </div>
+
+               <div className="mb-6">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Admin Password</label>
+                  <input type="password" value={refundPassword} onChange={e => setRefundPassword(e.target.value)} placeholder="Enter password to confirm" className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm" />
+               </div>
+
+               <div className="flex gap-3">
+                  <button onClick={() => { setRefundModalTx(null); setRefundPassword(''); }} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl text-sm">Cancel</button>
+                  <button onClick={handleRefundSubmit} className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700 transition-colors">Confirm Refund</button>
+               </div>
+            </div>
          </div>
        )}
     </div>

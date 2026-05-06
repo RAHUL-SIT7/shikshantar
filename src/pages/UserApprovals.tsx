@@ -305,7 +305,7 @@ export default function UserApprovals() {
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#1e3a8a] flex items-center gap-2">
+          <h1 className="text-2xl font-black text-primary flex items-center gap-2">
             <Shield className="w-8 h-8 text-orange-500" />
             Administrative User Management
           </h1>
@@ -332,9 +332,7 @@ export default function UserApprovals() {
       </div>
 
       {status.type && (
-        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[200] p-4 min-w-[300px] rounded-xl flex items-center justify-between text-sm font-bold shadow-2xl animate-in slide-in-from-top duration-300 ${
-          status.type === 'success' ? 'bg-[#ecfdf5] text-[#065f46] border border-[#a7f3d0]' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
+        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[200] p-4 min-w-[300px] rounded-xl flex items-center justify-between text-sm font-bold shadow-2xl animate-in slide-in-from-top duration-300 ${ status.type === 'success' ? 'bg-[#ecfdf5] text-[#065f46] border border-[#a7f3d0]' : 'bg-red-50 text-red-700 border border-red-200' }`}>
           <div className="flex items-center gap-2">
             {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
             <span>{status.message}</span>
@@ -346,7 +344,7 @@ export default function UserApprovals() {
       {/* Main Container */}
       <section className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
         {/* Filters Bar */}
-        <div className="p-4 bg-gray-50 border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="p-4 text-primary border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:w-96">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
@@ -360,7 +358,7 @@ export default function UserApprovals() {
           <div className="flex gap-2 w-full md:w-auto">
             <button 
               onClick={() => setIsCreatingUser(true)}
-              className="flex items-center gap-2 bg-[#1e3a8a] text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#1e40af] transition-all shadow-md active:scale-95"
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-md active:scale-95"
             >
               <UserPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Add New User</span>
@@ -392,7 +390,7 @@ export default function UserApprovals() {
           ) : (
             <table className="w-full text-left whitespace-nowrap">
               <thead>
-                <tr className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                <tr className="text-primary text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                   <th className="p-4 px-6 uppercase tracking-wider">User Information</th>
                   <th className="p-4 px-6 uppercase tracking-wider">Contact & ID</th>
                   <th className="p-4 px-6 uppercase tracking-wider">System Role</th>
@@ -411,9 +409,7 @@ export default function UserApprovals() {
                   <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="p-4 px-6">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                          user.role === 'admin' ? 'bg-orange-500' : user.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500'
-                        }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${ user.role === 'admin' ? 'bg-orange-500' : user.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500' }`}>
                           {user.fullName ? user.fullName.charAt(0) : user.email?.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -433,12 +429,7 @@ export default function UserApprovals() {
                     </td>
                     <td className="p-4 px-6">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider w-fit border ${
-                          user.status === 'pending' ? 'bg-red-50 text-red-700 border-red-200' :
-                          user.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                          user.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider w-fit border ${ user.status === 'pending' ? 'bg-red-50 text-red-700 border-red-200' : user.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' : user.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }`}>
                           {user.status === 'pending' ? 'PENDING APPROVAL' : user.role}
                         </span>
                         {user.class && <span className="text-[10px] text-gray-400 font-bold ml-1">Class {user.class}</span>}
@@ -541,19 +532,13 @@ export default function UserApprovals() {
 
             <div className="p-8 space-y-6">
               <div className="flex items-center gap-4 border-b border-gray-100 pb-6">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black text-white shadow-sm ${
-                  viewingUser.role === 'admin' ? 'bg-orange-500' : viewingUser.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500'
-                }`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black text-white shadow-sm ${ viewingUser.role === 'admin' ? 'bg-orange-500' : viewingUser.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500' }`}>
                   {viewingUser.fullName ? viewingUser.fullName.charAt(0) : viewingUser.email?.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">{viewingUser.fullName || 'No Name Provided'}</h3>
                   <div className="flex gap-2 items-center mt-1">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border ${
-                      viewingUser.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                      viewingUser.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                      'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border ${ viewingUser.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' : viewingUser.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }`}>
                       {viewingUser.role}
                     </span>
                     {viewingUser.class && (
@@ -602,7 +587,7 @@ export default function UserApprovals() {
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="bg-[#1e3a8a] text-white p-6 relative shrink-0">
+            <div className="bg-primary text-white p-6 relative shrink-0">
               <h2 className="text-xl font-black">Edit User Profile</h2>
               <p className="text-blue-200 text-xs font-medium">Updating identity of {editingUser.email}</p>
               <button 
@@ -621,7 +606,7 @@ export default function UserApprovals() {
                     type="text" 
                     value={editingUser.fullName || ''}
                     onChange={e => setEditingUser({...editingUser, fullName: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
                     placeholder="Enter full name"
                   />
                 </div>
@@ -631,7 +616,7 @@ export default function UserApprovals() {
                     type="text" 
                     value={editingUser.phone || ''}
                     onChange={e => setEditingUser({...editingUser, phone: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
                     placeholder="+977-..."
                   />
                 </div>
@@ -643,7 +628,7 @@ export default function UserApprovals() {
                   <select 
                     value={editingUser.role}
                     onChange={e => setEditingUser({...editingUser, role: e.target.value as any})}
-                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
+                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
@@ -656,7 +641,7 @@ export default function UserApprovals() {
                     type="text" 
                     value={editingUser.class || ''}
                     onChange={e => setEditingUser({...editingUser, class: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
                     placeholder="e.g. 10"
                   />
                 </div>
@@ -668,7 +653,7 @@ export default function UserApprovals() {
                   type="text" 
                   value={editingUser.studentId || ''}
                   onChange={e => setEditingUser({...editingUser, studentId: e.target.value})}
-                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-600" 
+                  className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-600" 
                   placeholder="EX: SA-2024-001"
                 />
               </div>
@@ -680,7 +665,7 @@ export default function UserApprovals() {
                     <select 
                       value={editingUser.scholarshipStatus || 'Not Provided'}
                       onChange={e => setEditingUser({...editingUser, scholarshipStatus: e.target.value})}
-                      className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
+                      className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
                     >
                       <option value="Not Provided">Not Provided</option>
                       <option value="Provided">Provided</option>
@@ -693,7 +678,7 @@ export default function UserApprovals() {
                         type="number" 
                         value={editingUser.scholarshipAmount || ''}
                         onChange={e => setEditingUser({...editingUser, scholarshipAmount: Number(e.target.value)})}
-                        className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
+                        className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700" 
                         placeholder="e.g. 500"
                       />
                     </div>
@@ -711,7 +696,7 @@ export default function UserApprovals() {
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-4 text-sm font-black bg-[#1e3a8a] text-white rounded-2xl shadow-lg hover:bg-[#1e40af] transition-transform active:scale-95"
+                  className="flex-1 py-4 text-sm font-black bg-primary text-white rounded-2xl shadow-lg hover:bg-primary-dark transition-transform active:scale-95"
                 >
                   Save Profile Info
                 </button>
@@ -725,7 +710,7 @@ export default function UserApprovals() {
       {isCreatingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="bg-[#1e3a8a] text-white p-6 relative shrink-0">
+            <div className="bg-primary text-white p-6 relative shrink-0">
               <button 
                 onClick={() => setIsCreatingUser(false)} 
                 className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/30 rounded-full transition-colors z-10"
@@ -746,7 +731,7 @@ export default function UserApprovals() {
                     value={newUser.email}
                     onChange={e => setNewUser({...newUser, email: e.target.value})}
                     placeholder="official@school.com"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
                 </div>
                 <div className="space-y-1 relative">
@@ -758,7 +743,7 @@ export default function UserApprovals() {
                       value={newUser.password}
                       onChange={e => setNewUser({...newUser, password: e.target.value})}
                       placeholder="Set initial password"
-                      className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 pr-12 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                      className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 pr-12 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                     />
                     <button 
                       type="button" 
@@ -774,7 +759,7 @@ export default function UserApprovals() {
                   <select 
                     value={newUser.role}
                     onChange={e => setNewUser({...newUser, role: e.target.value as any})}
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
@@ -789,7 +774,7 @@ export default function UserApprovals() {
                     value={newUser.fullName}
                     onChange={e => setNewUser({...newUser, fullName: e.target.value})}
                     placeholder="Enter full name"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -800,7 +785,7 @@ export default function UserApprovals() {
                     value={newUser.studentId}
                     onChange={e => setNewUser({...newUser, studentId: e.target.value})}
                     placeholder="ID Number (e.g. 1001)"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none font-mono"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none font-mono"
                   />
                 </div>
                 <div className="space-y-1">
@@ -811,7 +796,7 @@ export default function UserApprovals() {
                     onChange={e => setNewUser({...newUser, class: e.target.value})}
                     placeholder="e.g. 10"
                     disabled={newUser.role !== 'student'}
-                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
+                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : '-'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
                   />
                 </div>
                 <div className="space-y-1">
@@ -822,7 +807,7 @@ export default function UserApprovals() {
                     onChange={e => setNewUser({...newUser, section: e.target.value})}
                     placeholder="e.g. A"
                     disabled={newUser.role !== 'student'}
-                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
+                    className={`w-full ${newUser.role !== 'student' ? 'bg-gray-100 text-gray-400' : '-'} border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none`}
                   />
                 </div>
                 <div className="space-y-1">
@@ -833,7 +818,7 @@ export default function UserApprovals() {
                     value={newUser.guardianName}
                     onChange={e => setNewUser({...newUser, guardianName: e.target.value})}
                     placeholder="Enter parent's name"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -844,12 +829,12 @@ export default function UserApprovals() {
                     value={newUser.address}
                     onChange={e => setNewUser({...newUser, address: e.target.value})}
                     placeholder="Enter permanent address"
-                    className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Phone (Required)</label>
-                  <div className="flex bg-gray-50 border-gray-100 border rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                  <div className="flex border-primary text-primary border-gray-100 border rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 transition-all">
                     <div className="px-4 py-4 bg-gray-100 text-gray-500 font-bold text-sm border-r border-gray-200">
                       +977
                     </div>
@@ -872,7 +857,7 @@ export default function UserApprovals() {
                     <select 
                       value={newUser.scholarshipStatus || 'Not Provided'}
                       onChange={e => setNewUser({...newUser, scholarshipStatus: e.target.value})}
-                      className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none appearance-none"
+                      className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none appearance-none"
                     >
                       <option value="Not Provided">Not Provided</option>
                       <option value="Provided">Provided</option>
@@ -885,7 +870,7 @@ export default function UserApprovals() {
                         type="number" 
                         value={newUser.scholarshipAmount || ''}
                         onChange={e => setNewUser({...newUser, scholarshipAmount: Number(e.target.value)})}
-                        className="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none" 
+                        className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none" 
                         placeholder="e.g. 500"
                       />
                     </div>
@@ -905,7 +890,7 @@ export default function UserApprovals() {
                 <button 
                   type="submit"
                   disabled={isCreating}
-                  className="flex-1 py-4 text-sm font-black bg-[#1e3a8a] text-white rounded-2xl shadow-lg hover:bg-[#1e40af] transition-transform active:scale-95 disabled:opacity-70"
+                  className="flex-1 py-4 text-sm font-black bg-primary text-white rounded-2xl shadow-lg hover:bg-primary-dark transition-transform active:scale-95 disabled:opacity-70"
                 >
                   {isCreating ? 'Creating...' : 'Initialize User Account'}
                 </button>

@@ -127,12 +127,12 @@ export default function Facilities() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-2 md:p-6 bg-gray-50 min-h-screen">
+    <div className="flex flex-col gap-6 p-2 md:p-6 text-primary min-h-screen">
       {/* Header section with Edit controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-xl border shadow-sm">
         <div>
            <h1 className="text-2xl font-black text-gray-900 tracking-tight uppercase flex items-center gap-2">
-              <Activity className="w-6 h-6 text-[#1e3a8a]" /> Infrastructure & Facilities
+              <Activity className="w-6 h-6 text-primary" /> Infrastructure & Facilities
            </h1>
            <p className="text-sm text-gray-500 mt-1 font-medium">Explore the comprehensive amenities at Shikshantar Academy</p>
         </div>
@@ -144,12 +144,12 @@ export default function Facilities() {
                 <button onClick={handleSave} className="bg-[#10b981] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#059669] shadow-sm transition-all focus:ring-2 focus:ring-[#10b981]/50">
                   <Save className="w-4 h-4"/> Save Changes
                 </button>
-                <button onClick={handleCancel} className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-50 shadow-sm transition-all">
+                <button onClick={handleCancel} className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:text-primary shadow-sm transition-all">
                   <X className="w-4 h-4"/> Cancel
                 </button>
               </div>
             ) : (
-               <button onClick={handleEditClick} className="bg-[#1e3a8a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#1e40af] shadow-sm transition-all focus:ring-2 focus:ring-[#1e3a8a]/50">
+               <button onClick={handleEditClick} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-dark shadow-sm transition-all focus:ring-2 focus:ring-primary">
                   <Edit2 className="w-4 h-4"/> Edit Page Content
                </button>
             )}
@@ -160,7 +160,7 @@ export default function Facilities() {
       <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-[#e5e7eb]">
         {/* Main Description */}
         <div className="mb-10">
-          <h2 className="text-xl font-black text-gray-900 mb-4 border-b-2 border-gray-100 pb-3 uppercase tracking-wider text-[#1e3a8a]">Overview</h2>
+          <h2 className="text-xl font-black text-gray-900 mb-4 border-b-2 border-gray-100 pb-3 uppercase tracking-wider text-primary">Overview</h2>
           {isEditing ? (
             <textarea 
               className="w-full text-base text-[#1f2937] leading-relaxed p-4 border-2 border-blue-100 bg-blue-50/30 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-inner"
@@ -178,7 +178,7 @@ export default function Facilities() {
 
         {/* Facilities Grid */}
         <div className="mb-6 flex justify-between items-end border-b-2 border-gray-100 pb-3">
-            <h2 className="text-xl font-black text-gray-900 uppercase tracking-wider text-[#1e3a8a]">Featured Facilities</h2>
+            <h2 className="text-xl font-black text-gray-900 uppercase tracking-wider text-primary">Featured Facilities</h2>
             {isEditing && (
                 <button onClick={handleAddFacility} className="text-blue-600 hover:text-blue-800 font-bold text-sm flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-md transition-colors hover:bg-blue-100">
                     <Plus className="w-4 h-4" /> Add Facility
@@ -190,7 +190,7 @@ export default function Facilities() {
           {(isEditing ? tempFacilities : facilitiesList).map((facility) => (
               <motion.div 
                 key={facility.id} 
-                className={`group relative bg-white rounded-xl overflow-hidden border ${isEditing ? 'border-blue-200 shadow-md ring-2 ring-blue-50/50' : 'border-gray-200 shadow-sm hover:shadow-2xl hover:border-[#1e3a8a]/20'} transition-all duration-300 flex flex-col h-full hover:-translate-y-1`}
+                className={`group relative bg-white rounded-xl overflow-hidden border ${isEditing ? 'border-blue-200 shadow-md ring-2 ring-blue-50/50' : 'border-gray-200 shadow-sm hover:shadow-2xl hover:opacity-90'} transition-all duration-300 flex flex-col h-full hover:-translate-y-1`}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -208,7 +208,7 @@ export default function Facilities() {
                   
                   {isEditing && (
                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                         <label className="bg-white text-gray-900 border border-gray-300 text-sm font-bold px-5 py-2.5 rounded-lg cursor-pointer hover:bg-gray-50 shadow-lg flex items-center gap-2 transform transition-transform hover:scale-105">
+                         <label className="bg-white text-gray-900 border border-gray-300 text-sm font-bold px-5 py-2.5 rounded-lg cursor-pointer hover:text-primary shadow-lg flex items-center gap-2 transform transition-transform hover:scale-105">
                              {uploadingId === facility.id ? (
                                 <Activity className="w-5 h-5 animate-spin text-blue-600" />
                              ) : (
@@ -221,7 +221,7 @@ export default function Facilities() {
                   )}
 
                   {!isEditing && (
-                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md text-[#1e3a8a] p-2.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0 duration-300 z-10 cursor-pointer pointer-events-none">
+                     <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md bg-primary p-2.5 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0 duration-300 z-10 cursor-pointer pointer-events-none">
                         <ImageIcon className="w-5 h-5" />
                      </div>
                   )}
@@ -246,10 +246,10 @@ export default function Facilities() {
                           <textarea 
                               value={facility.description}
                               onChange={(e) => handleFacilityChange(facility.id, 'description', e.target.value)}
-                              className="text-base text-gray-600 flex-1 border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none resize-none bg-gray-50/50 min-h-[100px] transition-all"
+                              className="text-base text-gray-600 flex-1 border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none resize-none border-primary text-primary min-h-[100px] transition-all"
                               placeholder="Describe this facility in detail..."
                           />
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 bg-gray-50 -mx-6 -mb-6 p-4 rounded-b-lg">
+                          <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 text-primary -mx-6 -mb-6 p-4 rounded-b-lg">
                              <span className="text-xs text-gray-400 font-mono bg-white px-2 py-1 rounded shadow-sm border border-gray-100">ID: {facility.id.substring(0, 12)}...</span>
                              <button onClick={() => handleDeleteFacility(facility.id)} className="text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-md transition-colors text-sm font-bold flex items-center gap-1 shadow-sm" title="Delete Facility">
                                  <Trash2 className="w-4 h-4" /> Remove
@@ -258,11 +258,11 @@ export default function Facilities() {
                       </div>
                   ) : (
                       <div className="relative z-10 flex flex-col h-full">
-                          <h3 className="text-xl font-black text-gray-900 mb-3 group-hover:text-[#1e3a8a] transition-colors">{facility.title}</h3>
+                          <h3 className="text-xl font-black text-gray-900 mb-3 group-hover:bg-[var(--primary)] transition-colors">{facility.title}</h3>
                           <p className="text-base text-gray-600 leading-relaxed font-medium line-clamp-4 flex-1">
                               {facility.description}
                           </p>
-                          <div className="w-12 h-1 bg-gradient-to-r from-[#1e3a8a] to-blue-300 rounded-full mt-5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                          <div className="w-12 h-1 bg-gradient-to-r bg-primary to-blue-300 rounded-full mt-5 opacity-50 group-hover:opacity-100 transition-opacity" />
                       </div>
                   )}
                 </div>
@@ -271,7 +271,7 @@ export default function Facilities() {
         </div>
 
         {!isEditing && facilitiesList.length === 0 && (
-           <div className="py-20 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-300 mt-8">
+           <div className="py-20 text-center text-gray-400 border-primary text-primary rounded-xl border border-dashed border-gray-300 mt-8">
                <Leaf className="w-16 h-16 mx-auto mb-4 opacity-20 text-blue-500" />
                <p className="text-lg font-medium text-gray-500">No facilities have been set up yet.</p>
                {isAdmin && (

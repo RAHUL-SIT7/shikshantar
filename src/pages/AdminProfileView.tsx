@@ -224,14 +224,14 @@ export default function AdminProfileView() {
       )}
 
       {/* SECTION 1 - HERO CARD */}
-      <div className="bg-gradient-to-r from-[#1a2744] to-[#2c406b] rounded-2xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden mb-6">
+      <div className="bg-gradient-to-r text-primary text-primary rounded-2xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden mb-6">
          {/* Background decoration */}
          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-[#4f46e5]/20 rounded-full blur-3xl mb-[-100px] pointer-events-none"></div>
 
          {/* Avatar & Upload */}
          <div className="flex flex-col items-center gap-3 relative z-10 shrink-0">
-           <div className="w-[100px] h-[100px] rounded-full border-4 border-white/20 bg-[#1a2744] shadow-xl overflow-hidden flex items-center justify-center relative group">
+           <div className="w-[100px] h-[100px] rounded-full border-4 border-white/20 bg-primary shadow-xl overflow-hidden flex items-center justify-center relative group">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
               ) : (
@@ -252,7 +252,7 @@ export default function AdminProfileView() {
          <div className="flex-1 relative z-10">
             <div className="flex flex-col md:flex-row md:items-center gap-3 mb-1">
                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">{fullName}</h1>
-               <span className="bg-white text-[#1a2744] text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-gray-200 shadow-sm w-max">
+               <span className="bg-white border-primary text-primary text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-gray-200 shadow-sm w-max">
                  ADMIN
                </span>
             </div>
@@ -289,14 +289,14 @@ export default function AdminProfileView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* SECTION 2 LEFT: Personal Info */}
         <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between text-primary">
              <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
-                <CircleUserRound className="w-5 h-5 text-[#1a2744]" /> Personal Information
+                <CircleUserRound className="w-5 h-5 text-primary" /> Personal Information
              </h2>
              {!isEditingPersonal && (
                <button 
                  onClick={() => setIsEditingPersonal(true)}
-                 className="text-xs font-bold text-[#1a2744] hover:text-blue-700 flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
+                 className="text-xs font-bold border-primary text-primary hover:text-blue-700 flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
                >
                  <Edit2 className="w-3.5 h-3.5" /> Edit
                </button>
@@ -307,26 +307,26 @@ export default function AdminProfileView() {
                <div className="space-y-4">
                   <div className="space-y-1.5">
                      <label className="text-xs font-bold text-gray-500 uppercase">Full Name</label>
-                     <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                     <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                   </div>
                   <div className="space-y-1.5">
                      <label className="text-xs font-bold text-gray-500 uppercase">Email</label>
-                     <input type="email" value={email} readOnly className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 outline-none cursor-not-allowed" />
+                     <input type="email" value={email} readOnly className="w-full px-3 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 outline-none cursor-not-allowed" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                      <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Phone</label>
-                        <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                        <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                      </div>
                      <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Date of Birth</label>
-                        <input type="date" value={dob} onChange={e => setDob(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                        <input type="date" value={dob} onChange={e => setDob(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                      </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Gender</label>
-                        <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]">
+                        <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary">
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                           <option value="Other">Other</option>
@@ -334,15 +334,15 @@ export default function AdminProfileView() {
                      </div>
                      <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Address</label>
-                        <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                        <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                      </div>
                   </div>
                   
                   <div className="pt-4 flex gap-3">
-                     <button onClick={handleSavePersonal} disabled={saving} className="bg-[#1a2744] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-[#111a2f] transition-colors disabled:opacity-50">
+                     <button onClick={handleSavePersonal} disabled={saving} className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-primary-dark transition-colors disabled:opacity-50">
                         {saving ? 'Saving...' : 'Save Changes'}
                      </button>
-                     <button onClick={() => setIsEditingPersonal(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                     <button onClick={() => setIsEditingPersonal(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:text-primary transition-colors">
                         Cancel
                      </button>
                   </div>
@@ -380,16 +380,16 @@ export default function AdminProfileView() {
 
         {/* SECTION 2 RIGHT: School Info */}
         <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between text-primary">
              <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-[#1a2744]" /> School Information
+                <GraduationCap className="w-5 h-5 text-primary" /> School Information
              </h2>
           </div>
           <div className="p-6 flex-1 flex flex-col h-full">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4 mb-auto">
                <div>
                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Role</p>
-                 <span className="text-xs font-bold text-[#1a2744] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded uppercase">Admin</span>
+                 <span className="text-xs font-bold border-primary text-primary bg-blue-50 border border-blue-100 px-2 py-0.5 rounded uppercase">Admin</span>
                </div>
                <div>
                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Employee ID</p>
@@ -429,9 +429,9 @@ export default function AdminProfileView() {
 
       {/* SECTION 3: SECURITY SETTINGS */}
       <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden mb-6">
-        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+        <div className="p-5 border-b border-gray-100 text-primary">
            <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#1a2744]" /> Security & Password
+              <Lock className="w-5 h-5 text-primary" /> Security & Password
            </h2>
         </div>
         <div className="p-6">
@@ -449,12 +449,12 @@ export default function AdminProfileView() {
                  {!showPasswordSection ? (
                    <button 
                      onClick={() => setShowPasswordSection(true)} 
-                     className="bg-white border border-gray-300 text-gray-700 text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+                     className="bg-white border border-gray-300 text-gray-700 text-sm font-bold px-4 py-2 rounded-lg shadow-sm hover:text-primary transition-colors flex items-center gap-2"
                    >
                       <Lock className="w-4 h-4" /> Change Password
                    </button>
                  ) : (
-                   <form onSubmit={handleUpdatePassword} className="bg-gray-50 border border-gray-100 p-5 rounded-xl space-y-4 animate-in slide-in-from-top-2">
+                   <form onSubmit={handleUpdatePassword} className="border-primary text-primary border border-gray-100 p-5 rounded-xl space-y-4 animate-in slide-in-from-top-2">
                       {pwdError && (
                         <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200">
                           {pwdError}
@@ -463,7 +463,7 @@ export default function AdminProfileView() {
                       <div className="space-y-1.5 relative">
                          <label className="text-[11px] font-bold text-gray-500 uppercase">Current Password</label>
                          <div className="relative">
-                           <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                           <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                            <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                              {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
@@ -472,7 +472,7 @@ export default function AdminProfileView() {
                       <div className="space-y-1.5 relative">
                          <label className="text-[11px] font-bold text-gray-500 uppercase">New Password</label>
                          <div className="relative">
-                           <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                           <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                              {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
@@ -500,7 +500,7 @@ export default function AdminProfileView() {
                       <div className="space-y-1.5 relative mb-4">
                          <label className="text-[11px] font-bold text-gray-500 uppercase">Confirm New Password</label>
                          <div className="relative">
-                           <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-[#1a2744] focus:ring-1 focus:ring-[#1a2744]" />
+                           <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 pr-10 bg-white border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:ring-primary focus:ring-1 focus:ring-primary" />
                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                            </button>
@@ -511,10 +511,10 @@ export default function AdminProfileView() {
                       </div>
                       
                       <div className="pt-2 flex gap-3">
-                         <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || /[!@#$]/.test(newPassword)} className="bg-[#1a2744] text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-[#111a2f] transition-colors w-full disabled:opacity-50 flex items-center justify-center gap-2">
+                         <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || /[!@#$]/.test(newPassword)} className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-primary-dark transition-colors w-full disabled:opacity-50 flex items-center justify-center gap-2">
                             {pwdLoading ? 'Updating...' : 'Update Password'}
                          </button>
-                         <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                         <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:text-primary transition-colors">
                             Cancel
                          </button>
                       </div>
@@ -530,7 +530,7 @@ export default function AdminProfileView() {
                  <h3 className="text-sm font-bold text-gray-900 mb-4">Active Sessions</h3>
                  <div className="space-y-3">
                     <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 flex gap-3 items-start">
-                       <MonitorSmartphone className="w-5 h-5 text-[#1a2744] mt-0.5 shrink-0" />
+                       <MonitorSmartphone className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                        <div>
                           <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
                             Chrome on MacOS
@@ -551,9 +551,9 @@ export default function AdminProfileView() {
 
       {/* SECTION 4: RECENT ACTIVITY (Admin Only) */}
       <div className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden mb-6">
-        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+        <div className="p-5 border-b border-gray-100 text-primary">
            <h2 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-[#1a2744]" /> Recent Activity
+              <Activity className="w-5 h-5 text-primary" /> Recent Activity
            </h2>
         </div>
         <div className="p-2 md:p-4">
@@ -576,7 +576,7 @@ export default function AdminProfileView() {
            </div>
         </div>
         <div className="border-t border-gray-100 p-4">
-           <button onClick={() => setIsActivityLogOpen(true)} className="text-sm font-bold text-[#1a2744] hover:text-blue-700 flex items-center gap-1 mx-auto">
+           <button onClick={() => setIsActivityLogOpen(true)} className="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1 mx-auto">
              View Full Activity Log <ChevronRight className="w-4 h-4" />
            </button>
         </div>
@@ -606,7 +606,7 @@ export default function AdminProfileView() {
       {isActivityLogOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center text-primary shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                   <Activity className="w-5 h-5" />
@@ -641,7 +641,7 @@ export default function AdminProfileView() {
                  )}
                </div>
              </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+            <div className="px-6 py-4 text-primary border-t border-gray-100 flex justify-end shrink-0">
                <button 
                  onClick={() => setIsActivityLogOpen(false)}
                  className="px-5 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-300 transition-colors"

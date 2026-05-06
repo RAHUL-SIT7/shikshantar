@@ -280,8 +280,8 @@ export default function Result() {
                <p className="text-xs text-gray-500">Student ID or Roll No is case-sensitive.</p>
             </div>
             <form onSubmit={handleAdminSearch} className="flex gap-2 w-full sm:w-auto">
-               <input type="text" value={searchStudentId} onChange={(e) => setSearchStudentId(e.target.value)} placeholder="e.g. STU123" className="border border-gray-200 px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:border-[#1e3a8a]" />
-               <button type="submit" className="bg-[#1e3a8a] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-800"><Search className="w-4 h-4"/> Search</button>
+               <input type="text" value={searchStudentId} onChange={(e) => setSearchStudentId(e.target.value)} placeholder="e.g. STU123" className="border border-gray-200 px-3 py-2 rounded-lg text-sm flex-1 outline-none focus:ring-primary" />
+               <button type="submit" className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-800"><Search className="w-4 h-4"/> Search</button>
             </form>
          </div>
       )}
@@ -296,10 +296,7 @@ export default function Result() {
                     <button 
                       key={exam} 
                       onClick={() => setActiveTab(exam)}
-                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
-                         activeTab === exam ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 
-                         'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                      }`}
+                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${ activeTab === exam ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-500 hover:text-gray-800 hover:opacity-90' }`}
                     >
                        {exam} ✓
                     </button>
@@ -313,10 +310,7 @@ export default function Result() {
                     <button 
                       key={exam} 
                       onClick={() => setActiveTab(exam)}
-                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
-                         activeTab === exam ? 'border-purple-600 text-purple-600 bg-purple-50/50' : 
-                         'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                      }`}
+                      className={`px-4 py-2 font-bold text-sm whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${ activeTab === exam ? 'border-purple-600 text-purple-600 bg-purple-50/50' : 'border-transparent text-gray-500 hover:text-gray-800 hover:opacity-90' }`}
                     >
                        {exam} ✓
                     </button>
@@ -332,7 +326,7 @@ export default function Result() {
            </div>
       ) : !currentResult ? (
           <div className="bg-white rounded-3xl p-8 md:p-12 text-center shadow-sm border border-gray-100 max-w-2xl mx-auto mt-8">
-             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+             <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
                 <ClipboardList className="w-10 h-10 text-gray-400" />
              </div>
              <h3 className="text-xl font-black text-gray-900 mb-2">No results published yet.</h3>
@@ -381,7 +375,7 @@ export default function Result() {
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-gray-50 border-b border-gray-100">
+                    <thead className="text-primary border-b border-gray-100">
                       <tr>
                         <th className="p-4 font-black text-gray-600">Subject</th>
                         <th className="p-4 font-black text-gray-600 text-center">Full Marks</th>
@@ -401,12 +395,7 @@ export default function Result() {
                               <td className="p-4 text-center text-gray-500 font-medium">{marks.fullMarks}</td>
                               <td className="p-4 text-center font-black text-gray-900">{marks.obtained}</td>
                               <td className="p-4 text-center">
-                                 <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                    grade.includes('A') ? 'bg-green-100 text-green-700' :
-                                    grade.includes('B') ? 'bg-blue-100 text-blue-700' :
-                                    grade.includes('C') ? 'bg-orange-100 text-orange-700' :
-                                    'bg-red-100 text-red-700'
-                                 }`}>
+                                 <span className={`px-2 py-1 rounded text-xs font-bold ${ grade.includes('A') ? 'bg-green-100 text-green-700' : grade.includes('B') ? 'bg-blue-100 text-blue-700' : grade.includes('C') ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700' }`}>
                                     {grade}
                                  </span>
                               </td>
@@ -417,12 +406,12 @@ export default function Result() {
                             </tr>
                          );
                       })}
-                      <tr className="bg-gray-50 font-black text-gray-900 border-t-2 border-gray-200">
+                      <tr className="text-primary font-black text-gray-900 border-t-2 border-gray-200">
                          <td className="p-4 uppercase">TOTAL</td>
                          <td className="p-4 text-center">{currentResult.fullTotal}</td>
                          <td className="p-4 text-center">{currentResult.total}</td>
                          <td className="p-4 text-center">{currentResult.grade}</td>
-                         <td className="p-4 text-center text-[#1e3a8a]">{(() => {
+                         <td className="p-4 text-center text-primary">{(() => {
                              const subjects = Object.values(currentResult.subjects) as any[];
                              if (subjects.length === 0) return '0.0';
                              const totalGpa = subjects.reduce((acc, marks) => acc + getGradeInfo(marks.obtained, marks.fullMarks).gpa, 0);
@@ -457,7 +446,7 @@ export default function Result() {
 
             <div className="flex flex-col sm:flex-row justify-end mt-2 gap-3">
                {localStorage.getItem('userRole') !== 'student' && (
-                 <button onClick={downloadClassResultExcel} className="text-gray-700 bg-white border border-gray-200 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 hover:bg-gray-50">
+                 <button onClick={downloadClassResultExcel} className="text-gray-700 bg-white border border-gray-200 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 hover:text-primary">
                    <Download className="w-5 h-5 text-green-600" />
                    Download Class Result (Excel)
                  </button>

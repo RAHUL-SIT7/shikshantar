@@ -211,7 +211,7 @@ export default function AdminAdmissions() {
           <p className="text-xs text-gray-500 mt-1">Manage and respond to new student applications.</p>
         </div>
         <div className="flex items-center gap-2 mb-4 md:mb-0">
-          <div className="bg-[#f8fafc] px-4 py-2 flex items-center rounded border border-gray-200 text-sm font-bold text-[#1e3a8a]">
+          <div className="border-primary text-primary px-4 py-2 flex items-center rounded border border-gray-200 text-sm font-bold border-primary text-primary">
             Total Applications: {admissions.length}
           </div>
           <button 
@@ -224,7 +224,7 @@ export default function AdminAdmissions() {
       </div>
 
       {admissions.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+        <div className="text-center py-12 border-primary text-primary rounded-lg border border-dashed border-gray-300">
           <User className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-gray-900">No Admission Requests</h3>
           <p className="text-sm text-gray-500 mt-1">When parents fill out the admission form, it will appear here.</p>
@@ -233,7 +233,7 @@ export default function AdminAdmissions() {
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold select-none">
+              <tr className="text-primary border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold select-none">
                 <th className="p-4 cursor-pointer hover:bg-gray-100 group transition-colors" onClick={() => handleSort('submittedAt')}>
                   Date {getSortIcon('submittedAt')}
                 </th>
@@ -289,7 +289,7 @@ export default function AdminAdmissions() {
                       </td>
                     </tr>
                   ) : (
-                    <tr className="hover:bg-gray-50 transition-colors group">
+                    <tr className="hover:text-primary transition-colors group">
                       <td className="p-4 text-xs text-gray-500 whitespace-nowrap align-top">
                         <div className="flex border border-gray-200 bg-white rounded px-2 py-1 w-fit items-center gap-1"><Clock className="w-3 h-3" /> {formatDate(admission.submittedAt)}</div>
                       </td>
@@ -321,12 +321,7 @@ export default function AdminAdmissions() {
                         <select 
                           value={admission.status || 'Pending'} 
                           onChange={(e) => handleUpdateStatus(admission.id, e.target.value)}
-                          className={`text-xs font-bold px-2 py-1.5 rounded-full border outline-none cursor-pointer w-full text-center ${
-                            admission.status === 'Pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : 
-                            admission.status === 'Contacted' ? 'bg-blue-50 text-blue-800 border-blue-200' : 
-                            admission.status === 'Admitted' ? 'bg-green-50 text-green-800 border-green-200' : 
-                            'bg-red-50 text-red-800 border-red-200'
-                          }`}
+                          className={`text-xs font-bold px-2 py-1.5 rounded-full border outline-none cursor-pointer w-full text-center ${ admission.status === 'Pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : admission.status === 'Contacted' ? 'bg-blue-50 text-blue-800 border-blue-200' : admission.status === 'Admitted' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200' }`}
                         >
                           <option value="Pending">🕒 Pending</option>
                           <option value="Contacted">📞 Contacted</option>

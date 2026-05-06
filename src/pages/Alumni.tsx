@@ -305,7 +305,7 @@ export default function Alumni() {
             </label>
             <button 
               onClick={() => handleOpenModal()} 
-              className="bg-[#1a2744] hover:bg-[#25375f] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ml-auto"
+              className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ml-auto"
             >
               <Plus className="w-4 h-4" /> Add New Alumni
             </button>
@@ -322,11 +322,11 @@ export default function Alumni() {
       )}
 
       {/* HERO SECTION */}
-      <div className="bg-gradient-to-r from-[#1a2744] to-[#25375f] text-white py-12 md:py-16 px-4 mb-8">
+      <div className="bg-gradient-to-r bg-primary bg-primary text-white py-12 md:py-16 px-4 mb-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center md:text-left mb-10">
             <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-tight flex items-center justify-center md:justify-start gap-3">
-              <GraduationCap className="w-10 h-10 md:w-12 md:h-12 text-[#f97316]" /> 
+              <GraduationCap className="w-10 h-10 md:w-12 md:h-12 text-primary" /> 
               Alumni & Student Success
             </h1>
             <p className="text-blue-100 text-base md:text-lg max-w-3xl leading-relaxed">
@@ -376,7 +376,7 @@ export default function Alumni() {
                 <button 
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition border ${selectedCategory === cat ? 'bg-[#1a2744] text-white border-[#1a2744]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition border ${selectedCategory === cat ? 'bg-[var(--primary)] text-white' : 'bg-white text-gray-600 border-gray-200 hover:opacity-90'}`}
                 >
                   {cat}
                 </button>
@@ -398,8 +398,8 @@ export default function Alumni() {
         {/* FEATURED ALUMNI */}
         {featuredAlumni.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-2xl font-black text-[#1a2744] mb-6 flex items-center gap-2">
-              <Star className="w-6 h-6 text-[#f97316] fill-[#f97316]" /> Featured Alumni
+            <h2 className="text-2xl font-black text-primary mb-6 flex items-center gap-2">
+              <Star className="w-6 h-6 text-primary text-primary" /> Featured Alumni
             </h2>
             <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
               {featuredAlumni.map((a) => (
@@ -437,7 +437,7 @@ export default function Alumni() {
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 text-sm text-gray-600 mb-4 bg-gray-50/50 p-3 rounded-lg border border-gray-100">
+                      <div className="space-y-1.5 text-sm text-gray-600 mb-4 border-primary text-primary p-3 rounded-lg border border-gray-100">
                         <p className="flex items-start gap-2 max-w-full overflow-hidden">
                           <GraduationCap className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" /> 
                           <span className="truncate" title={`${a.batch} | GPA: ${a.seeBand}`}>
@@ -464,7 +464,7 @@ export default function Alumni() {
                         </div>
                       )}
 
-                      <div className="mt-auto relative bg-gray-50 p-4 rounded-xl text-sm italic text-gray-600 mt-2">
+                      <div className="mt-auto relative text-primary p-4 rounded-xl text-sm italic text-gray-600 mt-2">
                          <div className="text-4xl text-gray-300 font-serif leading-none absolute -top-2 -left-1">"</div>
                          <p className="relative z-10 pl-2 leading-relaxed limit-lines line-clamp-3">{a.quote}</p>
                          <p className="text-right font-semibold text-gray-800 mt-2 text-xs">— {a.name.split(' ')[0]}</p>
@@ -478,7 +478,7 @@ export default function Alumni() {
 
         {/* ALL ALUMNI GRID */}
         <div className="mb-16">
-          <h2 className="text-2xl font-black text-[#1a2744] mb-6">👥 All Alumni</h2>
+          <h2 className="text-2xl font-black text-primary mb-6">👥 All Alumni</h2>
           
           {filteredAlumni.length === 0 ? (
              <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
@@ -558,7 +558,7 @@ export default function Alumni() {
                    </div>
                    
                    {a.quote && (
-                     <div className="bg-gray-50 px-5 py-3 rounded-b-xl">
+                     <div className="text-primary px-5 py-3 rounded-b-xl">
                        <button 
                          onClick={() => toggleQuote(a.id)}
                          className="flex items-center justify-between w-full text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
@@ -580,12 +580,12 @@ export default function Alumni() {
         </div>
 
         {/* BOTTOM INSPIRE CARD */}
-        <div className="bg-[#1a2744] rounded-2xl p-8 md:p-12 text-center text-white shadow-xl mb-12">
+        <div className="bg-primary rounded-2xl p-8 md:p-12 text-center text-white shadow-xl mb-12">
            <h2 className="text-2xl md:text-3xl font-black mb-4">Are you a Shikshantar Alumni?</h2>
            <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">Share your success story and inspire current students! We would love to feature your journey on our platform.</p>
            <a 
              href="mailto:shikshantar@school.edu.np?subject=Alumni Success Story Submission" 
-             className="inline-flex items-center justify-center gap-2 bg-white text-[#1a2744] hover:bg-gray-100 px-8 py-4 rounded-xl font-black transition-colors w-full md:w-auto shadow-lg"
+             className="inline-flex items-center justify-center gap-2 bg-white text-primary hover:bg-gray-100 px-8 py-4 rounded-xl font-black transition-colors w-full md:w-auto shadow-lg"
            >
              <Mail className="w-5 h-5" /> Share Your Story
            </a>
@@ -598,15 +598,15 @@ export default function Alumni() {
               <BarChart2 className="w-6 h-6 text-indigo-600" /> Alumni Statistics
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-               <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+               <div className="p-4 border-primary text-primary rounded-xl border border-gray-100">
                  <p className="text-sm font-bold text-gray-500 uppercase">Total Alumni</p>
                  <p className="text-3xl font-black text-gray-900 mt-1">{stats.total}</p>
                </div>
-               <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+               <div className="p-4 border-primary text-primary rounded-xl border border-gray-100">
                  <p className="text-sm font-bold text-gray-500 uppercase">Featured Profiles</p>
                  <p className="text-3xl font-black text-yellow-600 mt-1">{stats.featured}</p>
                </div>
-               <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 lg:col-span-2">
+               <div className="p-4 border-primary text-primary rounded-xl border border-gray-100 lg:col-span-2">
                  <p className="text-sm font-bold text-gray-500 uppercase mb-3">Categories Breakdown</p>
                  <div className="flex flex-wrap gap-2">
                    {Object.entries(stats.catCounts).map(([cat, count]) => (
@@ -626,7 +626,7 @@ export default function Alumni() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center text-primary">
               <h2 className="text-xl font-black text-gray-900">{editingAlumnus ? 'Edit Alumni' : 'Add New Alumni'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 text-gray-400 hover:bg-gray-200 rounded-full transition"><X className="w-5 h-5"/></button>
             </div>
@@ -635,43 +635,43 @@ export default function Alumni() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
-                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" required />
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" required />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Category *</label>
-                  <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none">
+                  <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none">
                     {categories.filter(c => c !== "All").map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Batch / Graduation Year *</label>
-                  <input type="text" placeholder="e.g. SEE Batch 2075" value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. SEE Batch 2075" value={formData.batch} onChange={e => setFormData({...formData, batch: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">SEE GPA / Percentage</label>
-                  <input type="text" placeholder="e.g. 3.85 GPA" value={formData.seeBand} onChange={e => setFormData({...formData, seeBand: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. 3.85 GPA" value={formData.seeBand} onChange={e => setFormData({...formData, seeBand: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Current Status / Role *</label>
-                  <input type="text" placeholder="e.g. Engineer, Student" value={formData.currentStatus} onChange={e => setFormData({...formData, currentStatus: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. Engineer, Student" value={formData.currentStatus} onChange={e => setFormData({...formData, currentStatus: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Organization / College *</label>
-                  <input type="text" placeholder="e.g. Nepal Electricity Authority" value={formData.organization} onChange={e => setFormData({...formData, organization: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. Nepal Electricity Authority" value={formData.organization} onChange={e => setFormData({...formData, organization: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Degree (Optional)</label>
-                  <input type="text" placeholder="e.g. B.E. Civil Engineering" value={formData.degree} onChange={e => setFormData({...formData, degree: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. B.E. Civil Engineering" value={formData.degree} onChange={e => setFormData({...formData, degree: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
-                  <input type="text" placeholder="e.g. Kathmandu, Nepal" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. Kathmandu, Nepal" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
 
-                <div className="md:col-span-2 space-y-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="md:col-span-2 space-y-3 p-4 border-primary text-primary border border-gray-200 rounded-lg">
                    <label className="block text-xs font-bold text-gray-500 uppercase">Alumni Photo</label>
                    <div className="flex gap-4 mb-2">
                      <button type="button" onClick={() => setFormData({...formData, photoSource: 'url'})} className={`text-xs font-bold px-3 py-1.5 rounded-full ${formData.photoSource !== 'device' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>Image URL</button>
@@ -700,15 +700,15 @@ export default function Alumni() {
 
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Achievement (Highlight)</label>
-                  <input type="text" placeholder="e.g. District Topper in SEE 2075" value={formData.achievement} onChange={e => setFormData({...formData, achievement: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="text" placeholder="e.g. District Topper in SEE 2075" value={formData.achievement} onChange={e => setFormData({...formData, achievement: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Quote to current students</label>
-                  <textarea rows={3} value={formData.quote} onChange={e => setFormData({...formData, quote: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+                  <textarea rows={3} value={formData.quote} onChange={e => setFormData({...formData, quote: e.target.value})} className="w-full px-4 py-2 border-primary text-primary border border-gray-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
                 </div>
                 
-                <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="md:col-span-2 flex items-center justify-between p-4 border-primary text-primary border border-gray-200 rounded-lg">
                    <div>
                      <p className="text-sm font-bold text-gray-900">Featured Alumni</p>
                      <p className="text-xs text-gray-500">Show this profile prominently at the top of the page</p>
@@ -721,11 +721,11 @@ export default function Alumni() {
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 text-primary">
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-700 bg-white border border-gray-300 hover:text-primary transition">
                 Cancel
               </button>
-              <button onClick={handleSave} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#1a2744] hover:bg-[#25375f] transition shadow-md">
+              <button onClick={handleSave} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary-dark transition shadow-md">
                 Save Alumni
               </button>
             </div>

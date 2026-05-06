@@ -248,7 +248,7 @@ export default function FAQ() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#1a2744] flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-primary flex items-center gap-2">
                <HelpCircle className="w-8 h-8 text-blue-600" />
                Frequently Asked Questions
             </h1>
@@ -265,7 +265,7 @@ export default function FAQ() {
               {!previewAsStudent && (
                 <button 
                   onClick={() => { setEditingFaq({ category: 'Admissions', question: '', answer: '', published: true }); setIsEditing(true); }}
-                  className="bg-[#1a2744] text-white text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1 hover:bg-[#111a2f]"
+                  className="bg-primary text-white text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1 hover:bg-primary-dark"
                 >
                   <Plus className="w-4 h-4" /> Add New Question
                 </button>
@@ -295,7 +295,7 @@ export default function FAQ() {
                 <button 
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${selectedCategory === cat ? 'bg-[#1a2744] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${selectedCategory === cat ? '- text-white' : 'bg-white text-gray-600 border border-gray-200 hover:opacity-90'}`}
                 >
                   {cat} {cat !== 'All' && `(${faqs.filter(f => f.category === cat && (isAdmin || f.published)).length})`}
                 </button>
@@ -310,13 +310,13 @@ export default function FAQ() {
              <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
                <div className="flex flex-col">
                  <label className="text-xs font-bold text-gray-500 uppercase mb-1">Filter Category</label>
-                 <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border border-gray-200 rounded p-2 text-sm bg-gray-50 min-w-[150px]">
+                 <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="border border-gray-200 rounded p-2 text-sm border-primary text-primary min-w-[150px]">
                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
                  </select>
                </div>
                <div className="flex flex-col">
                  <label className="text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
-                 <select value={adminStatusFilter} onChange={e => setAdminStatusFilter(e.target.value)} className="border border-gray-200 rounded p-2 text-sm bg-gray-50 min-w-[120px]">
+                 <select value={adminStatusFilter} onChange={e => setAdminStatusFilter(e.target.value)} className="border border-gray-200 rounded p-2 text-sm border-primary text-primary min-w-[120px]">
                    <option value="All">All</option>
                    <option value="Published">Published</option>
                    <option value="Draft">Draft</option>
@@ -326,11 +326,11 @@ export default function FAQ() {
                  <label className="text-xs font-bold text-gray-500 uppercase mb-1">Search</label>
                  <div className="relative">
                     <Search className="w-4 h-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
-                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border border-gray-200 rounded p-2 pl-8 text-sm w-full bg-gray-50" />
+                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="border border-gray-200 rounded p-2 pl-8 text-sm w-full border-primary text-primary" />
                  </div>
                </div>
              </div>
-             <button className="whitespace-nowrap px-4 py-2 border border-gray-200 text-gray-700 bg-white rounded font-semibold text-sm hover:bg-gray-50 w-full md:w-auto">
+             <button className="whitespace-nowrap px-4 py-2 border border-gray-200 text-gray-700 bg-white rounded font-semibold text-sm hover:text-primary w-full md:w-auto">
                Export FAQ as PDF
              </button>
           </div>
@@ -340,7 +340,7 @@ export default function FAQ() {
         <div className="space-y-8">
           {Object.keys(groupedFAQs).map(catName => (
             <div key={catName}>
-               {!isAdmin && <h2 className="text-sm font-bold text-[#1a2744] uppercase tracking-widest mb-3 flex items-center gap-2">
+               {!isAdmin && <h2 className="text-sm font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
                  📝 {catName.toUpperCase()} ({groupedFAQs[catName].length})
                </h2>}
                <div className="space-y-3">
@@ -368,8 +368,8 @@ export default function FAQ() {
                               </button>
                               <span className="text-xs font-bold text-gray-400 border-l pl-6">Order: {faq.order}</span>
                               <div className="flex gap-2 ml-auto">
-                                <button onClick={() => moveFaq(faq.id, 'up')} className="text-xs font-bold text-gray-500 hover:text-[#1a2744] flex items-center gap-1"><ArrowUp className="w-3.5 h-3.5"/> Move Up</button>
-                                <button onClick={() => moveFaq(faq.id, 'down')} className="text-xs font-bold text-gray-500 hover:text-[#1a2744] flex items-center gap-1"><ArrowDown className="w-3.5 h-3.5"/> Move Down</button>
+                                <button onClick={() => moveFaq(faq.id, 'up')} className="text-xs font-bold text-gray-500 hover:text-primary flex items-center gap-1"><ArrowUp className="w-3.5 h-3.5"/> Move Up</button>
+                                <button onClick={() => moveFaq(faq.id, 'down')} className="text-xs font-bold text-gray-500 hover:text-primary flex items-center gap-1"><ArrowDown className="w-3.5 h-3.5"/> Move Down</button>
                               </div>
                            </div>
                         </div>
@@ -379,10 +379,10 @@ export default function FAQ() {
                      <div key={faq.id} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.05)] overflow-hidden transition-colors hover:bg-[#EEF2FF]">
                        <button 
                          onClick={() => toggleAccordion(faq.id)} 
-                         className={`w-full p-4 flex gap-4 items-start text-left transition-colors ${openIds.includes(faq.id) ? 'border-l-4 border-[#1a2744]' : 'border-l-4 border-transparent'}`}
+                         className={`w-full p-4 flex gap-4 items-start text-left transition-colors ${openIds.includes(faq.id) ? 'border-l-4 -' : 'border-l-4 border-transparent'}`}
                        >
                          <span className="text-lg">❓</span>
-                         <span className={`flex-1 text-[15px] font-semibold mt-0.5 ${openIds.includes(faq.id) ? 'text-[#1a2744]' : 'text-gray-800'}`}>
+                         <span className={`flex-1 text-[15px] font-semibold mt-0.5 ${openIds.includes(faq.id) ? '-' : 'text-gray-800'}`}>
                            {faq.question}
                          </span>
                          {openIds.includes(faq.id) ? <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
@@ -411,7 +411,7 @@ export default function FAQ() {
 
         {/* CONTACT CARD */}
         {!isAdmin && (
-          <div className="mt-12 bg-[#1a2744] rounded-2xl p-6 md:p-8 text-center shadow-lg">
+          <div className="mt-12 text-primary rounded-2xl p-6 md:p-8 text-center shadow-lg">
              <h2 className="text-xl font-bold text-white mb-2">Still have questions? We're here to help!</h2>
              <p className="text-white/70 text-sm mb-6 max-w-md mx-auto">If you couldn't find the answer to your question, please don't hesitate to reach out to our administration.</p>
              <div className="flex flex-col md:flex-row justify-center gap-4">
@@ -432,7 +432,7 @@ export default function FAQ() {
         {isEditing && (
           <div className="fixed inset-0 z-50 bg-black/50 flex flex-col items-center justify-center p-4">
              <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col h-auto max-h-screen">
-                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center text-primary">
                   <h3 className="font-bold text-gray-900">{editingFaq.id ? 'Edit Question' : 'Add New Question'}</h3>
                   <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-900"><Trash2 className="hidden"/><span className="text-xl leading-none">&times;</span></button>
                 </div>
@@ -467,7 +467,7 @@ export default function FAQ() {
                            <span className={editingFaq.answer.length > 1000 ? 'text-red-500' : 'text-gray-400'}>{editingFaq.answer.length}/1000</span>
                          </label>
                          <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:border-blue-500">
-                           <div className="bg-gray-50 border-b border-gray-200 p-1 flex gap-1">
+                           <div className="text-primary border-b border-gray-200 p-1 flex gap-1">
                              <button type="button" className="p-1.5 text-gray-500 hover:bg-gray-200 rounded font-serif font-bold px-3">B</button>
                              <button type="button" className="p-1.5 text-gray-500 hover:bg-gray-200 rounded">● List</button>
                            </div>
@@ -484,20 +484,20 @@ export default function FAQ() {
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Status</label>
                          <div className="flex gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" checked={editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: true})} className="w-4 h-4 accent-[#1a2744]" />
+                              <input type="radio" checked={editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: true})} className="w-4 h-4 text-primary" />
                               <span className="font-semibold text-gray-700 text-sm">Published ◉</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" checked={!editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: false})} className="w-4 h-4 accent-[#1a2744]" />
+                              <input type="radio" checked={!editingFaq.published} onChange={() => setEditingFaq({...editingFaq, published: false})} className="w-4 h-4 text-primary" />
                               <span className="font-semibold text-gray-700 text-sm">Draft ○</span>
                             </label>
                          </div>
                        </div>
                     </form>
                 </div>
-                <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                <div className="p-5 border-t border-gray-100 flex justify-end gap-3 text-primary">
                    <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-white transition-colors">Cancel</button>
-                   <button type="submit" form="faq-form" className="px-5 py-2.5 rounded-lg bg-[#1a2744] text-white font-bold hover:bg-[#111a2f] transition-colors">Save Question</button>
+                   <button type="submit" form="faq-form" className="px-5 py-2.5 rounded-lg bg-primary text-white font-bold hover:bg-primary-dark transition-colors">Save Question</button>
                 </div>
              </div>
           </div>

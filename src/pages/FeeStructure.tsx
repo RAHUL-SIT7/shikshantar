@@ -11,6 +11,8 @@ interface AcademicFee {
   admission: string;
   tuition: string;
   annual: string;
+  exam: string;
+  computer: string;
 }
 
 interface TransportFee {
@@ -36,19 +38,20 @@ interface FeeStructureData {
 
 const defaultData: FeeStructureData = {
   academic: [
-    { id: '1', className: 'Nursery', admission: '5000', tuition: '1500', annual: '3000' },
-    { id: '2', className: 'LKG', admission: '5000', tuition: '1500', annual: '3000' },
-    { id: '3', className: 'UKG', admission: '5000', tuition: '1500', annual: '3000' },
-    { id: '4', className: 'Class 1', admission: '6000', tuition: '1800', annual: '3500' },
-    { id: '5', className: 'Class 2', admission: '6000', tuition: '1800', annual: '3500' },
-    { id: '6', className: 'Class 3', admission: '6000', tuition: '1800', annual: '3500' },
-    { id: '7', className: 'Class 4', admission: '7000', tuition: '2000', annual: '4000' },
-    { id: '8', className: 'Class 5', admission: '7000', tuition: '2000', annual: '4000' },
-    { id: '9', className: 'Class 6', admission: '8000', tuition: '2500', annual: '5000' },
-    { id: '10', className: 'Class 7', admission: '8000', tuition: '2500', annual: '5000' },
-    { id: '11', className: 'Class 8', admission: '8000', tuition: '2500', annual: '5000' },
-    { id: '12', className: 'Class 9', admission: '10000', tuition: '3000', annual: '6000' },
-    { id: '13', className: 'Class 10', admission: '10000', tuition: '3000', annual: '6000' },
+    { id: '0', className: 'Play Group', admission: '4000', tuition: '1200', annual: '2500', exam: '500', computer: '0' },
+    { id: '1', className: 'Nursery', admission: '5000', tuition: '1500', annual: '3000', exam: '600', computer: '0' },
+    { id: '2', className: 'LKG', admission: '5000', tuition: '1500', annual: '3000', exam: '600', computer: '200' },
+    { id: '3', className: 'UKG', admission: '5000', tuition: '1500', annual: '3000', exam: '600', computer: '200' },
+    { id: '4', className: 'Class 1', admission: '6000', tuition: '1800', annual: '3500', exam: '800', computer: '300' },
+    { id: '5', className: 'Class 2', admission: '6000', tuition: '1800', annual: '3500', exam: '800', computer: '300' },
+    { id: '6', className: 'Class 3', admission: '6000', tuition: '1800', annual: '3500', exam: '800', computer: '300' },
+    { id: '7', className: 'Class 4', admission: '7000', tuition: '2000', annual: '4000', exam: '1000', computer: '400' },
+    { id: '8', className: 'Class 5', admission: '7000', tuition: '2000', annual: '4000', exam: '1000', computer: '400' },
+    { id: '9', className: 'Class 6', admission: '8000', tuition: '2500', annual: '5000', exam: '1200', computer: '500' },
+    { id: '10', className: 'Class 7', admission: '8000', tuition: '2500', annual: '5000', exam: '1200', computer: '500' },
+    { id: '11', className: 'Class 8', admission: '8000', tuition: '2500', annual: '5000', exam: '1200', computer: '500' },
+    { id: '12', className: 'Class 9', admission: '10000', tuition: '3000', annual: '6000', exam: '1500', computer: '600' },
+    { id: '13', className: 'Class 10', admission: '10000', tuition: '3000', annual: '6000', exam: '1500', computer: '600' },
   ],
   transportation: [
     { id: '1', className: 'All Classes', route: '0-5 km', fee: '1000' },
@@ -261,8 +264,30 @@ const FeeStructure = () => {
   const addAcademicRow = () => {
     setEditedData({
       ...editedData,
-      academic: [...editedData.academic, { id: generateId(), className: '', admission: '', tuition: '', annual: '' }]
+      academic: [...editedData.academic, { id: generateId(), className: '', admission: '', tuition: '', annual: '', exam: '', computer: '' }]
     });
+  };
+
+  const calculateExpectedRevenue = () => {
+     let total = 0;
+     const structMap = new Map();
+     data.academic.forEach(s => structMap.set(s.className, s));
+
+     for (const s of allStudents) {
+         if (s.role !== 'student') continue;
+         const rawClass = s.class || s.studentClass || '';
+         const formattedClass = ['PG', 'Nursery', 'LKG', 'UKG'].includes(rawClass) ? rawClass : `Class ${rawClass}`;
+         const feeStruct = structMap.get(formattedClass) || structMap.get(rawClass);
+
+         if (feeStruct) {
+            const tuition = Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) || 0;
+            const annual = Number(feeStruct.annual.replace(/[^0-9.]/g, '')) || 0;
+            const scholarship = s.scholarshipStatus === 'Provided' ? Number(s.scholarshipAmount||0) : 0;
+            
+            total += (Math.max(0, tuition - scholarship) * 12) + annual;
+         }
+     }
+     return total;
   };
 
   const addTransportRow = () => {
@@ -320,7 +345,10 @@ const FeeStructure = () => {
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-[#e2e8f0]">
         <div>
-          <h2 className="text-2xl font-bold text-[#1e3a8a]">Academy Fee Structure</h2>
+          <h2 className="text-2xl font-bold text-primary flex items-center gap-3">
+             Academy Fee Structure
+             <span className="text-sm font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full whitespace-nowrap border border-gray-200">Academic Year 2083-2084</span>
+          </h2>
           <p className="text-sm text-slate-600 mt-1">Comprehensive fee details for all classes</p>
         </div>
         
@@ -338,13 +366,17 @@ const FeeStructure = () => {
                className="flex justify-center items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
             >
                <Users className="w-4 h-4" />
-               {generatingFees ? 'Calculating...' : 'Calculate Future Bills'}
+               {generatingFees ? 'Calculating...' : 'Apply Structure to Students'}
             </button>
 
             {!editMode ? (
               <button
-                onClick={() => setEditMode(true)}
-                className="flex justify-center items-center gap-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                onClick={() => {
+                   if (window.confirm("Warning: Updating this will NOT change previously generated bills. Only future bills will use the new structure. Do you want to continue?")) {
+                      setEditMode(true);
+                   }
+                }}
+                className="flex justify-center items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit Fee Structure
@@ -383,7 +415,7 @@ const FeeStructure = () => {
       {/* Academic Fees */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
         <div className="p-6 border-b border-[#e2e8f0] bg-slate-50 flex justify-between items-center">
-          <h3 className="text-xl font-bold text-[#1e3a8a]">Academic Fees</h3>
+          <h3 className="text-xl font-bold text-primary">Academic Fees</h3>
           {editMode && (
             <button onClick={addAcademicRow} className="text-sm font-semibold text-blue-600 flex items-center gap-1 hover:text-blue-800">
               <Plus className="w-4 h-4" /> Add Row
@@ -398,6 +430,8 @@ const FeeStructure = () => {
                 <th className="pb-4 font-semibold text-slate-700">Admission Fee</th>
                 <th className="pb-4 font-semibold text-slate-700">Monthly Tuition</th>
                 <th className="pb-4 font-semibold text-slate-700">Annual Charges</th>
+                <th className="pb-4 font-semibold text-slate-700">Exam Fee</th>
+                <th className="pb-4 font-semibold text-slate-700">Computer Fee</th>
                 {editMode && <th className="pb-4 font-semibold text-slate-700 w-10"></th>}
               </tr>
             </thead>
@@ -420,7 +454,7 @@ const FeeStructure = () => {
                         newAcademic[index].admission = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
                       }} />
-                    ) : <span className="text-slate-600">Rs. {row.admission}</span>}
+                    ) : <span className="text-slate-600">NRs. {row.admission}</span>}
                   </td>
                   <td className="py-3">
                     {editMode ? (
@@ -429,7 +463,7 @@ const FeeStructure = () => {
                         newAcademic[index].tuition = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
                       }} />
-                    ) : <span className="text-slate-600">Rs. {row.tuition}</span>}
+                    ) : <span className="text-slate-600">NRs. {row.tuition}</span>}
                   </td>
                   <td className="py-3">
                     {editMode ? (
@@ -438,7 +472,25 @@ const FeeStructure = () => {
                         newAcademic[index].annual = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
                       }} />
-                    ) : <span className="text-slate-600">Rs. {row.annual}</span>}
+                    ) : <span className="text-slate-600">NRs. {row.annual}</span>}
+                  </td>
+                  <td className="py-3">
+                    {editMode ? (
+                      <input className="w-full border p-2 rounded" value={row.exam} onChange={(e) => {
+                        const newAcademic = [...editedData.academic];
+                        newAcademic[index].exam = e.target.value;
+                        setEditedData({ ...editedData, academic: newAcademic });
+                      }} />
+                    ) : <span className="text-slate-600">NRs. {row.exam}</span>}
+                  </td>
+                  <td className="py-3">
+                    {editMode ? (
+                      <input className="w-full border p-2 rounded" value={row.computer} onChange={(e) => {
+                        const newAcademic = [...editedData.academic];
+                        newAcademic[index].computer = e.target.value;
+                        setEditedData({ ...editedData, academic: newAcademic });
+                      }} />
+                    ) : <span className="text-slate-600">NRs. {row.computer}</span>}
                   </td>
                   {editMode && (
                     <td className="py-3 text-right">
@@ -451,18 +503,28 @@ const FeeStructure = () => {
                 </tr>
               ))}
               {currentData.academic.length === 0 && (
-                <tr><td colSpan={5} className="py-4 text-center text-gray-500">No academic fees data.</td></tr>
+                <tr><td colSpan={7} className="py-4 text-center text-gray-500">No academic fees data.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden p-6 flex flex-col sm:flex-row justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+          <div>
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Expected Annual Revenue</h3>
+              <p className="text-3xl font-black text-primary tracking-tight">NRs. {calculateExpectedRevenue().toLocaleString()}</p>
+          </div>
+          <div className="text-right mt-4 sm:mt-0 text-sm font-medium text-gray-500">
+             Based on current active students, applying structure and existing scholarships.
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-8">
         {/* Transportation Fees */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
           <div className="p-6 border-b border-[#e2e8f0] bg-slate-50 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-[#1e3a8a]">Transportation Fees</h3>
+            <h3 className="text-xl font-bold text-primary">Transportation Fees</h3>
             {editMode && (
               <button onClick={addTransportRow} className="text-sm font-semibold text-blue-600 flex items-center gap-1 hover:text-blue-800">
                 <Plus className="w-4 h-4" /> Add Row
@@ -507,7 +569,7 @@ const FeeStructure = () => {
                           newTransport[index].fee = e.target.value;
                           setEditedData({ ...editedData, transportation: newTransport });
                         }} />
-                      ) : <span className="text-slate-600">Rs. {row.fee}</span>}
+                      ) : <span className="text-slate-600">NRs. {row.fee}</span>}
                     </td>
                     {editMode && (
                       <td className="py-3 text-right">
@@ -530,7 +592,7 @@ const FeeStructure = () => {
         {/* Lab Fees */}
         <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
           <div className="p-6 border-b border-[#e2e8f0] bg-slate-50 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-[#1e3a8a]">Lab Fees</h3>
+            <h3 className="text-xl font-bold text-primary">Lab Fees</h3>
             {editMode && (
               <button onClick={addLabRow} className="text-sm font-semibold text-blue-600 flex items-center gap-1 hover:text-blue-800">
                 <Plus className="w-4 h-4" /> Add Row
@@ -575,7 +637,7 @@ const FeeStructure = () => {
                           newLab[index].fee = e.target.value;
                           setEditedData({ ...editedData, lab: newLab });
                         }} />
-                      ) : <span className="text-slate-600">Rs. {row.fee}</span>}
+                      ) : <span className="text-slate-600">NRs. {row.fee}</span>}
                     </td>
                     {editMode && (
                       <td className="py-3 text-right">
@@ -600,22 +662,22 @@ const FeeStructure = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-2xl shadow-sm overflow-hidden mt-8">
         <div className="p-6 border-b border-blue-200 bg-blue-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Award className="w-6 h-6 text-[#1e3a8a]" />
-            <h3 className="text-xl font-bold text-[#1e3a8a]">Scholarship & Discount Policy</h3>
+            <Award className="w-6 h-6 text-primary" />
+            <h3 className="text-xl font-bold text-primary">Scholarship & Discount Policy</h3>
           </div>
           {isAdmin && !editMode && (
              <div>
                 {policyEditMode ? (
                    <div className="flex gap-2">
-                      <button onClick={handleSavePolicy} disabled={savingPolicy} className="bg-[#1e3a8a] text-white px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 hover:bg-[#1e40af]">
+                      <button onClick={handleSavePolicy} disabled={savingPolicy} className="bg-primary text-white px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 hover:bg-primary-dark">
                          {savingPolicy ? 'Saving...' : <><Save className="w-4 h-4"/> Save</>}
                       </button>
-                      <button onClick={() => setPolicyEditMode(false)} className="bg-white text-gray-700 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 hover:bg-gray-50 border border-gray-300">
+                      <button onClick={() => setPolicyEditMode(false)} className="bg-white text-gray-700 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 hover:text-primary border border-gray-300">
                          <X className="w-4 h-4"/> Cancel
                       </button>
                    </div>
                 ) : (
-                   <button onClick={() => { setTempPolicy(data.scholarshipPolicy || defaultData.scholarshipPolicy || ''); setPolicyEditMode(true); }} className="text-[#1e3a8a] bg-blue-50 px-3 py-1.5 rounded border border-[#1e3a8a]/20 shadow-sm text-sm font-bold flex items-center gap-1 hover:bg-blue-200 transition-colors">
+                   <button onClick={() => { setTempPolicy(data.scholarshipPolicy || defaultData.scholarshipPolicy || ''); setPolicyEditMode(true); }} className="border-primary text-primary bg-blue-50 px-3 py-1.5 rounded border border-primary text-primary shadow-sm text-sm font-bold flex items-center gap-1 hover:bg-blue-200 transition-colors">
                       <Edit2 className="w-4 h-4"/> Edit Policy
                    </button>
                 )}
@@ -652,8 +714,8 @@ const FeeStructure = () => {
       {isAdmin && (
         <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden mt-8">
           <div className="p-6 border-b border-[#e2e8f0] bg-slate-50 flex items-center gap-2">
-            <Award className="w-6 h-6 text-[#1e3a8a]" />
-            <h3 className="text-xl font-bold text-[#1e3a8a]">Scholarships & Discounts Allocation</h3>
+            <Award className="w-6 h-6 text-primary" />
+            <h3 className="text-xl font-bold text-primary">Scholarships & Discounts Allocation</h3>
           </div>
           
           <div className="p-6">
@@ -696,7 +758,7 @@ const FeeStructure = () => {
               <button
                 onClick={handleSearchStudents}
                 disabled={searching || !searchTerm.trim()}
-                className="bg-[#1e3a8a] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#1e40af] disabled:opacity-50 transition-colors"
+                className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-dark disabled:opacity-50 transition-colors"
               >
                 {searching ? 'Searching...' : 'Search'}
               </button>
@@ -779,7 +841,7 @@ const FeeStructure = () => {
                   <button
                     onClick={handleApplyDiscount}
                     disabled={!discountValue || applyingDiscount}
-                    className="px-6 py-2 bg-[#1e3a8a] border border-transparent rounded-lg text-sm font-medium text-white hover:bg-[#1e40af] disabled:opacity-50"
+                    className="px-6 py-2 bg-primary border border-transparent rounded-lg text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
                   >
                     {applyingDiscount ? 'Applying...' : 'Apply to Account'}
                   </button>

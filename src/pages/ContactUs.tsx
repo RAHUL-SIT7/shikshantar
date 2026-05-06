@@ -52,7 +52,7 @@ export default function ContactUs() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-[#1e3a8a]">Contact Us</h1>
+        <h1 className="text-3xl font-bold text-primary">Contact Us</h1>
         {isAdmin && !isEditing && (
           <button onClick={handleEdit} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
             <Edit2 className="w-4 h-4" /> Edit Details
@@ -93,7 +93,7 @@ export default function ContactUs() {
             </div>
             
             <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+              <button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded-lg hover:text-primary flex items-center gap-2">
                 <X className="w-4 h-4" /> Cancel
               </button>
               <button disabled={saving} onClick={handleSave} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50">

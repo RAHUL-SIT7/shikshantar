@@ -165,7 +165,7 @@ export default function Admission() {
   if (isLoadingFields) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-[#1e3a8a] mb-4" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <p className="text-gray-500">Loading Form Layout...</p>
       </div>
     );
@@ -190,7 +190,7 @@ export default function Admission() {
           <div className="flex flex-col items-center sm:items-start flex-1 min-w-[250px]">
             <div className="flex items-center gap-3 mb-2">
               <img src={logoUrl} alt="Shikshantar Academy Logo" className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" />
-              <h1 className="text-2xl md:text-3xl font-extrabold text-[#1e3a8a] tracking-wide uppercase">Shikshantar Academy</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-wide uppercase">Shikshantar Academy</h1>
             </div>
             <h2 className="text-xl font-bold text-[#374151] mb-2">Online Admission Form</h2>
             <p className="text-[#6b7280] text-sm text-center sm:text-left">Please fill out the form below to apply for admission to Shikshantar Academy.</p>
@@ -200,7 +200,7 @@ export default function Admission() {
             {isAdmin && (
               <button 
                 onClick={() => setIsFormConfigOpen(true)}
-                className="bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] hover:bg-[#e2e8f0] px-3 py-1.5 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
+                className="border-primary text-primary text-[#334155] border border-[#cbd5e1] hover:bg-[#e2e8f0] px-3 py-1.5 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
               >
                 <Settings className="w-4 h-4"/> Edit Form Fields
               </button>
@@ -237,7 +237,7 @@ export default function Admission() {
                   value={formData[field.id] || ''}
                   onChange={handleChange}
                   required={field.required}
-                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-[#f3f4f6]"
+                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-[#f3f4f6]"
                   rows={3}
                   placeholder={`Enter ${field.label.toLowerCase()}`}
                   disabled={isSubmitting}
@@ -250,7 +250,7 @@ export default function Admission() {
                   onChange={handleChange}
                   required={field.required}
                   disabled={isSubmitting}
-                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-[#f3f4f6]"
+                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-[#f3f4f6]"
                 >
                   {(field.options || []).map((opt: string) => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -258,7 +258,7 @@ export default function Admission() {
                 </select>
               ) : field.type === 'tel' ? (
                 <div className="relative flex">
-                  <span className="inline-flex items-center px-3 rounded-l border border-r-0 border-[#d1d5db] bg-gray-50 text-gray-600 sm:text-sm font-bold">
+                  <span className="inline-flex items-center px-3 rounded-l border border-r-0 border-[#d1d5db] border-primary text-primary text-gray-600 sm:text-sm font-bold">
                     +977
                   </span>
                   <input
@@ -273,7 +273,7 @@ export default function Admission() {
                     required={field.required}
                     disabled={isSubmitting}
                     maxLength={10}
-                    className="flex-1 w-full px-3 py-2 border border-[#d1d5db] rounded-r shadow-sm focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-[#f3f4f6]"
+                    className="flex-1 w-full px-3 py-2 border border-[#d1d5db] rounded-r shadow-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-[#f3f4f6]"
                     placeholder="Enter 10-digit number"
                   />
                 </div>
@@ -286,7 +286,7 @@ export default function Admission() {
                   onChange={handleChange}
                   required={field.required}
                   disabled={isSubmitting}
-                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] disabled:bg-[#f3f4f6]"
+                  className="w-full px-3 py-2 border border-[#d1d5db] rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-[#f3f4f6]"
                   placeholder={`Enter ${field.label.toLowerCase()}`}
                 />
               )}
@@ -299,7 +299,7 @@ export default function Admission() {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${isSubmitting ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}
+              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${isSubmitting ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[var(--primary)] text-white hover:opacity-90'}`}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Application'}
               <Send className="w-4 h-4" />
@@ -312,7 +312,7 @@ export default function Admission() {
       {isAdmin && isFormConfigOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-left">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center text-primary rounded-t-xl">
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Configure Admission Form</h2>
                 <p className="text-xs text-gray-500">Customize the fields parents will see on this application.</p>
@@ -320,7 +320,7 @@ export default function Admission() {
               <button type="button" onClick={() => setIsFormConfigOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6"/></button>
             </div>
             
-            <div className="p-5 overflow-y-auto flex-1 bg-gray-50">
+            <div className="p-5 overflow-y-auto flex-1 text-primary">
               <div className="space-y-4">
                 {formFields.map((field, idx) => (
                   <div key={idx} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-wrap gap-4 items-start relative group">
@@ -349,7 +349,7 @@ export default function Admission() {
                     </div>
 
                     {field.type === 'select' && (
-                      <div className="w-full mt-2 bg-gray-50 p-2 rounded border border-gray-100">
+                      <div className="w-full mt-2 border-primary text-primary p-2 rounded border border-gray-100">
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Dropdown Options (Comma separated)</label>
                         <input type="text" value={(field.options || []).join(', ')} onChange={(e) => handleUpdateField(idx, 'options', e.target.value.split(',').map((s:string)=>s.trim()).filter((s:string)=>s))} className="w-full text-sm border-b border-gray-300 py-1 outline-none focus:border-blue-500 bg-transparent" placeholder="Option 1, Option 2, Option 3..." />
                       </div>
@@ -365,7 +365,7 @@ export default function Admission() {
             
             <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
               <button type="button" onClick={() => setIsFormConfigOpen(false)} className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-              <button type="button" disabled={savingConfig} onClick={handleSaveConfig} className="bg-[#1e3a8a] text-white px-5 py-2 font-bold rounded flex items-center gap-2 hover:bg-[#1e40af] disabled:opacity-50">
+              <button type="button" disabled={savingConfig} onClick={handleSaveConfig} className="bg-primary text-white px-5 py-2 font-bold rounded flex items-center gap-2 hover:bg-primary-dark disabled:opacity-50">
                 <Save className="w-4 h-4"/> {savingConfig ? 'Saving...' : 'Save Configuration'}
               </button>
             </div>

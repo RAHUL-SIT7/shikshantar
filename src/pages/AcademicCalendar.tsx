@@ -173,34 +173,34 @@ export default function AcademicCalendar() {
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-6">
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e7eb] mb-6 p-5">
-        <h2 className="text-xl font-bold text-[#1e3a8a] mb-2 border-b pb-2">Academic Calendar</h2>
+        <h2 className="text-xl font-bold text-primary mb-2 border-b pb-2">Academic Calendar</h2>
         
         {isAdminOrTeacher && (
-          <div className="bg-[#f8fafc] p-4 rounded-lg border border-[#e2e8f0] mb-6 shadow-sm mt-4">
+          <div className="border-primary text-primary p-4 rounded-lg border border-[#e2e8f0] mb-6 shadow-sm mt-4">
             <h3 className="text-sm font-bold text-[#1e293b] mb-3">Update Calendar</h3>
             
             <div className="flex gap-2 mb-3">
-              <button onClick={() => setUploadMode('url')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'url' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+              <button onClick={() => setUploadMode('url')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'url' ? '- text-white' : 'bg-white border text-[#6b7280]'}`}>
                 <LinkIcon className="w-3 h-3"/> URL
               </button>
-              <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+              <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? '- text-white' : 'bg-white border text-[#6b7280]'}`}>
                 <Upload className="w-3 h-3"/> File (PDF/Image)
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               {uploadMode === 'url' ? (
-                <input type="text" placeholder="Calendar File URLs (comma separated)" value={newCalendarUrl} onChange={(e) => setNewCalendarUrl(e.target.value)} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+                <input type="text" placeholder="Calendar File URLs (comma separated)" value={newCalendarUrl} onChange={(e) => setNewCalendarUrl(e.target.value)} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-primary" />
               ) : (
                 <div className="flex flex-col gap-1">
                    <span className="text-[0.65rem] font-bold text-gray-500 uppercase">Select Image(s) or PDF</span>
-                   <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+                   <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:- file:- hover:file:-" />
                 </div>
               )}
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button disabled={isUploading} onClick={handleUpdateCalendar} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm ${isUploading ? 'bg-[#cbd5e1] text-[#475569] cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}>
+              <button disabled={isUploading} onClick={handleUpdateCalendar} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm ${isUploading ? 'bg-[#cbd5e1] text-[#475569] cursor-not-allowed' : '- text-white hover:opacity-90'}`}>
                 {isUploading ? 'Uploading...' : 'Update Calendar'}
               </button>
               {isUploading && uploadMode === 'file' && (
@@ -221,7 +221,7 @@ export default function AcademicCalendar() {
           </div>
         )}
 
-        <div className="w-full flex justify-center bg-gray-50 rounded-lg border p-2 min-h-[50vh]">
+        <div className="w-full flex justify-center border-primary text-primary rounded-lg border p-2 min-h-[50vh]">
            {calendarUrls.length > 0 ? (
               calendarType === 'pdf' ? (
                 <iframe src={calendarUrls[0]} className="w-full h-[70vh] rounded" title="Academic Calendar" />

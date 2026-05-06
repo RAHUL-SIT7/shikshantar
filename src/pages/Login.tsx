@@ -466,7 +466,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
   if (view === 'verify') {
     return (
-      <div className="flex items-center justify-center min-h-screen relative bg-[#f8fafc]">
+      <div className="flex items-center justify-center min-h-screen relative text-primary">
         {/* Professional Background Pattern/Logo */}
         <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03]">
           <img 
@@ -476,7 +476,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
           />
         </div>
         <div className="w-full max-w-md bg-white backdrop-blur-md rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e2e8f0] text-center relative z-10 mx-4">
-          <Mail className="w-16 h-16 text-[#1e3a8a] mx-auto mb-4" />
+          <Mail className="w-16 h-16 text-primary mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[#1f2937] mb-2">Verify Your Email</h2>
           <p className="text-[#4b5563] mb-6">
             We have sent you a verification email to <span className="font-bold text-[#1f2937]">{email}</span>. Please verify it and log in.
@@ -486,7 +486,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               setView('login');
               setPassword('');
             }}
-            className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl hover:bg-[#1e40af] transition-all shadow-md active:scale-[0.98]"
+            className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-xl hover:bg-primary-dark transition-all shadow-md active:scale-[0.98]"
           >
             Go to Login
           </button>
@@ -496,7 +496,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen relative bg-[#f8fafc] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex items-center justify-center min-h-screen relative text-primary py-12 px-4 sm:px-6 lg:px-8">
       {/* Professional Background Pattern/Logo */}
       <div className="absolute inset-0 z-0 overflow-hidden flex items-center justify-center opacity-[0.03] pointer-events-none">
         <img 
@@ -515,7 +515,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               className="w-12 h-12 object-contain drop-shadow-sm"
             />
             <div className="text-left flex flex-col justify-center">
-              <h1 className="text-xl sm:text-2xl font-black text-[#1e3a8a] uppercase tracking-wide leading-tight">Shikshantar Academy</h1>
+              <h1 className="text-xl sm:text-2xl font-black text-primary uppercase tracking-wide leading-tight">Shikshantar Academy</h1>
               <p className="text-[10px] text-[#64748b] font-bold uppercase tracking-wider">Bastipur-5, Siraha</p>
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-[#e2e8f0] rounded-xl bg-[#f8fafc] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/10 transition-all text-[#0f172a]"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-[#e2e8f0] rounded-xl border-primary text-primary text-sm focus:outline-none focus:ring-primary focus:ring-4 focus:ring-primary transition-all text-[#0f172a]"
                   placeholder="name@example.com"
                 />
               </div>
@@ -573,13 +573,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2.5 border border-[#e2e8f0] rounded-xl bg-[#f8fafc] text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-4 focus:ring-[#1e3a8a]/10 transition-all text-[#0f172a]"
+                  className="block w-full pl-10 pr-10 py-2.5 border border-[#e2e8f0] rounded-xl border-primary text-primary text-sm focus:outline-none focus:ring-primary focus:ring-4 focus:ring-primary transition-all text-[#0f172a]"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#94a3b8] hover:text-[#1e3a8a] focus:outline-none transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#94a3b8] hover:text-primary focus:outline-none transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -594,7 +594,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   setError(''); 
                   setMessage(''); 
                 }}
-                className="text-xs text-[#1e3a8a] hover:text-[#1e40af] font-semibold transition-colors"
+                className="text-xs text-primary hover:text-primary font-semibold transition-colors"
               >
                 Forgot Password?
               </button>
@@ -603,7 +603,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#1e3a8a] text-white font-semibold py-3 px-4 rounded-xl text-sm mt-6 hover:bg-[#1e40af] hover:shadow-lg hover:shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none"
+              className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-xl text-sm mt-6 hover:bg-primary-dark hover:shadow-lg hover:shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none"
             >
               {loading ? 'Please wait...' : `Login`}
             </button>
@@ -620,7 +620,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
+                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:text-primary hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -646,7 +646,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
             <p className="text-center text-sm text-[#475569] mt-6">
               Don't have an account?{' '}
-              <button type="button" onClick={() => { setRole('student'); setView('register'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
+              <button type="button" onClick={() => { setRole('student'); setView('register'); setError(''); }} className="text-primary font-semibold hover:text-primary hover:underline transition-colors">
                 Register here
               </button>
             </p>
@@ -659,18 +659,14 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button
                 type="button"
                 onClick={() => { setResetMethod('email'); setError(''); setMessage(''); }}
-                className={`flex-1 py-2 text-sm font-bold rounded-md capitalize transition-all ${
-                  resetMethod === 'email' ? 'bg-white text-[#1e3a8a] shadow-sm' : 'text-[#4b5563] hover:text-[#1f2937]'
-                }`}
+                className={`flex-1 py-2 text-sm font-bold rounded-md capitalize transition-all ${ resetMethod === 'email' ? 'bg-white bg-primary shadow-sm' : 'text-[#4b5563] hover:text-[#1f2937]' }`}
               >
                 Reset via Email
               </button>
               <button
                 type="button"
                 onClick={() => { setResetMethod('phone'); setError(''); setMessage(''); }}
-                className={`flex-1 py-2 text-sm font-bold rounded-md capitalize transition-all ${
-                  resetMethod === 'phone' ? 'bg-white text-[#1e3a8a] shadow-sm' : 'text-[#4b5563] hover:text-[#1f2937]'
-                }`}
+                className={`flex-1 py-2 text-sm font-bold rounded-md capitalize transition-all ${ resetMethod === 'phone' ? 'bg-white bg-primary shadow-sm' : 'text-[#4b5563] hover:text-[#1f2937]' }`}
               >
                 Reset via Phone OTP
               </button>
@@ -689,7 +685,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                      className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm"
                       placeholder="Enter email"
                     />
                   </div>
@@ -698,7 +694,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#1e3a8a] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#1e3a8a]/90 transition-colors disabled:opacity-70 shadow-md"
+                  className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </button>
@@ -719,7 +715,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                          className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm"
                           placeholder="98XXXXXXXX"
                         />
                       </div>
@@ -727,7 +723,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-[#1e3a8a] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#1e3a8a]/90 transition-colors disabled:opacity-70 shadow-md"
+                      className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
                     >
                       {loading ? 'Sending OTP...' : 'Send OTP'}
                     </button>
@@ -745,7 +741,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                           required
                           value={otpCode}
                           onChange={(e) => setOtpCode(e.target.value)}
-                          className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm tracking-widest font-bold"
+                          className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm tracking-widest font-bold"
                           placeholder="123456"
                           maxLength={6}
                         />
@@ -754,7 +750,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
+                      className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
                     >
                       {loading ? 'Verifying...' : 'Verify OTP'}
                     </button>
@@ -767,7 +763,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button 
                 type="button" 
                 onClick={() => { setView('login'); setError(''); setMessage(''); setConfirmationResult(null); }} 
-                className="text-[#1e3a8a] font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
+                className="text-primary font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to Login
               </button>
@@ -779,7 +775,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button 
                 type="button" 
                 onClick={() => { setView('reset'); setError(''); setMessage(''); }} 
-                className="text-xs text-[#f97316] font-bold hover:underline"
+                className="text-xs text-primary font-bold hover:underline"
               >
                 Enter New Password Directly
               </button>
@@ -800,13 +796,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-primary focus:outline-none"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -823,13 +819,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm"
+                  className="block w-full pl-9 pr-10 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-primary focus:outline-none"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -845,7 +841,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
+              className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
             >
               {loading ? 'Updating...' : 'Change Password'}
             </button>
@@ -854,7 +850,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button 
                 type="button" 
                 onClick={() => { setView('login'); setError(''); setMessage(''); }} 
-                className="text-[#1e3a8a] font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
+                className="text-primary font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to Login
               </button>
@@ -870,17 +866,17 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-4 w-4 text-[#6b7280]" />
                 </div>
-                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Enter full name" />
+                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Enter full name" />
               </div>
             </div>
 
             <div>
               <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Father's Name</label>
-              <input type="text" required value={fatherName} onChange={(e) => setFatherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Father's name" />
+              <input type="text" required value={fatherName} onChange={(e) => setFatherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Father's name" />
             </div>
             <div>
               <label className="block text-[0.75rem] font-bold uppercase text-[#4b5563] mb-1">Mother's Name</label>
-              <input type="text" required value={motherName} onChange={(e) => setMotherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Mother's name" />
+              <input type="text" required value={motherName} onChange={(e) => setMotherName(e.target.value)} className="block w-full px-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Mother's name" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -889,7 +885,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Calendar className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <input type="date" required value={dob} onChange={(e) => setDob(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" />
+                  <input type="date" required value={dob} onChange={(e) => setDob(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" />
                 </div>
               </div>
               <div>
@@ -898,7 +894,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <BookOpen className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <select required value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm appearance-none">
+                  <select required value={studentClass} onChange={(e) => setStudentClass(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm appearance-none">
                     <option value="" disabled>Select Class</option>
                     <option value="Playgroup">Playgroup</option>
                     <option value="Nursery">Nursery</option>
@@ -917,7 +913,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-4 w-4 text-[#6b7280]" />
                 </div>
-                <input type="text" required value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Student ID (e.g. STU123)" />
+                <input type="text" required value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Student ID (e.g. STU123)" />
               </div>
             </div>
             <div>
@@ -926,7 +922,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <MapPin className="h-4 w-4 text-[#6b7280]" />
                 </div>
-                <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Full address" />
+                <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Full address" />
               </div>
             </div>
 
@@ -941,7 +937,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required 
                   value={phone} 
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} 
-                  className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" 
+                  className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" 
                   placeholder="98XXXXXXXX or 97XXXXXXXX" 
                   maxLength={10}
                   pattern="^(98|97)\d{8}$"
@@ -956,7 +952,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-4 w-4 text-[#6b7280]" />
                 </div>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="Enter email" />
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="block w-full pl-9 pr-3 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="Enter email" />
               </div>
             </div>
 
@@ -967,8 +963,8 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none">
+                  <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-primary focus:outline-none">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -979,8 +975,8 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-4 w-4 text-[#6b7280]" />
                   </div>
-                  <input type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm" placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-[#1e3a8a] focus:outline-none">
+                  <input type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="block w-full pl-9 pr-10 py-2 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#6b7280] hover:text-primary focus:outline-none">
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -996,7 +992,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
+              className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
             >
               {loading ? 'Registering...' : `Register Account`}
             </button>
@@ -1013,7 +1009,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
+                className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-[#334155] font-semibold py-2.5 px-4 rounded-xl text-sm border border-[#e2e8f0] hover:text-primary hover:border-[#cbd5e1] transition-all shadow-sm active:scale-[0.98]"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -1039,7 +1035,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
 
             <p className="text-center text-sm text-[#475569] mt-6">
               Already have an account?{' '}
-              <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-[#1e3a8a] font-semibold hover:text-[#1e40af] hover:underline transition-colors">
+              <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-primary font-semibold hover:text-primary hover:underline transition-colors">
                 Sign in here
               </button>
             </p>
@@ -1060,7 +1056,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
                   required
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:border-[#1e3a8a] focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all shadow-sm tracking-widest font-bold text-center"
+                  className="block w-full pl-9 pr-3 py-2.5 border border-white/60 rounded-lg bg-white/60 backdrop-blur-sm text-sm focus:outline-none focus:ring-primary focus:ring-2 focus:ring-primary transition-all shadow-sm tracking-widest font-bold text-center"
                   placeholder="123456"
                   maxLength={6}
                 />
@@ -1070,7 +1066,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#f97316] text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-[#ea580c] transition-colors disabled:opacity-70 shadow-md"
+              className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg text-sm mt-4 hover:bg-primary-dark transition-colors disabled:opacity-70 shadow-md"
             >
               {loading ? 'Verifying & Registering...' : 'Verify Phone & Register'}
             </button>
@@ -1078,7 +1074,7 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
               <button 
                 type="button" 
                 onClick={() => { setView('register'); setError(''); setMessage(''); setConfirmationResult(null); }} 
-                className="text-[#1e3a8a] font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
+                className="text-primary font-bold text-sm flex items-center justify-center gap-1 mx-auto hover:underline"
               >
                 <ArrowLeft className="w-4 h-4" /> Cancel & Go Back
               </button>

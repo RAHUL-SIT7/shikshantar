@@ -106,7 +106,7 @@ export default function ReportsAnalyticsTab() {
          </div>
          <div className="flex flex-wrap gap-2">
             <button onClick={exportMonthlyReport} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 flex gap-2 items-center"><FileDown className="w-4 h-4"/> Monthly Report</button>
-            <button onClick={exportFullLedger} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-50 flex gap-2 items-center"><FileDown className="w-4 h-4"/> Full Ledger</button>
+            <button onClick={exportFullLedger} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:text-primary flex gap-2 items-center"><FileDown className="w-4 h-4"/> Full Ledger</button>
          </div>
        </div>
 
@@ -143,7 +143,7 @@ export default function ReportsAnalyticsTab() {
        </div>
 
        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gray-50 p-6 border-b border-gray-100 flex justify-between items-center">
+          <div className="text-primary p-6 border-b border-gray-100 flex justify-between items-center">
              <div>
                <h3 className="text-base font-black text-gray-800">Defaulters List</h3>
                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Students with outstanding dues</p>

@@ -352,11 +352,7 @@ export default function Account() {
                  const isPaid = feeDoc?.status === 'paid' || (Number(feeDoc?.paidAmount) > 0 && Number(feeDoc?.dueAmount) === 0);
                  const isDue = feeDoc?.status === 'due' || Number(feeDoc?.dueAmount) > 0;
                  return (
-                    <div key={m} className={`p-2 md:p-3 rounded-xl border flex flex-col items-center justify-center gap-1 md:gap-2 transition-all cursor-pointer hover:shadow-md ${
-                       isPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
-                       isDue ? 'bg-red-50 border-red-200 text-red-600' : 
-                       'bg-gray-50 border-gray-200 text-gray-400'
-                    }`}>
+                    <div key={m} className={`p-2 md:p-3 rounded-xl border flex flex-col items-center justify-center gap-1 md:gap-2 transition-all cursor-pointer hover:shadow-md ${ isPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : isDue ? 'bg-red-50 border-red-200 text-red-600' : '- border-gray-200 text-gray-400' }`}>
                        <p className="text-[9px] md:text-[11px] font-black uppercase tracking-tight w-full text-center truncate">{m === 'Ashoj' ? 'ASO' : m.slice(0, 3)}.</p>
                        {isPaid ? (
                           <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">✓</div>
@@ -390,7 +386,7 @@ export default function Account() {
                          <span className="font-black text-gray-900">{annualTotal - (((feeStructure?.tuitionFee || 0) * 12) + (feeStructure?.examFee || 0))}</span>
                       </div>
                    )}
-                   <div className="flex justify-between items-center py-3 bg-gray-50 rounded-xl px-4 mt-2">
+                   <div className="flex justify-between items-center py-3 text-primary rounded-xl px-4 mt-2">
                       <span className="text-xs font-black text-gray-800 uppercase tracking-widest">Total</span>
                       <span className="text-lg font-black text-gray-900">NRs. {annualTotal.toLocaleString()}</span>
                    </div>
@@ -406,13 +402,13 @@ export default function Account() {
 
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {paymentHistory.map(txn => (
-                    <div key={txn.id} className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex flex-wrap gap-2 justify-between items-center hover:border-blue-200 transition-colors">
+                    <div key={txn.id} className="border-primary text-primary border border-gray-100 rounded-xl p-4 flex flex-wrap gap-2 justify-between items-center hover:border-blue-200 transition-colors">
                        <div>
                           <p className="text-xs font-black text-gray-900">{txn.receipt || txn.id.substring(0, 8)}</p>
                           <p className="text-[10px] font-bold text-gray-500 uppercase mt-0.5">{txn.date} • {txn.method}</p>
                        </div>
                        <div className="text-right flex items-center gap-4">
-                          <p className="text-sm font-black text-emerald-600">रू {txn.amount.toLocaleString()}</p>
+                          <p className="text-sm font-black text-emerald-600">NRs. {txn.amount.toLocaleString()}</p>
                           <button onClick={() => setReceipt(txn)} className="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg" title="Download">
                              <FileDown className="w-4 h-4" />
                           </button>
@@ -435,7 +431,7 @@ export default function Account() {
          <a 
             href={`https://wa.me/9779807790805?text=${encodeURIComponent(`Namaste, Ma ${studentRecord.name} hu, Class ${studentRecord.class}, Mero fee barema kura garna chahanchhu.`)}`}
             target="_blank" rel="noopener noreferrer"
-            className="w-full bg-[#1e3a8a] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+            className="w-full bg-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
             📞 Contact Fee Office — +977 9807790805
          </a>
       </div>
@@ -450,7 +446,7 @@ export default function Account() {
              <h3 className="text-xl font-black text-gray-800 mb-2">Scan to Pay</h3>
              <p className="text-sm font-bold text-gray-500 mb-6">Amount: <span className="text-[#60bb46]">NRs. {esewaQrData.amount}</span></p>
              
-             <div className="bg-gray-50 p-2 inline-block rounded-xl mx-auto mb-6 border border-gray-100">
+             <div className="border-primary text-primary p-2 inline-block rounded-xl mx-auto mb-6 border border-gray-100">
                 <img 
                    src="https://i.postimg.cc/jd6J3mtF/image.png" 
                    alt="eSewa QR Code" 
@@ -478,7 +474,7 @@ export default function Account() {
                   <div className="mx-auto mb-3 flex items-center justify-center">
                     <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
                   </div>
-                  <h2 className="font-black text-xl text-[#1e3a8a] uppercase tracking-widest">Shikshantar Academy</h2>
+                  <h2 className="font-black text-xl text-primary uppercase tracking-widest">Shikshantar Academy</h2>
                   <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>
                   <div className="mt-4 inline-block bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">
                      Payment Receipt
@@ -486,7 +482,7 @@ export default function Account() {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-xl">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-primary p-4 rounded-xl">
                     <div>
                       <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Receipt No</span>
                       <span className="text-gray-800 font-mono font-black">{receipt.receipt || receipt.id.substring(0, 8)}</span>
@@ -515,7 +511,7 @@ export default function Account() {
                        <div key={m} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
                          <div className="flex justify-between text-sm">
                            <span className="text-blue-800 font-bold">{m} Tuition Fee</span>
-                           <span className="text-blue-900 font-black">रू {netPerMonth.toLocaleString()}</span>
+                           <span className="text-blue-900 font-black">NRs. {netPerMonth.toLocaleString()}</span>
                          </div>
                        </div>
                      )})}
@@ -523,14 +519,14 @@ export default function Account() {
                       <div key={idx} className="space-y-1 pb-3 mb-3 border-b border-blue-100 last:border-0 last:pb-0 last:mb-0">
                          <div className="flex justify-between text-sm">
                            <span className="text-blue-800 font-bold">{f.name}</span>
-                           <span className="text-blue-900 font-black">रू {Number(f.amount).toLocaleString()}</span>
+                           <span className="text-blue-900 font-black">NRs. {Number(f.amount).toLocaleString()}</span>
                          </div>
                       </div>
                      ))}
                      {(receipt.months?.length === 0 && receipt.otherFees?.length === 0) && (
                         <div className="flex justify-between text-sm">
                          <span className="text-blue-800 font-bold">Tuition Payment</span>
-                         <span className="text-blue-900 font-black">रू {(receipt.amount || 0).toLocaleString()}</span>
+                         <span className="text-blue-900 font-black">NRs. {(receipt.amount || 0).toLocaleString()}</span>
                        </div>
                      )}
                   </div>
@@ -538,7 +534,7 @@ export default function Account() {
                   <div className="mt-6 border-t border-b border-gray-200 py-4 divide-y divide-gray-100">
                     <div className="flex justify-between items-center pb-3">
                       <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Total Paid</span>
-                      <span className="text-2xl font-black text-gray-800">रू {(receipt.amount || 0).toLocaleString()}</span>
+                      <span className="text-2xl font-black text-gray-800">NRs. {(receipt.amount || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pt-3 mt-1 text-sm">
                       <span className="font-bold text-gray-500">Method: <span className="text-gray-800">{receipt.method}</span></span>
@@ -559,8 +555,8 @@ export default function Account() {
 
               <div className="p-4 bg-white border-t border-gray-200 space-y-3">
                 <div className="flex gap-3">
-                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 bg-gray-50 border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">Close</button>
-                   <button onClick={downloadReceipt} className="flex-1 py-3 bg-[#1e3a8a] text-white border border-[#1e3a8a] rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg flex justify-center items-center gap-2 hover:bg-blue-900 transition-colors"><FileDown className="w-4 h-4"/> Download PDF</button>
+                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-primary text-primary border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">Close</button>
+                   <button onClick={downloadReceipt} className="flex-1 py-3 bg-primary text-white border bg-primary rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg flex justify-center items-center gap-2 hover:bg-blue-900 transition-colors"><FileDown className="w-4 h-4"/> Download PDF</button>
                 </div>
               </div>
            </div>

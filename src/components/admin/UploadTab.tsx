@@ -231,11 +231,11 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
         <label className="block text-sm font-bold text-gray-700 mb-2">1. Select Type</label>
         <div className="flex gap-4 items-center mb-4 h-[42px]">
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setUploadExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setUploadExamType(''); }} className="w-4 h-4 text-primary focus:ring-primary outline-none" />
                 <span className="text-sm font-bold">Terminal</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setUploadExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setUploadExamType(''); }} className="w-4 h-4 text-primary focus:ring-primary outline-none" />
                 <span className="text-sm font-bold">Test</span>
             </label>
         </div>
@@ -245,7 +245,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
             <select 
                 value={uploadExamType} 
                 onChange={e => setUploadExamType(e.target.value)} 
-                className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none h-[42px]"
+                className="w-full px-4 py-2 border rounded-lg mb-4 border-primary text-primary focus:ring-2 focus:ring-primary outline-none h-[42px]"
             >
                 <option value="">-- Select Terminal --</option>
                 {EXAM_TYPES.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
@@ -255,13 +255,13 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
                 type="text"
                 value={uploadExamType} 
                 onChange={e => setUploadExamType(e.target.value)} 
-                className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none h-[42px]"
+                className="w-full px-4 py-2 border rounded-lg mb-4 border-primary text-primary focus:ring-2 focus:ring-primary outline-none h-[42px]"
                 placeholder="e.g. Unit Test 1"
             />
         )}
 
         <label className="block text-sm font-bold text-gray-700 mb-2">3. Select Class</label>
-        <select value={uploadClass} onChange={e => setUploadClass(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-[#1e3a8a] outline-none">
+        <select value={uploadClass} onChange={e => setUploadClass(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 border-primary text-primary focus:ring-2 focus:ring-primary outline-none">
             <option value="">-- Select Class --</option>
             {allowedClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
             {allowedClasses.length === 0 && <option value="1">Class 1 (Default)</option>}
@@ -271,7 +271,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
         <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg transition-colors ${!uploadClass ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60' : 'bg-[#f9fafb] border-[#e5e7eb] cursor-pointer hover:bg-[#f3f4f6]'}`}>
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Upload className="w-8 h-8 text-[#6b7280] mb-2" />
-            <p className="text-sm text-[#6b7280]"><span className="font-semibold text-[#1e3a8a]">Click to upload</span> or drag and drop</p>
+            <p className="text-sm text-[#6b7280]"><span className="font-semibold text-primary">Click to upload</span> or drag and drop</p>
             <p className="text-xs text-[#6b7280] mt-1">.XLSX, .XLS, or .CSV</p>
           </div>
           <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} disabled={!uploadClass} />
@@ -285,7 +285,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-50 p-6 rounded-lg border border-gray-200">
+      <div className="flex-1 border-primary text-primary p-6 rounded-lg border border-gray-200">
           <h3 className="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2"><FileEdit className="w-5 h-5"/> Upload Requirements</h3>
           <button onClick={downloadTemplate} className="mb-4 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-100 transition-colors w-full justify-center">
              <Download className="w-4 h-4" /> Download Sample Template
@@ -309,7 +309,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
                      <h3 className="font-bold text-lg">Preview Data Form ({previewData.length} students)</h3>
                      <div className="flex gap-2">
                          <button onClick={() => setPreviewData(null)} className="px-4 py-2 rounded-lg bg-gray-100 font-bold text-gray-600 hover:bg-gray-200">Cancel</button>
-                         <button onClick={confirmAndSave} className="px-4 py-2 rounded-lg bg-[#1e3a8a] text-white font-bold hover:bg-[#1e40af] flex items-center gap-2">
+                         <button onClick={confirmAndSave} className="px-4 py-2 rounded-lg bg-primary text-white font-bold hover:bg-primary-dark flex items-center gap-2">
                              <CheckCircle2 className="w-4 h-4" /> Confirm & Save
                          </button>
                      </div>
@@ -327,7 +327,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
                           </thead>
                           <tbody>
                               {previewData.map((row, i) => (
-                                  <tr key={i} className={row._errors.length > 0 ? "bg-red-50" : "hover:bg-gray-50"}>
+                                  <tr key={i} className={row._errors.length > 0 ? "bg-red-50" : "hover:opacity-90"}>
                                       <td className="p-2 border">{row.StudentId || row['Roll no.']}</td>
                                       <td className="p-2 border font-bold flex items-center gap-2">
                                           {row.Name}

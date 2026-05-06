@@ -290,7 +290,7 @@ export default function Profile() {
                      <button onClick={handleSavePhone} disabled={saving} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
                         {saving ? 'Saving...' : 'Save Changes'}
                      </button>
-                     <button onClick={() => setIsEditingPersonal(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                     <button onClick={() => setIsEditingPersonal(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2 rounded-lg hover:text-primary transition-colors">
                         Cancel
                      </button>
                   </div>
@@ -436,7 +436,7 @@ export default function Profile() {
                </button>
              </div>
            ) : (
-             <form onSubmit={handleUpdatePassword} className="bg-gray-50 border border-gray-100 p-5 rounded-xl space-y-4 max-w-lg">
+             <form onSubmit={handleUpdatePassword} className="border-primary text-primary border border-gray-100 p-5 rounded-xl space-y-4 max-w-lg">
                 {pwdError && (
                   <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200">
                     {pwdError}
@@ -495,7 +495,7 @@ export default function Profile() {
                    <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[A-Z]/.test(newPassword) || /[!@#$]/.test(newPassword)} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full sm:w-auto disabled:opacity-50">
                       {pwdLoading ? 'Updating...' : 'Update Password'}
                    </button>
-                   <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-auto text-center">
+                   <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:text-primary transition-colors w-full sm:w-auto text-center">
                       Cancel
                    </button>
                 </div>

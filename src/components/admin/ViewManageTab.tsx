@@ -289,28 +289,25 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                    value={filterExam} 
                    onChange={e=>setFilterExam(e.target.value)} 
                    placeholder="Search or Select Exam..."
-                   className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-primary"
                 />
                 <datalist id="history-exams">
                     {availableExamsForClass.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
                 </datalist>
             </div>
-            <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]">
+            <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-primary">
                 <option value="">All Permitted Classes</option>
                 {allowedClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
             </select>
             <div className="relative flex-1 w-full">
                 <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-                <input type="text" placeholder="Search name or ID..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a]" />
+                <input type="text" placeholder="Search name or ID..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-primary" />
             </div>
             
             <button 
                 onClick={handlePublishResults} 
                 disabled={isPublishing || filteredData.length === 0 || allPublished}
-                className={`w-full md:w-auto px-6 py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all shadow-sm
-                    ${(isPublishing || filteredData.length === 0) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 
-                      allPublished ? 'bg-green-100 border border-green-300 text-green-700 cursor-not-allowed' : 
-                      'bg-[#10b981] text-white hover:bg-[#059669] active:scale-95'}`}
+                className={`w-full md:w-auto px-6 py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all shadow-sm ${(isPublishing || filteredData.length === 0) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : allPublished ? 'bg-green-100 border border-green-300 text-green-700 cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] active:scale-95'}`}
             >
                 {allPublished || publishSuccess ? <CheckCircle2 className="w-4 h-4" /> : <BellRing className="w-4 h-4" />}
                 {allPublished ? '✓ Published ' : isPublishing ? 'Publishing...' : 'Publish to Students'}
@@ -320,7 +317,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
         {classStats && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-xl mb-6 shadow-sm flex flex-wrap gap-6 items-center">
                 <div className="flex-1 min-w-[200px]">
-                   <h3 className="font-black text-[#1e3a8a] text-lg mb-2">Class Statistics ({filterClass ? `Class ${filterClass}` : 'All Classes'}{filterExam ? ` - ${filterExam}` : ''})</h3>
+                   <h3 className="font-black text-primary text-lg mb-2">Class Statistics ({filterClass ? `Class ${filterClass}` : 'All Classes'}{filterExam ? ` - ${filterExam}` : ''})</h3>
                    <div className="flex gap-4 text-sm font-bold text-gray-700">
                       <div><span className="text-gray-500 block text-xs">High</span> {classStats.max.toFixed(1)}%</div>
                       <div><span className="text-gray-500 block text-xs">Low</span> {classStats.min.toFixed(1)}%</div>
@@ -357,12 +354,12 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                 const groupSubjects = Array.from(new Set(groupStudents.flatMap(std => Object.keys(std.subjects))));
                 return (
                 <div key={groupTitle} className="mb-8 last:mb-0">
-                    <h4 className="font-black text-[#1e3a8a] text-md px-4 py-2 bg-blue-50 border border-blue-100 rounded-t-xl">
+                    <h4 className="font-black border-primary text-primary text-md px-4 py-2 bg-blue-50 border border-blue-100 rounded-t-xl">
                         {groupTitle}
                     </h4>
                     <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 border-t-0 overflow-x-auto">
                         <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-[#f8fafc] border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
+                            <thead className="text-primary border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
                                 <tr>
                                     <th className="p-4">Rank</th>
                                     <th className="p-4">Student</th>
@@ -401,14 +398,9 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                                             )
                                         })}
                                         <td className="p-4 text-center font-black text-gray-800">{std.total}</td>
-                                        <td className="p-4 text-center font-black text-[#1e3a8a]">{std.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 text-center font-black text-primary">{std.percentage.toFixed(1)}%</td>
                                         <td className="p-4 text-center">
-                                            <span className={`px-2 py-1 rounded-sm text-xs font-black ${
-                                               std.grade.includes('A') ? 'bg-green-100 text-green-700' : 
-                                               std.grade.includes('B') ? 'bg-blue-100 text-[#1e3a8a]' : 
-                                               std.grade.includes('C') ? 'bg-orange-100 text-orange-700' :
-                                               'bg-red-100 text-red-700'
-                                            }`}>
+                                            <span className={`px-2 py-1 rounded-sm text-xs font-black ${ std.grade.includes('A') ? 'bg-green-100 text-green-700' : std.grade.includes('B') ? 'bg-blue-100 -' : std.grade.includes('C') ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700' }`}>
                                                 {std.grade || '-'}
                                             </span>
                                         </td>
@@ -420,7 +412,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-[#1e3a8a] hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:text-primary hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
                                                 <button onClick={() => deleteRecord(std.studentId, std.examType)} className="p-2 bg-gray-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
                                             </div>
                                         </td>
@@ -438,12 +430,12 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
         {editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                    <div className="p-4 border-b bg-gray-50 flex justify-between items-center text-gray-800">
+                    <div className="p-4 border-b text-primary flex justify-between items-center text-gray-800">
                         <h3 className="font-black uppercase tracking-wider text-sm flex items-center gap-2"><Edit2 className="w-4 h-4"/> Edit Record: {editingRecord.studentName}</h3>
                         <button onClick={() => setEditingRecord(null)} className="p-1 hover:bg-gray-200 rounded-full"><X className="w-5 h-5"/></button>
                     </div>
                     <div className="p-6 overflow-y-auto bg-white flex-1 space-y-4">
-                       <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-4">
+                       <div className="grid grid-cols-2 gap-4 border-primary text-primary p-3 rounded-lg border border-gray-100 mb-4">
                            <div><span className="text-xs font-bold text-gray-400 uppercase">Class</span><p className="font-bold">{editingRecord.class}</p></div>
                            <div><span className="text-xs font-bold text-gray-400 uppercase">Exam Type</span><p className="font-bold">{editingRecord.examType}</p></div>
                        </div>
@@ -463,7 +455,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                                                [s]: { ...marks, obtained: val as any }
                                            }
                                        })
-                                   }} className="w-24 text-center px-3 py-1.5 border rounded-lg font-black text-lg focus:ring-2 focus:ring-[#1e3a8a] outline-none" />
+                                   }} className="w-24 text-center px-3 py-1.5 border rounded-lg font-black text-lg focus:ring-2 focus:ring-primary outline-none" />
                                </div>
                            );
                        })}
@@ -473,9 +465,9 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                            <textarea value={editReason} onChange={e=>setEditReason(e.target.value)} rows={2} className="w-full p-2 border border-red-200 rounded-lg bg-red-50 outline-none focus:ring-2 focus:ring-red-400" placeholder="e.g. Recounting verified by Principal..."></textarea>
                        </div>
                     </div>
-                    <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                    <div className="p-4 border-t text-primary flex justify-end gap-2">
                         <button onClick={() => setEditingRecord(null)} className="px-4 py-2 font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button>
-                        <button onClick={saveEdit} disabled={!editReason} className={`px-5 py-2 font-bold rounded-lg flex items-center gap-2 ${editReason ? 'bg-[#1e3a8a] text-white hover:bg-[#1e40af] shadow-md' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><Save className="w-4 h-4"/> Save Changes</button>
+                        <button onClick={saveEdit} disabled={!editReason} className={`px-5 py-2 font-bold rounded-lg flex items-center gap-2 ${editReason ? '- text-white hover:bg-primary-dark shadow-md' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><Save className="w-4 h-4"/> Save Changes</button>
                     </div>
                 </div>
             </div>

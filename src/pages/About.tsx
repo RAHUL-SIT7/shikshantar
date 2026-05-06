@@ -62,7 +62,7 @@ export default function About() {
               </button>
             </div>
           ) : (
-             <button onClick={() => setIsEditing(true)} className="bg-[#1e3a8a] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#1e40af] shadow-md transition-all active:scale-95">
+             <button onClick={() => setIsEditing(true)} className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-primary-dark shadow-md transition-all active:scale-95">
                 <Edit2 className="w-4 h-4"/> Edit Page Content
              </button>
           )}
@@ -73,20 +73,20 @@ export default function About() {
       <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 relative overflow-hidden mb-8 group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
         <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-[#1e3a8a] text-xs font-black tracking-widest mb-6 uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 bg-primary text-xs font-black tracking-widest mb-6 uppercase">
             <Info className="w-3.5 h-3.5" />
             About Our Institution
           </div>
           <h1 className="text-4xl md:text-5xl font-black leading-tight text-gray-900 mb-4 tracking-tight">
             Shikshantar Academy
           </h1>
-          <p className="text-lg md:text-xl font-bold text-[#f97316] mb-8">
+          <p className="text-lg md:text-xl font-bold text-primary mb-8">
             Empowering Minds, Shaping Futures
           </p>
           
           {isEditing ? (
             <textarea 
-              className="w-full text-base text-gray-700 leading-relaxed p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[120px]"
+              className="w-full text-base text-gray-700 leading-relaxed p-4 border-primary text-primary border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all resize-y min-h-[120px]"
               value={tempContent.aboutUs}
               onChange={(e) => setTempContent({...tempContent, aboutUs: e.target.value})}
             />
@@ -101,7 +101,7 @@ export default function About() {
               href="https://maps.app.goo.gl/n3Y7iLB1fry5cqtX9"
               target="_blank"
               rel="noopener noreferrer"
-              className="group/btn inline-flex items-center gap-2 px-6 py-3 bg-[#1e3a8a] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1e40af] hover:shadow-lg transition-all active:scale-95"
+              className="group/btn inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold shadow-md hover:bg-primary-dark hover:shadow-lg transition-all active:scale-95"
             >
               <MapPin className="h-4 w-4 transition-transform group-hover/btn:-translate-y-0.5" />
               Find Us on Map
@@ -116,13 +116,13 @@ export default function About() {
         {/* Mission & Vision Column */}
         <div className="flex flex-col gap-8">
           <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex-1 relative overflow-hidden group">
-            <div className="w-12 h-12 bg-blue-50 text-[#1e3a8a] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all duration-300">
+            <div className="w-12 h-12 bg-blue-50 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[var(--primary)] group-hover:text-white transition-all duration-300">
                <Target className="w-6 h-6" />
             </div>
             <h2 className="text-xl font-black text-gray-900 mb-4">Our Mission</h2>
             {isEditing ? (
               <textarea 
-                className="w-full text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[100px]"
+                className="w-full text-sm text-gray-700 leading-relaxed p-3 border-primary text-primary border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all resize-y min-h-[100px]"
                 value={tempContent.mission}
                 onChange={(e) => setTempContent({...tempContent, mission: e.target.value})}
               />
@@ -134,13 +134,13 @@ export default function About() {
           </section>
 
           <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex-1 relative overflow-hidden group">
-            <div className="w-12 h-12 bg-orange-50 text-[#f97316] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[#f97316] group-hover:text-white transition-all duration-300">
+            <div className="w-12 h-12 bg-orange-50 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[var(--primary)] group-hover:text-white transition-all duration-300">
                <Eye className="w-6 h-6" />
             </div>
             <h2 className="text-xl font-black text-gray-900 mb-4">Our Vision</h2>
             {isEditing ? (
               <textarea 
-                className="w-full text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[100px]"
+                className="w-full text-sm text-gray-700 leading-relaxed p-3 border-primary text-primary border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all resize-y min-h-[100px]"
                 value={tempContent.vision}
                 onChange={(e) => setTempContent({...tempContent, vision: e.target.value})}
               />
@@ -165,7 +165,7 @@ export default function About() {
             
             {isEditing ? (
               <textarea 
-                className="w-full text-sm text-gray-700 leading-relaxed p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1e3a8a] focus:bg-white outline-none transition-all resize-y min-h-[120px]"
+                className="w-full text-sm text-gray-700 leading-relaxed p-4 border-primary text-primary border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all resize-y min-h-[120px]"
                 value={tempContent.history}
                 onChange={(e) => setTempContent({...tempContent, history: e.target.value})}
               />
@@ -186,27 +186,27 @@ export default function About() {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                  <div className="border-primary text-primary p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
                     <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Excellence</h4>
                     <p className="text-xs text-gray-500 leading-relaxed">Striving for the highest standards in academics and character.</p>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                  <div className="border-primary text-primary p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
                     <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Integrity</h4>
                     <p className="text-xs text-gray-500 leading-relaxed">Fostering honesty, ethical behavior, and accountability.</p>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                  <div className="border-primary text-primary p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
                     <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Respect</h4>
                     <p className="text-xs text-gray-500 leading-relaxed">Valuing diversity and treating everyone with dignity.</p>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+                  <div className="border-primary text-primary p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
                     <h4 className="font-bold text-gray-900 mb-1.5 flex items-center gap-2">Innovation</h4>
                     <p className="text-xs text-gray-500 leading-relaxed">Embracing modern teaching methodologies and technology.</p>
                   </div>
                 </div>
              </section>
 
-             <section className="bg-[#1a2744] text-white rounded-3xl p-8 shadow-lg flex flex-col justify-center relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#25375f] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
+             <section className="bg-primary text-white rounded-3xl p-8 shadow-lg flex flex-col justify-center relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
                 <div className="absolute -bottom-8 -right-8 opacity-5 transform rotate-[-20deg] scale-150 transition-transform duration-700 group-hover:scale-[1.6]">
                   <img src={logoImage} alt="" className="w-48 h-48 object-contain grayscale" />
                 </div>
@@ -219,7 +219,7 @@ export default function About() {
                       </blockquote>
                   </div>
                   <div>
-                    <div className="h-1 w-12 bg-[#f97316] rounded-full mb-4"></div>
+                    <div className="h-1 w-12 text-primary rounded-full mb-4"></div>
                     <p className="font-black text-white text-base tracking-wide uppercase">Management Team</p>
                     <p className="text-sm text-blue-300 font-medium">Shikshantar Academy</p>
                   </div>

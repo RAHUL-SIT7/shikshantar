@@ -281,31 +281,19 @@ export default function Gallery() {
         <div className="flex gap-2">
           <button
             onClick={() => switchTab('teachers')}
-            className={`px-3 py-1 text-xs rounded border ${
-              activeTab === 'teachers'
-                ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
-                : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb]'
-            }`}
+            className={`px-3 py-1 text-xs font-bold rounded border ${ activeTab === 'teachers' ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb] hover:bg-gray-100' }`}
           >
             Faculty & Team
           </button>
           <button
             onClick={() => switchTab('batches')}
-            className={`px-3 py-1 text-xs rounded border ${
-              activeTab === 'batches'
-                ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
-                : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb]'
-            }`}
+            className={`px-3 py-1 text-xs font-bold rounded border ${ activeTab === 'batches' ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb] hover:bg-gray-100' }`}
           >
             Batches
           </button>
           <button
             onClick={() => switchTab('events')}
-            className={`px-3 py-1 text-xs rounded border ${
-              activeTab === 'events'
-                ? 'bg-[#1e3a8a] text-white border-[#1e3a8a]'
-                : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb]'
-            }`}
+            className={`px-3 py-1 text-xs font-bold rounded border ${ activeTab === 'events' ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb] hover:bg-gray-100' }`}
           >
             Events
           </button>
@@ -313,7 +301,7 @@ export default function Gallery() {
       </div>
 
       {isAdminOrTeacher && (
-        <div className="bg-[#f8fafc] p-4 rounded-lg border border-[#e2e8f0] mb-6 shadow-sm">
+        <div className="border-primary text-primary p-4 rounded-lg border border-[#e2e8f0] mb-6 shadow-sm">
           <h3 className="text-sm font-bold text-[#1e293b] mb-3 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
             <span>Add New Media to {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>
             <div className="flex flex-wrap gap-2">
@@ -337,36 +325,36 @@ export default function Gallery() {
           </h3>
           
           <div className="flex gap-2 mb-3">
-            <button onClick={() => setUploadMode('url')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'url' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+            <button onClick={() => setUploadMode('url')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'url' ? 'bg-[var(--primary)] text-white' : 'bg-white border text-[#6b7280]'}`}>
               <LinkIcon className="w-3 h-3"/> URL
             </button>
-            <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+            <button onClick={() => setUploadMode('file')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'file' ? 'bg-[var(--primary)] text-white' : 'bg-white border text-[#6b7280]'}`}>
               <Upload className="w-3 h-3"/> Device
             </button>
-            <button onClick={() => setUploadMode('camera')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'camera' ? 'bg-[#1e3a8a] text-white' : 'bg-white border text-[#6b7280]'}`}>
+            <button onClick={() => setUploadMode('camera')} className={`px-3 py-1.5 text-xs font-bold rounded flex items-center gap-1 ${uploadMode === 'camera' ? 'bg-[var(--primary)] text-white' : 'bg-white border text-[#6b7280]'}`}>
               <ImageIcon className="w-3 h-3"/> Camera
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             {uploadMode === 'url' ? (
-              <input type="text" placeholder="Image URL (e.g. from Imgur)" value={newImage.url} onChange={(e) => setNewImage({...newImage, url: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+              <input type="text" placeholder="Image URL (e.g. from Imgur)" value={newImage.url} onChange={(e) => setNewImage({...newImage, url: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-gray-800" />
             ) : uploadMode === 'camera' ? (
               <div className="flex flex-col gap-1">
                 <span className="text-[0.65rem] font-bold text-gray-500 uppercase">Will request Camera Permission</span>
-                <input ref={fileInputRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+                <input ref={fileInputRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[var(--primary)] file:text-white hover:file:opacity-90" />
               </div>
             ) : (
               <div className="flex flex-col gap-1">
                  <span className="text-[0.65rem] font-bold text-gray-500 uppercase">Select from File System (Images/Video up to 5min)</span>
-                 <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1e3a8a]/10 file:text-[#1e3a8a] hover:file:bg-[#1e3a8a]/20" />
+                 <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileChange} className="px-3 py-1.5 border border-[#cbd5e1] rounded-lg text-sm w-full bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[var(--primary)] file:text-white hover:file:opacity-90" />
               </div>
             )}
             
-            <input type="text" placeholder={activeTab === 'teachers' ? 'Teacher Name' : activeTab === 'batches' ? 'Batch Year (e.g. 2082)' : 'Event Title'} value={newImage.caption} onChange={(e) => setNewImage({...newImage, caption: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+            <input type="text" placeholder={activeTab === 'teachers' ? 'Teacher Name' : activeTab === 'batches' ? 'Batch Year (e.g. 2082)' : 'Event Title'} value={newImage.caption} onChange={(e) => setNewImage({...newImage, caption: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-gray-800" />
             
             {activeTab === 'teachers' && (
-              <input type="text" placeholder="Subject / Role" value={newImage.role} onChange={(e) => setNewImage({...newImage, role: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 focus:border-[#1e3a8a]" />
+              <input type="text" placeholder="Subject / Role" value={newImage.role} onChange={(e) => setNewImage({...newImage, role: e.target.value})} className="px-3 py-2 border border-[#cbd5e1] rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-gray-800" />
             )}
           </div>
           
@@ -382,7 +370,7 @@ export default function Gallery() {
           )}
 
           <div className="flex gap-3 items-center">
-            <button disabled={isUploading} onClick={handleAddMedia} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm ${isUploading ? 'bg-[#cbd5e1] text-[#475569] cursor-not-allowed' : 'bg-[#1e3a8a] text-white hover:bg-[#1e40af]'}`}>
+            <button disabled={isUploading} onClick={handleAddMedia} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm ${isUploading ? 'bg-[#cbd5e1] text-[#475569] cursor-not-allowed' : 'bg-[var(--primary)] text-white hover:opacity-90'}`}>
               {isUploading ? 'Uploading...' : 'Upload Media'}
             </button>
             {isUploading && uploadMode === 'file' && (
@@ -413,12 +401,12 @@ export default function Gallery() {
               )}
               <div className={`aspect-[4/5] rounded-lg overflow-hidden mb-3 border border-gray-100 ${isDeleteMode ? 'pointer-events-none' : ''}`}>
                 {teacher.type === 'video' || teacher.image?.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
-                  <video src={teacher.image} className="w-full h-full object-cover shadow-sm bg-gray-50" muted />
+                  <video src={teacher.image} className="w-full h-full object-cover shadow-sm text-primary" muted />
                 ) : (
                   <img
                     src={teacher.image}
                     alt={teacher.name}
-                    className="w-full h-full object-cover shadow-sm bg-gray-50"
+                    className="w-full h-full object-cover shadow-sm text-primary"
                     referrerPolicy="no-referrer"
                   />
                 )}

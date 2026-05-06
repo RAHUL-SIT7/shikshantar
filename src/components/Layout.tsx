@@ -215,10 +215,12 @@ export default function Layout({
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
       nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
     } else if (role === 'admin') {
+      nav = nav.filter(item => item.name !== 'Fee Structure');
       nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User, group: 2 });
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
       nav.push({ name: 'Administrative User Management', href: '/user-approvals', icon: Shield, group: 5 });
+      nav.push({ name: 'Theme Settings', href: '/theme-settings', icon: Settings, group: 5 });
       nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
     }
     
@@ -306,9 +308,9 @@ export default function Layout({
   };
 
   return (
-    <div className="h-screen w-full flex bg-[#f3f4f6] text-[#1f2937] overflow-hidden print:h-auto print:bg-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+    <div className="h-screen w-full flex bg-[#f3f4f6] text-[#1f2937] font-sans overflow-hidden print:h-auto print:bg-white">
       {/* Sidebar Navigation */}
-      <aside className="w-[220px] bg-[#1e3a8a] text-white flex-col py-5 hidden md:flex shrink-0 print:hidden">
+      <aside className="w-[220px] bg-primary text-white flex-col py-5 hidden md:flex shrink-0 print:hidden">
         <div className="px-5 pb-[30px] flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-white p-1 mb-3 shadow-md flex items-center justify-center">
             <img src={logoUrl} alt="Shikshantar Academy Logo" className="w-full h-full object-contain rounded-full" />
@@ -348,11 +350,7 @@ export default function Layout({
                     <li>
                       <Link
                         to={item.href}
-                        className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
-                          location.pathname === item.href 
-                            ? 'bg-white/10 border-[#f97316]' 
-                            : 'border-transparent hover:bg-white/5'
-                        }`}
+                        className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${ location.pathname === item.href ? 'bg-white/10 -' : 'border-transparent hover:bg-white/5' }`}
                       >
                         <Icon className="w-4 h-4" />
                         {item.name}
@@ -378,11 +376,7 @@ export default function Layout({
                 <li>
                   <Link
                     to="/login"
-                    className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${
-                      location.pathname === '/login' 
-                        ? 'bg-white/10 border-[#fca5a5] text-[#fca5a5]' 
-                        : 'border-transparent hover:bg-white/5 text-[#fca5a5]'
-                    }`}
+                    className={`px-6 py-2.5 text-[0.85rem] cursor-pointer flex items-center gap-3 transition-colors border-l-4 ${ location.pathname === '/login' ? 'bg-white/10 border-[#fca5a5] text-[#fca5a5]' : 'border-transparent hover:bg-white/5 text-[#fca5a5]' }`}
                   >
                     <LogIn className="w-4 h-4" />
                     Login
@@ -393,7 +387,7 @@ export default function Layout({
           </nav>
         </div>
         
-        <div className="shrink-0 p-4 border-t border-white/10 bg-[#1e40af]/30">
+        <div className="shrink-0 p-4 border-t border-white/10 text-primary">
           <div className="text-[0.65rem] opacity-60 uppercase tracking-wider font-bold">Academic Year</div>
           <div className="text-[0.85rem] font-bold text-white shadow-sm">{academicYearString}</div>
         </div>
@@ -402,7 +396,7 @@ export default function Layout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden print:h-auto print:overflow-visible relative">
         {/* Mobile Header */}
-        <div className="md:hidden bg-[#1e3a8a] text-white p-4 flex justify-between items-center shrink-0 print:hidden shadow-md relative z-20">
+        <div className="md:hidden bg-primary text-white p-4 flex justify-between items-center shrink-0 print:hidden shadow-md relative z-20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white p-0.5 flex items-center justify-center">
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain rounded-full" />
@@ -416,7 +410,7 @@ export default function Layout({
              <button onClick={() => setIsBellOpen(!isBellOpen)} className="relative p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <Bell className="w-6 h-6" />
                 {unreadUrgentCount > 0 && (
-                   <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-[#1e3a8a] text-white">
+                   <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center border-2 bg-primary text-white">
                       {unreadUrgentCount}
                    </span>
                 )}
@@ -443,7 +437,7 @@ export default function Layout({
          </div>
          <div className="max-h-80 overflow-y-auto pt-4 pb-2 px-1 custom-scrollbar">
              {combinedBellItems.length > 0 ? combinedBellItems.map(n => (
-               <div key={n.id} onClick={(e) => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); markAsRead(n.id, !!n.isAdmission, e, false); }} className="block p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer group relative">
+               <div key={n.id} onClick={(e) => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); markAsRead(n.id, !!n.isAdmission, e, false); }} className="block p-3 border-b border-gray-50 hover:text-primary cursor-pointer group relative">
                   <div className="flex justify-between items-center mb-1.5 pr-8">
                      <span className={`text-[9px] leading-tight font-bold px-1.5 py-0.5 rounded uppercase flex items-center h-4 border border-current/10 ${n.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{n.isAdmission ? 'Admission' : n.priority}</span>
                      {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
@@ -466,7 +460,7 @@ export default function Layout({
                    No notifications
                  </div>}
          </div>
-         <div className="p-2 bg-gray-50 text-center border-t border-gray-100">
+         <div className="p-2 text-primary text-center border-t border-gray-100">
             <Link to="/notices" onClick={() => setIsBellOpen(false)} className="text-sm font-bold text-blue-600 hover:text-blue-800 w-full text-center block outline-none">Open Notice Board</Link>
          </div>
       </div>
@@ -474,7 +468,7 @@ export default function Layout({
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-[#1e3a8a] text-white absolute top-[72px] left-0 right-0 z-50 border-t border-white/10 shadow-xl overflow-y-auto max-h-[calc(100vh-72px)] pb-6">
+          <div className="md:hidden bg-primary text-white absolute top-[72px] left-0 right-0 z-50 border-t border-white/10 shadow-xl overflow-y-auto max-h-[calc(100vh-72px)] pb-6">
             <div className="px-6 py-4 flex items-center gap-3 border-b border-white/10">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                 <User className="w-5 h-5 text-white" />
@@ -497,9 +491,7 @@ export default function Layout({
                     <Link
                       to={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-3 px-6 py-3.5 text-[0.95rem] border-l-4 ${
-                        location.pathname === item.href ? 'bg-white/10 border-[#f97316]' : 'border-transparent active:bg-white/5'
-                      }`}
+                      className={`flex items-center gap-3 px-6 py-3.5 text-[0.95rem] border-l-4 ${ location.pathname === item.href ? 'bg-white/10 -' : 'border-transparent active:bg-white/5' }`}
                     >
                       <Icon className="w-5 h-5 opacity-80" />
                       {item.name}
@@ -532,7 +524,7 @@ export default function Layout({
              <div className="flex items-center gap-3">
                <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" />
                <div className="flex flex-col justify-center">
-                  <h1 className="text-base font-bold text-[#1e3a8a] leading-none mb-1">Shikshantar Academy | Siraha</h1>
+                  <h1 className="text-base font-bold text-primary leading-none mb-1">Shikshantar Academy | Siraha</h1>
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none">Admin Control Panel</p>
                </div>
              </div>
@@ -567,7 +559,7 @@ export default function Layout({
                     </div>
                     <div className="max-h-80 overflow-y-auto pt-4 pb-2 px-1 custom-scrollbar">
                        {combinedBellItems.length > 0 ? combinedBellItems.map(n => (
-                          <div key={n.id} onClick={(e) => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); markAsRead(n.id, !!n.isAdmission, e, false); }} className="block p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer group relative">
+                          <div key={n.id} onClick={(e) => { setIsBellOpen(false); navigate(n.isAdmission ? '/admin-admissions' : '/notices'); markAsRead(n.id, !!n.isAdmission, e, false); }} className="block p-3 border-b border-gray-50 hover:text-primary cursor-pointer group relative">
                              <div className="flex justify-between items-center mb-2 pr-10">
                                 <span className={`text-[9px] leading-none font-bold px-1.5 py-0.5 rounded uppercase flex items-center h-4 border border-current/10 ${n.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{n.isAdmission ? 'Admission' : n.priority}</span>
                                 {(!n.readBy || !n.readBy.includes(auth.currentUser?.uid || studentId || 'guest')) && !localReads.includes(n.id) && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-2 ring-white"></span>}
@@ -590,7 +582,7 @@ export default function Layout({
                               No recent notifications
                             </div>}
                     </div>
-                    <div className="p-3 bg-gray-50 text-center border-t border-gray-100">
+                    <div className="p-3 text-primary text-center border-t border-gray-100">
                        <Link to="/notices" onClick={() => setIsBellOpen(false)} className="text-sm font-bold text-blue-600 hover:text-blue-800 w-full text-center block outline-none">Open Notice Board</Link>
                     </div>
                  </div>
@@ -600,7 +592,7 @@ export default function Layout({
             <div className="text-right border-l border-gray-200 pl-6">
               <div className="text-[0.8rem] font-bold flex items-center justify-end gap-2 text-[#1f2937]">
                 {isAuthenticated ? (
-                   <span className="px-2.5 py-0.5 rounded-full bg-[#1e3a8a] text-white text-[10px] uppercase font-black tracking-widest shadow-sm">
+                   <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[10px] uppercase font-black tracking-widest shadow-sm">
                       {role.toUpperCase()}
                    </span>
                 ) : 'Guest User'}
@@ -624,7 +616,7 @@ export default function Layout({
           </div>
 
           {/* Professional Footer */}
-          <footer className="bg-[#1e3a8a] text-white py-10 shrink-0 print:hidden mt-auto border-t-[4px] border-[#f97316]">
+          <footer className="bg-primary text-white py-10 shrink-0 print:hidden mt-auto border-t-[4px] bg-primary">
             <div className="max-w-6xl mx-auto px-5 grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Branding Section */}
               <div className="flex flex-col gap-4">
@@ -644,17 +636,17 @@ export default function Layout({
 
               {/* Quick Links */}
               <div>
-                <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-4 border-b border-white/20 pb-2 inline-block">Quick Links</h4>
+                <h4 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-4 border-b border-white/20 pb-2 inline-block">Quick Links</h4>
                 <ul className="space-y-2 text-sm opacity-90 font-medium">
-                  <li><Link to="/about" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> About Us</Link></li>
-                  <li><Link to="/admission" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Admission Form</Link></li>
-                  <li><Link to="/notices" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Notice Board</Link></li>
-                  <li><Link to="/gallery" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Photo Gallery</Link></li>
-                  <li><Link to="/alumni" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Alumni / Success</Link></li>
-                  <li><Link to="/faq" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> FAQ</Link></li>
-                  <li><Link to="/contact" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Contact Us</Link></li>
+                  <li><Link to="/about" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> About Us</Link></li>
+                  <li><Link to="/admission" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Admission Form</Link></li>
+                  <li><Link to="/notices" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Notice Board</Link></li>
+                  <li><Link to="/gallery" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Photo Gallery</Link></li>
+                  <li><Link to="/alumni" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Alumni / Success</Link></li>
+                  <li><Link to="/faq" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> FAQ</Link></li>
+                  <li><Link to="/contact" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Contact Us</Link></li>
                   {!isAuthenticated && (
-                    <li><Link to="/login" className="hover:text-[#f97316] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#f97316] rounded-full inline-block"></span> Login Portal</Link></li>
+                    <li><Link to="/login" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Login Portal</Link></li>
                   )}
                 </ul>
               </div>
@@ -664,15 +656,15 @@ export default function Layout({
                 <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-4 border-b border-white/20 pb-2 inline-block">Contact Us</h4>
                 <ul className="space-y-3 justify-center text-sm opacity-90 mb-6">
                   <li className="flex items-start gap-3">
-                    <Building className="w-5 h-5 text-[#f97316] shrink-0" />
+                    <Building className="w-5 h-5 text-[var(--accent)] shrink-0" />
                     <span>Location: Karjanha Municipality, Ward No. 05, Siraha, Madhesh Province, Nepal.</span>
                   </li>
                   <li className="flex items-center gap-3">
-                    <Megaphone className="w-5 h-5 text-[#f97316] shrink-0" />
+                    <Megaphone className="w-5 h-5 text-[var(--accent)] shrink-0" />
                     <span>Postal Code: 56500</span>
                   </li>
                   <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-[#f97316] shrink-0" />
+                    <Check className="w-5 h-5 text-[var(--accent)] shrink-0" />
                     <span>Dedicated to Bright Futures</span>
                   </li>
                 </ul>
@@ -680,7 +672,7 @@ export default function Layout({
                   href="https://maps.app.goo.gl/n3Y7iLB1fry5cqtX9" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="inline-flex items-center gap-2 bg-[#f97316] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-[#ea580c] transition-colors active:scale-95"
+                  className="inline-flex items-center gap-2 bg-white text-[var(--primary)] px-5 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-gray-100 transition-colors active:scale-95"
                 >
                   <MapPin className="w-4 h-4" />
                   Find Us

@@ -173,13 +173,13 @@ export function ReportCardsTab({ EXAM_TYPES, allClasses, data, setStatus }: any)
                    value={filterExam} 
                    onChange={e=>setFilterExam(e.target.value)} 
                    placeholder="Search or Select Exam..."
-                   className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                   className="w-full md:w-auto px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-primary"
                 />
                 <datalist id="reportcard-exams">
                     {availableExamsForClass.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
                 </datalist>
             </div>
-            <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#1e3a8a]">
+            <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="px-4 py-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-primary">
                 <option value="">-- Select Class --</option>
                 {allClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
             </select>
@@ -209,12 +209,12 @@ export function ReportCardsTab({ EXAM_TYPES, allClasses, data, setStatus }: any)
                 }, {} as Record<string, any[]>)
             ) as [string, any[]][]).map(([groupTitle, groupStudents]) => (
                 <div key={groupTitle} className="mb-8 last:mb-0">
-                    <h4 className="font-black text-[#1e3a8a] text-md px-4 py-2 bg-blue-50 border border-blue-100 rounded-t-xl">
+                    <h4 className="font-black border-primary text-primary text-md px-4 py-2 bg-blue-50 border border-blue-100 rounded-t-xl">
                         {groupTitle}
                     </h4>
                     <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
                         <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-[#f8fafc] border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
+                            <thead className="text-primary border-b text-gray-600 font-bold uppercase text-[10px] tracking-widest">
                                 <tr>
                                     <th className="p-4">Rank</th>
                                     <th className="p-4">Student</th>
@@ -225,13 +225,13 @@ export function ReportCardsTab({ EXAM_TYPES, allClasses, data, setStatus }: any)
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {groupStudents.map((std: any) => (
-                                    <tr key={`${std.studentId}_${std.examType}`} className="hover:bg-gray-50">
+                                    <tr key={`${std.studentId}_${std.examType}`} className="hover:text-primary">
                                         <td className="p-4 font-black text-gray-600">#{std.rank}</td>
                                         <td className="p-4 font-bold text-gray-800 uppercase">{std.studentName} <span className="text-gray-400 font-normal text-xs ml-2">ID: {std.studentId}</span></td>
                                         <td className="p-4 font-bold text-gray-600">{std.total} / {std.fullTotal}</td>
-                                        <td className="p-4 font-black text-[#1e3a8a]">{std.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 font-black text-primary">{std.percentage.toFixed(1)}%</td>
                                         <td className="p-4 text-right">
-                                            <button onClick={() => handleDownloadSingle(std)} disabled={generating} className="bg-gray-100 text-[#1e3a8a] px-4 py-1.5 rounded-md font-bold text-xs hover:bg-gray-200 flex items-center gap-2 ml-auto">
+                                            <button onClick={() => handleDownloadSingle(std)} disabled={generating} className="bg-gray-100 text-primary px-4 py-1.5 rounded-md font-bold text-xs hover:bg-gray-200 flex items-center gap-2 ml-auto">
                                                 <Download className="w-3 h-3" /> Download PDF
                                             </button>
                                         </td>

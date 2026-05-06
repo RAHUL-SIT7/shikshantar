@@ -60,7 +60,7 @@ export default function Events() {
                   )}
                 </div>
                 <div className="flex flex-col justify-center">
-                  <div className="flex items-center gap-1 text-[#f97316] text-[0.65rem] font-bold uppercase mb-1">
+                  <div className="flex items-center gap-1 text-primary text-[0.65rem] font-bold uppercase mb-1">
                     <Calendar className="h-3 w-3" />
                     {event.date}
                   </div>
@@ -90,7 +90,7 @@ export default function Events() {
               </p>
             </div>
           </div>
-          <button className="w-full bg-[#f97316] text-white border-none py-2 px-3 rounded-md text-[0.8rem] font-medium cursor-pointer mt-6">
+          <button className="w-full bg-primary text-white border-none py-2 px-3 rounded-md text-[0.8rem] font-medium cursor-pointer mt-6">
             Open School Location (Maps)
           </button>
         </section>

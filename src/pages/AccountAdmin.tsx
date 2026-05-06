@@ -165,77 +165,77 @@ export default function AccountAdmin() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-10">
       <div className="mb-2">
-        <h1 className="text-2xl md:text-3xl font-black text-[#1e3a8a] tracking-tight uppercase">Fee Management</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-primary tracking-tight uppercase">Fee Management</h1>
       </div>
       
       {/* Top Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in zoom-in-95 duration-500">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 animate-in fade-in zoom-in-95 duration-500">
         {/* Card 1 */}
-        <div className="bg-emerald-50 rounded-2xl p-4 md:p-5 border border-emerald-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-default flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[#059669] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-default flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <p className="text-[10px] md:text-xs text-emerald-800 font-bold uppercase leading-tight tracking-wider">Collected overall</p>
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Collected This Year</p>
+            <TrendingUp className="w-5 h-5 text-[#059669]" />
           </div>
           <div>
-            <p className="text-xl md:text-3xl font-black text-emerald-900 tracking-tight">NRs. {stats.collectedThisYear.toLocaleString()}</p>
-            <p className="text-[10px] text-emerald-600 font-medium mt-1">Total revenue collected</p>
+            <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">NRs. {stats.collectedThisYear.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-500 font-medium mt-1">Academic Year 2083-2084</p>
           </div>
         </div>
 
         {/* Card 2 */}
-        <div className="bg-red-50 rounded-2xl p-4 md:p-5 border border-red-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-default flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[#ef4444] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-default flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-            <p className="text-[10px] md:text-xs text-red-800 font-bold uppercase leading-tight tracking-wider">Total Outstanding</p>
-            <AlertTriangle className="w-4 h-4 text-red-600" />
+            <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Total Outstanding Dues</p>
+            <AlertTriangle className="w-5 h-5 text-[#ef4444]" />
           </div>
           <div>
-            <p className="text-xl md:text-3xl font-black text-red-900 tracking-tight">NRs. {stats.totalOutstanding.toLocaleString()}</p>
-            <p className="text-[10px] text-red-600 font-medium mt-1">{stats.defaultersCount} students with dues</p>
+            <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">NRs. {stats.totalOutstanding.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-500 font-medium mt-1">{stats.defaultersCount} students have pending fees</p>
           </div>
         </div>
 
         {/* Card 3 */}
         <div 
-           className="bg-orange-50 rounded-2xl p-4 md:p-5 border border-orange-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-pointer flex flex-col justify-between"
-           onClick={() => setActiveTab('student_ledger')}
+           className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[var(--accent)] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer flex flex-col justify-between"
+           onClick={() => { setActiveTab('student_ledger'); /* Optionally emit event or update state to filter by defaulter */ }}
         >
           <div className="flex justify-between items-start mb-2">
-            <p className="text-[10px] md:text-xs text-orange-800 font-bold uppercase leading-tight tracking-wider">Defaulters</p>
-            <Users className="w-4 h-4 text-orange-600" />
+            <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Defaulters</p>
+            <Users className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="text-xl md:text-3xl font-black text-orange-900 tracking-tight">{stats.defaultersCount} Students</p>
-            <p className="text-[10px] text-orange-600 font-medium mt-1">Need to verify dates</p>
+            <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">{stats.defaultersCount} Students</p>
+            <p className="text-[10px] text-gray-500 font-medium mt-1">Dues over 30 days — needs attention</p>
           </div>
         </div>
 
         {/* Card 4 */}
-        <div className="bg-blue-50 rounded-2xl p-4 md:p-5 border border-blue-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-default flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[#3b82f6] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-default flex flex-col justify-between">
           <div className="flex justify-between items-start mb-2">
-             <p className="text-[10px] md:text-xs text-blue-800 font-bold uppercase leading-tight tracking-wider">Collection Rate</p>
-             <Wallet className="w-4 h-4 text-blue-600"/>
+             <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Collection Rate</p>
+             <Wallet className="w-5 h-5 text-[#3b82f6]"/>
           </div>
           <div>
-            <p className="text-xl md:text-3xl font-black text-blue-900 tracking-tight">{stats.collectionRate}%</p>
-            <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2 mb-1">
-               <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${stats.collectionRate}%` }}></div>
+            <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">{stats.collectionRate}%</p>
+            <div className="w-full bg-gray-100 rounded-full h-2 mt-2 mb-1">
+               <div className="bg-primary h-2 rounded-full" style={{ width: `${stats.collectionRate}%` }}></div>
             </div>
-            <p className="text-[10px] text-blue-600 font-medium leading-tight mt-1">Last Date: <span className="font-bold">{(stats as any).lastCollectionDate || 'N/A'}</span></p>
+            <p className="text-[10px] text-gray-500 font-medium leading-tight mt-1">Last updated: <span className="font-bold">{(stats as any).lastCollectionDate || 'N/A'}</span></p>
           </div>
         </div>
 
         {/* Card 5 */}
         <div 
-           className="bg-purple-50 rounded-2xl p-4 md:p-5 border border-purple-100 shadow-sm transition-transform duration-300 hover:scale-105 hover:shadow-lg cursor-pointer flex flex-col justify-between"
+           className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[#a855f7] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer flex flex-col justify-between lg:col-span-1 md:col-span-2 col-span-2"
            onClick={() => setActiveTab('scholarship_students')}
         >
           <div className="flex justify-between items-start mb-2">
-            <p className="text-[10px] md:text-xs text-purple-800 font-bold uppercase leading-tight tracking-wider">Scholarships</p>
-            <GraduationCap className="w-4 h-4 text-purple-600" />
+            <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Scholarships Active</p>
+            <GraduationCap className="w-5 h-5 text-[#a855f7]" />
           </div>
           <div>
-            <p className="text-xl md:text-3xl font-black text-purple-900 tracking-tight">{scholarshipCount} Availed</p>
-            <p className="text-[10px] text-purple-600 font-medium mt-1">Total sponsored students</p>
+            <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">{scholarshipCount} Students</p>
+            <p className="text-[10px] text-gray-500 font-medium mt-1">Total saving: NRs. {studentsData.reduce((acc, s) => acc + (s.scholarshipStatus === 'Provided' ? Number(s.scholarshipAmount||0) : 0), 0).toLocaleString()}/month</p>
           </div>
         </div>
       </div>
@@ -247,11 +247,7 @@ export default function AccountAdmin() {
                <button 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
-                     activeTab === tab.id 
-                        ? 'border-[#1e3a8a] text-[#1e3a8a]' 
-                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300'
-                  }`}
+                  className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${ activeTab === tab.id ? '- -' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }`}
                >
                   {tab.label}
                </button>

@@ -457,11 +457,11 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Type</label>
                <div className="flex gap-4 items-center h-[42px] overflow-hidden">
                    <label className="flex items-center gap-2 cursor-pointer shrink-0">
-                       <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                       <input type="radio" value="Terminal" checked={examCategory === 'Terminal'} onChange={() => { setExamCategory('Terminal'); setExamType(''); }} className="w-4 h-4 text-primary focus:ring-primary outline-none" />
                        <span className="text-sm font-bold">Terminal</span>
                    </label>
                    <label className="flex items-center gap-2 cursor-pointer shrink-0">
-                       <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setExamType(''); }} className="w-4 h-4 text-[#1e3a8a] focus:ring-[#1e3a8a] outline-none" />
+                       <input type="radio" value="Test" checked={examCategory === 'Test'} onChange={() => { setExamCategory('Test'); setExamType(''); }} className="w-4 h-4 text-primary focus:ring-primary outline-none" />
                        <span className="text-sm font-bold">Test</span>
                    </label>
                </div>
@@ -472,7 +472,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                  <select 
                    value={examType} 
                    onChange={e=>setExamType(e.target.value)} 
-                   className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium h-[42px]"
+                   className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-medium h-[42px]"
                  >
                      <option value="">-- Select Terminal --</option>
                      {EXAM_TYPES.map((ex:string) => <option key={ex} value={ex}>{ex}</option>)}
@@ -482,21 +482,21 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    type="text" 
                    value={examType} 
                    onChange={e=>setExamType(e.target.value)} 
-                   className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium h-[42px]"
+                   className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-medium h-[42px]"
                    placeholder="e.g. Unit Test 1"
                  />
                )}
             </div>
             <div>
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Class</label>
-               <select value={selectedClass} onChange={e=>setSelectedClass(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium">
+               <select value={selectedClass} onChange={e=>setSelectedClass(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-medium">
                    <option value="">-- Select Class --</option>
                    {allowedClasses.map((c: string) => <option key={c} value={c}>Class {c}</option>)}
                </select>
             </div>
             <div>
                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Subject</label>
-               <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-medium">
+               <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-medium">
                    <option value="">-- Subject --</option>
                    {allowedSubjectsWithAll.map((s: string) => <option key={s} value={s}>{s}</option>)}
                </select>
@@ -507,16 +507,16 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subject Full Marks & Pass Marks</label>
                    <div className="grid grid-cols-2 lg:col-span-4 lg:grid-cols-6 gap-3">
                        {dynamicSubjects.map((subj: string) => (
-                           <div key={subj} className="bg-gray-50 p-2 rounded-lg border flex flex-col gap-2">
+                           <div key={subj} className="border-primary text-primary p-2 rounded-lg border flex flex-col gap-2">
                                <div className="text-xs font-bold text-gray-700 truncate">{subj}</div>
                                <div className="flex gap-2">
                                    <div className="flex-1">
                                        <label className="text-[10px] text-gray-400">Full</label>
-                                       <input type="number" value={subjectConfigs[subj]?.fullMarks ?? 100} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] bg-white font-bold" />
+                                       <input type="number" value={subjectConfigs[subj]?.fullMarks ?? 100} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
                                    </div>
                                    <div className="flex-1">
                                        <label className="text-[10px] text-gray-400">Pass</label>
-                                       <input type="number" value={subjectConfigs[subj]?.passMarks ?? 40} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-[#1e3a8a] bg-white font-bold" />
+                                       <input type="number" value={subjectConfigs[subj]?.passMarks ?? 40} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
                                    </div>
                                </div>
                            </div>
@@ -528,11 +528,11 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    <div className="col-span-1 lg:col-span-4 flex gap-4 mt-2">
                       <div className="flex-1">
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-bold text-[#1e3a8a]" />
+                         <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
                       </div>
                       <div className="flex-1">
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pass Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.passMarks ?? 40} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-[#1e3a8a] outline-none font-bold text-[#1e3a8a]" />
+                         <input type="number" value={subjectConfigs[selectedSubject]?.passMarks ?? 40} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
                       </div>
                    </div>
                 )
@@ -540,7 +540,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
         </div>
 
         {!selectedClass || !selectedSubject ? (
-            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+            <div className="text-center py-12 border-primary text-primary rounded-xl border border-dashed border-gray-300">
                <AlertCircle className="mx-auto w-10 h-10 text-gray-400 mb-2" />
                <p className="font-bold text-gray-600">Select Class and Subject to start entering marks.</p>
             </div>
@@ -549,11 +549,11 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                 <div className="bg-gray-100 p-3 px-4 border-b flex justify-between items-center whitespace-nowrap overflow-x-auto">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2">
                         Student List ({students.length})
-                        {loadingStudents && <Loader2 className="w-4 h-4 animate-spin text-[#1e3a8a]" />}
+                        {loadingStudents && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
                     </h3>
                     <div className="flex gap-2">
-                        <button onClick={addStudentRow} className="bg-white border border-[#1e3a8a] py-1 px-3 rounded-md font-bold text-sm text-[#1e3a8a] hover:bg-blue-50 active:scale-95 transition-all">+ Add Student Row</button>
-                        <button onClick={markAllPresent} className="bg-white border rounded-md px-3 py-1 font-bold text-sm text-gray-600 hover:bg-gray-50 active:scale-95 transition-all">Mark All Present</button>
+                        <button onClick={addStudentRow} className="bg-white border border-primary text-primary py-1 px-3 rounded-md font-bold text-sm border-primary text-primary hover:bg-blue-50 active:scale-95 transition-all">+ Add Student Row</button>
+                        <button onClick={markAllPresent} className="bg-white border rounded-md px-3 py-1 font-bold text-sm text-gray-600 hover:text-primary active:scale-95 transition-all">Mark All Present</button>
                     </div>
                 </div>
                 
@@ -561,7 +561,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                 <div className="hidden md:block overflow-x-auto">
                    <table className="w-full text-left text-sm whitespace-nowrap">
                        <thead>
-                           <tr className="bg-gray-50 border-b">
+                           <tr className="text-primary border-b">
                                <th className="p-3">Roll / ID</th>
                                <th className="p-3">Student Name</th>
                                {selectedSubject === 'All Subjects' ? (
@@ -579,12 +579,12 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                        </thead>
                        <tbody className="divide-y divide-gray-100">
                            {students.map((std, i) => (
-                               <tr key={i} className="hover:bg-gray-50">
+                               <tr key={i} className="hover:text-primary">
                                    <td className="p-3">
-                                       <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="w-full min-w-[80px] px-2 py-1.5 border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-[#1e3a8a] outline-none" placeholder="Roll/ID" />
+                                       <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="w-full min-w-[80px] px-2 py-1.5 border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
                                    </td>
                                    <td className="p-3">
-                                       <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full min-w-[150px] px-2 py-1.5 border rounded-md font-bold text-gray-800 uppercase focus:ring-1 focus:ring-[#1e3a8a] outline-none" placeholder="Student Name" />
+                                       <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full min-w-[150px] px-2 py-1.5 border rounded-md font-bold text-gray-800 uppercase focus:ring-1 focus:ring-primary outline-none" placeholder="Student Name" />
                                    </td>
                                    {selectedSubject === 'All Subjects' ? (
                                        dynamicSubjects.map((subj: string, sIndex: number) => (
@@ -594,7 +594,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                                       value={std.subjectMarks[subj] || ''} 
                                                       onChange={e => handleMarkChange(i, e.target.value, subj)} 
                                                       disabled={std.subjectAbsents[subj]}
-                                                      className={`w-full px-2 py-1.5 border rounded-md font-black text-center focus:ring-2 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-100 disabled:text-gray-400 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
+                                                      className={`w-full px-2 py-1.5 border rounded-md font-black text-center focus:ring-2 focus:ring-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
                                                       placeholder={`Max ${subjectConfigs[subj]?.fullMarks ?? 100}`}
                                                       tabIndex={i * dynamicSubjects.length + sIndex + 1}
                                                    />
@@ -608,7 +608,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                    ) : (
                                        <>
                                            <td className="p-3">
-                                               <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-4 h-4 text-[#1e3a8a] rounded focus:ring-[#1e3a8a] accent-[#1e3a8a] cursor-pointer" />
+                                               <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-4 h-4 text-primary rounded focus:ring-primary text-primary cursor-pointer" />
                                            </td>
                                            <td className="p-3">
                                                {std.isAbsent ? (
@@ -617,7 +617,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                                    <input type="number" 
                                                       value={std.tempMark} 
                                                       onChange={e => handleMarkChange(i, e.target.value)} 
-                                                      className={`w-full px-3 py-2 border rounded-md font-black text-lg focus:ring-2 focus:ring-[#1e3a8a] outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
+                                                      className={`w-full px-3 py-2 border rounded-md font-black text-lg focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
                                                       placeholder={`Max ${subjectConfigs[selectedSubject]?.fullMarks ?? 100}`}
                                                       tabIndex={i+1}
                                                    />
@@ -635,18 +635,18 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                 </div>
 
                 {/* Mobile view */}
-                <div className="md:hidden flex flex-col gap-3 p-3 bg-gray-50">
+                <div className="md:hidden flex flex-col gap-3 p-3 text-primary">
                    {students.map((std, i) => (
                        <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                          <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full mb-2 px-2 py-1.5 border rounded-md font-bold text-gray-900 uppercase text-lg focus:ring-1 focus:ring-[#1e3a8a] outline-none" placeholder="Student Name" />
+                          <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full mb-2 px-2 py-1.5 border rounded-md font-bold text-gray-900 uppercase text-lg focus:ring-1 focus:ring-primary outline-none" placeholder="Student Name" />
                           <div className="flex items-center gap-2 mb-3">
                               <span className="text-xs text-gray-500">ID:</span>
-                              <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="flex-1 px-2 py-1 text-sm border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-[#1e3a8a] outline-none" placeholder="Roll/ID" />
+                              <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="flex-1 px-2 py-1 text-sm border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
                           </div>
                            {selectedSubject === 'All Subjects' ? (
                                <div className="grid grid-cols-2 gap-3 mt-4">
                                    {dynamicSubjects.map((subj: string) => (
-                                       <div key={subj} className="bg-gray-50 p-2 rounded-lg border">
+                                       <div key={subj} className="border-primary text-primary p-2 rounded-lg border">
                                            <p className="text-xs font-bold text-gray-600 mb-1 truncate">{subj}</p>
                                            <div className="flex items-center gap-2">
                                               <input type="checkbox" checked={std.subjectAbsents[subj] || false} onChange={e => handleAbsentChange(i, e.target.checked, subj)} className="w-4 h-4 accent-red-600" />
@@ -654,7 +654,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                                   value={std.subjectMarks[subj] || ''} 
                                                   onChange={e => handleMarkChange(i, e.target.value, subj)} 
                                                   disabled={std.subjectAbsents[subj]}
-                                                  className={`w-full px-2 py-1 border rounded-md font-black text-sm text-center focus:ring-1 focus:ring-[#1e3a8a] outline-none disabled:bg-gray-100 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
+                                                  className={`w-full px-2 py-1 border rounded-md font-black text-sm text-center focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
                                                   placeholder="Marks" 
                                               />
                                            </div>
@@ -665,7 +665,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                <div className="flex items-center gap-4">
                                   <div className="flex flex-col items-center gap-1">
                                      <label className="text-[10px] font-bold uppercase text-gray-400">Absent</label>
-                                     <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-5 h-5 accent-[#1e3a8a]" />
+                                     <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-5 h-5 text-primary" />
                                   </div>
                                   <div className="flex-1">
                                      {std.isAbsent ? (
@@ -674,7 +674,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                          <input type="number" 
                                            value={std.tempMark} 
                                            onChange={e => handleMarkChange(i, e.target.value)} 
-                                           className={`w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-[#1e3a8a] outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
+                                           className={`w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
                                            placeholder={`/ ${subjectConfigs[selectedSubject]?.fullMarks ?? 100}`} />
                                      )}
                                   </div>
@@ -687,7 +687,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    ))}
                 </div>
 
-                <div className="p-4 border-t bg-gray-50 flex justify-end gap-4 border-x">
+                <div className="p-4 border-t text-primary flex justify-end gap-4 border-x">
                     <button 
                        onClick={publishResults} 
                        disabled={!isDataComplete()}
@@ -695,7 +695,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                        <CheckCircle2 className="w-5 h-5" /> Calculate Rank & Publish
                     </button>
                     {isAnyDataEntered() && (
-                        <button onClick={saveMarks} className="bg-[#1e3a8a] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#1e40af] flex items-center gap-2 shadow-lg active:scale-95 transition-all">
+                        <button onClick={saveMarks} className="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-primary-dark flex items-center gap-2 shadow-lg active:scale-95 transition-all">
                            <Save className="w-5 h-5" /> Save Marks
                         </button>
                     )}
