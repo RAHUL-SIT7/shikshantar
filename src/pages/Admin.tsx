@@ -255,16 +255,16 @@ export default function Admin() {
 
        {/* Tabs Header */}
        <div className="flex overflow-x-auto bg-white rounded-xl border border-gray-200 p-2 gap-2 shadow-sm font-bold scrollbar-hide">
-           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <Edit2 className="w-4 h-4"/> Manual Entry
            </button>
-           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <Upload className="w-4 h-4"/> Excel Upload
            </button>
-           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <BookOpen className="w-4 h-4"/> History
            </button>
-           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? '- text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
                <FileSpreadsheet className="w-4 h-4"/> Report Cards
            </button>
        </div>

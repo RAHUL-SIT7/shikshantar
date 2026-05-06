@@ -34,8 +34,7 @@ export default function Home() {
     admissionsBadge: 'Admissions Open 2083 B.S.'
   });
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempContent, setTempContent] = useState(content);
+  
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [notices, setNotices] = useState<any[]>([]);
   const [galleryImages, setGalleryImages] = useState<any[]>([]);
@@ -52,7 +51,9 @@ export default function Home() {
   
   const [isLoading, setIsLoading] = useState(true);
 
-  const userRole = localStorage.getItem('userRole') || 'student';
+  const urlParams = new URLSearchParams(window.location.search);
+  const previewRole = urlParams.get('previewRole');
+  const userRole = previewRole || localStorage.getItem('userRole') || 'student';
   const isAdmin = userRole === 'admin';
   const navigate = useNavigate();
 
@@ -177,9 +178,7 @@ export default function Home() {
       if (docSnap.exists()) {
         const data = docSnap.data() as any;
         setContent(data);
-        if(!isEditing) {
-          setTempContent(data);
-        }
+        
       }
     }, (err) => {
       handleFirestoreError(err, OperationType.GET, 'settings/home_content');
@@ -196,7 +195,7 @@ export default function Home() {
     });
 
     return () => { unsub(); unsubGallery(); };
-  }, [isEditing]);
+  }, []);
 
   useEffect(() => {
     let unsubNotices = () => {};
@@ -286,22 +285,6 @@ export default function Home() {
       return new Date(b.date).getTime() - new Date(a.date).getTime(); 
   }).slice(0, 3);
 
-  const handleSave = async () => {
-    try {
-      await setDoc(doc(db, 'settings', 'home_content'), tempContent);
-      setContent(tempContent);
-      setIsEditing(false);
-    } catch (err) {
-      console.error(err);
-      alert('Error saving content. Make sure you are an admin.');
-    }
-  };
-
-  const handleCancel = () => {
-    setTempContent(content);
-    setIsEditing(false);
-  };
-  
   const handleAdmissionAction = async (id: string, newStatus: string) => {
       try {
           await setDoc(doc(db, 'admissions', id), { status: newStatus }, { merge: true });
@@ -382,51 +365,25 @@ export default function Home() {
                <h1 className="text-2xl md:text-3xl font-extrabold text-[#1a1a2e] mb-2 tracking-tight">Good {greeting}, Admin 👋</h1>
                <p className="text-sm text-gray-500 font-medium">{dateString} | {bsString}</p>
             </div>
-            {isEditing ? (
-              <div className="flex gap-2">
-                <button onClick={handleSave} className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-emerald-600 shadow-sm transition-colors">
-                  <Save className="w-4 h-4"/> Save
-                </button>
-                <button onClick={handleCancel} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-300 shadow-sm transition-colors">
-                  <X className="w-4 h-4"/> Cancel
-                </button>
-              </div>
-            ) : (
-               <button onClick={() => setIsEditing(true)} className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:text-primary shadow-sm transition-colors">
-                  <Edit2 className="w-4 h-4"/> Edit Global Notice
-               </button>
-            )}
+            
          </div>
 
          {/* Global Scrolling Announcement */}
-         {(content.announcement || isEditing) && (
-           <div className={`w-full bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col md:flex-row shadow-sm relative mb-2 ${isEditing ? 'p-2 gap-2' : 'items-center'}`}>
-             <div className="bg-orange-500 text-white text-xs font-bold px-4 py-2.5 uppercase tracking-wider relative z-10 shadow-[2px_0_5px_rgba(0,0,0,0.1)] whitespace-nowrap shrink-0 flex items-center gap-2 rounded-l-md md:rounded-none">
-               <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-               Notice
-             </div>
-             <div className="relative flex-1 overflow-hidden h-full flex items-center w-full">
-               {isEditing ? (
-                 <div className="flex flex-col w-full px-2 py-1">
-                   <label className="text-[10px] font-bold text-gray-500 uppercase mb-1">Scrolling Notice (Leave empty to hide entirely)</label>
-                   <input
-                     type="text"
-                     placeholder="Type an announcement to show globally, or clear this text to hide the notice bar."
-                     value={tempContent.announcement || ''}
-                     onChange={(e) => setTempContent({...tempContent, announcement: e.target.value})}
-                     className="w-full text-primary border-2 border-gray-200 text-gray-800 rounded-lg focus:outline-none focus:border-blue-500 px-3 py-2 text-sm font-medium transition-colors"
-                   />
-                 </div>
-               ) : (
-                   <div className="animate-marquee whitespace-nowrap text-gray-800 text-sm font-bold pl-[100%] inline-block h-full flex items-center py-2.5">
-                     {content.announcement}
+               {content.announcement && (
+                 <div className="w-full bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col md:flex-row shadow-sm relative mb-2 items-center">
+                   <div className="bg-orange-500 text-white text-xs font-bold px-4 py-2.5 uppercase tracking-wider relative z-10 shadow-[2px_0_5px_rgba(0,0,0,0.1)] whitespace-nowrap shrink-0 flex items-center gap-2 rounded-l-md md:rounded-none">
+                     <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                     Notice
                    </div>
+                   <div className="relative flex-1 overflow-hidden h-full flex items-center w-full">
+                       <div className="animate-marquee whitespace-nowrap text-gray-800 text-sm font-bold pl-[100%] inline-block h-full flex items-center py-2.5">
+                         {content.announcement}
+                       </div>
+                   </div>
+                 </div>
                )}
-             </div>
-           </div>
-         )}
 
-         {/* Section 1: 6 Summary Stat Cards */}
+               {/* Section 1: 6 Summary Stat Cards */}
          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <div onClick={() => navigate('/user-approvals?filter=student')} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-l-[#2563eb] p-4 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all">
                <div className="flex justify-between items-start mb-2">
@@ -720,32 +677,35 @@ export default function Home() {
          </div>
 
          {/* Section 5: Quick Action Buttons */}
-         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-            <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-blue-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <UserPlus className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Add Student</span>
-            </button>
-            <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-emerald-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <CreditCard className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Record Fee</span>
-            </button>
-            <button onClick={() => navigate('/admin')} className="bg-white border text-left border-gray-200 hover:border-indigo-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <Upload className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Upload Results</span>
-            </button>
-            <button onClick={() => navigate('/notices')} className="bg-white border text-left border-gray-200 hover:border-purple-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <Megaphone className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Post Notice</span>
-            </button>
-            <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-cyan-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <ShieldCheck className="w-6 h-6 text-cyan-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Approve Users</span>
-            </button>
-            <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-orange-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-               <Download className="w-6 h-6 text-orange-500 group-hover:scale-110 transition-transform" />
-               <span className="text-xs font-bold text-gray-700 text-center">Download Reports</span>
-            </button>
-         </div>
+         {isAdmin && (
+           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+              <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-blue-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <UserPlus className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Add Student</span>
+              </button>
+              <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-emerald-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <CreditCard className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Record Fee</span>
+              </button>
+              <button onClick={() => navigate('/admin')} className="bg-white border text-left border-gray-200 hover:border-indigo-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <Upload className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Upload Results</span>
+              </button>
+              <button onClick={() => navigate('/notices')} className="bg-white border text-left border-gray-200 hover:border-purple-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <Megaphone className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Post Notice</span>
+              </button>
+              <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-cyan-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <ShieldCheck className="w-6 h-6 text-cyan-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Approve Users</span>
+              </button>
+              <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-orange-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
+                 <Download className="w-6 h-6 text-orange-500 group-hover:scale-110 transition-transform" />
+                 <span className="text-xs font-bold text-gray-700 text-center">Download Reports</span>
+              </button>
+           </div>
+         )}
+         
 
       </div>
     );
@@ -758,31 +718,14 @@ export default function Home() {
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           FIX 1 — NOTICE TICKER BAR
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {(!content.announcement || isEditing) ? (
-        (content.announcement || isEditing) && (
-          <div className="mx-4 mt-4 w-full max-w-7xl md:mx-auto border-primary text-primary border border-[#e2e8f0] rounded-xl overflow-hidden flex flex-col md:flex-row shadow-sm relative p-2 gap-2">
-            {isEditing && (
-              <div className="flex flex-col w-full px-2 py-1">
-                <label className="text-[0.65rem] font-bold text-[#64748b] uppercase mb-1">Scrolling Notice (Leave empty to hide entirely)</label>
-                <input
-                  type="text"
-                  placeholder="Type an announcement to show globally, or clear this text to hide the notice bar."
-                  value={tempContent.announcement || ''}
-                  onChange={(e) => setTempContent({...tempContent, announcement: e.target.value})}
-                  className="w-full bg-white border-2 border-primary text-[var(--primary)] text-[#1e293b] rounded-lg focus:outline-none focus:ring-[var(--primary)] px-3 py-2 text-sm font-medium transition-colors"
-                />
-              </div>
-            )}
-          </div>
-        )
-      ) : (
+      {content.announcement && (
         <div className="w-full h-[40px] bg-[var(--accent)] flex items-center overflow-hidden">
           <div className="bg-[#b33d00] text-white text-sm font-bold px-4 h-full flex items-center z-10 whitespace-nowrap shrink-0 shadow-md">
              📢 NOTICE:
           </div>
           <div className="flex-1 overflow-hidden h-full flex items-center">
              <div className="animate-marquee whitespace-nowrap text-white text-sm font-medium pl-[100%] inline-block h-full py-2.5">
-               🎉 Admissions Open for 2084 B.S. | 📊 Unit Test 1 Results Published | 🏆 Shikshantar Academy — Siraha's Pride Since 2072 B.S. | 📞 Contact: 9800000000
+               {content.announcement}
              </div>
           </div>
         </div>
@@ -802,8 +745,8 @@ export default function Home() {
           
           <div className="relative z-10 w-full max-w-3xl flex flex-col items-start">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold mb-6 border border-white/20 uppercase backdrop-blur-sm shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              🟢 Admissions Open — 2084 B.S.
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              {content.admissionsBadge}
             </div>
             
             <h1 className="text-[24px] md:text-[36px] font-extrabold leading-tight mb-4 tracking-tight text-white">
@@ -811,7 +754,7 @@ export default function Home() {
             </h1>
             
             <p className="text-[15px] text-white/90 mb-8 max-w-2xl leading-[1.6]">
-              Shikshantar Academy provides quality education from Play Group to Class 10 (SEE) following CDC Nepal curriculum in a peaceful and nurturing environment at Bastipur-5, Siraha, Madhesh Pradesh, Nepal.
+              {content.description}
             </p>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-10 w-full sm:w-auto">
@@ -830,9 +773,9 @@ export default function Home() {
             <div className="hidden md:flex flex-wrap items-center gap-4 text-white/90 text-sm font-medium">
                <span>🎓 Play Group — Class 10</span>
                <span className="w-px h-4 bg-white/30 hidden md:block"></span>
-               <span>👥 200+ Students</span>
+               <span>👥 {content.statsStudents || '200+'} Students</span>
                <span className="w-px h-4 bg-white/30 hidden md:block"></span>
-               <span>👨‍🏫 12+ Teachers</span>
+               <span>👨‍🏫 {content.statsTeachers || '12+'} Teachers</span>
                <span className="w-px h-4 bg-white/30 hidden md:block"></span>
                <span>🏆 Est. 2072 B.S.</span>
             </div>
@@ -847,11 +790,11 @@ export default function Home() {
            </div>
            <div className="bg-white p-4 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] text-center flex flex-col items-center gap-2">
               <span className="text-2xl">👥</span>
-              <span className="text-xs font-bold text-gray-800">200+ Students</span>
+              <span className="text-xs font-bold text-gray-800">{content.statsStudents || '200+'} Students</span>
            </div>
            <div className="bg-white p-4 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] text-center flex flex-col items-center gap-2">
               <span className="text-2xl">👨‍🏫</span>
-              <span className="text-xs font-bold text-gray-800">12+ Teachers</span>
+              <span className="text-xs font-bold text-gray-800">{content.statsTeachers || '12+'} Teachers</span>
            </div>
            <div className="bg-white p-4 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] text-center flex flex-col items-center gap-2">
               <span className="text-2xl">🏆</span>
@@ -865,23 +808,23 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <motion.div className="bg-white rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.07)] border-t-4 border-t-[var(--accent)] flex flex-col hover:-translate-y-[3px] hover:shadow-lg transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <span className="text-4xl mb-4">📚</span>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Quality Education</h3>
-            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">Comprehensive curriculum from Play Group to Class 10 following CDC Nepal standards. English medium instruction with focus on Science and Mathematics.</p>
-            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">📖 6 Core Subjects | Nepali & English Medium</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">{content.feature1Title || 'Quality Education'}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">{content.feature1Desc || 'Comprehensive curriculum from Play Group to Class 10 following CDC Nepal standards. English medium instruction with focus on Science and Mathematics.'}</p>
+            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">📖 {content.feature1Badge || '6 Core Subjects | Nepali & English Medium'}</div>
           </motion.div>
 
           <motion.div className="bg-white rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.07)] border-t-4 border-t-green-500 flex flex-col hover:-translate-y-[3px] hover:shadow-lg transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
             <span className="text-4xl mb-4">👨‍🏫</span>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Expert Faculty</h3>
-            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">Led by Principal Mr. Pappu Jha and a team of 12 dedicated, qualified educators with years of teaching experience.</p>
-            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">👥 12+ Teachers | Avg. 8 Years Experience</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">{content.feature2Title || 'Expert Faculty'}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">{content.feature2Desc || `Led by Principal Mr. Pappu Jha and a team of ${content.statsTeachers || '12+'} dedicated, qualified educators with years of teaching experience.`}</p>
+            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">👥 {content.feature2Badge || `${content.statsTeachers || '12+'} Teachers | Avg. 8 Years Experience`}</div>
           </motion.div>
 
           <motion.div className="bg-white rounded-xl p-6 shadow-[0_2px_8px_rgba(0,0,0,0.07)] border-t-4 border-t-yellow-500 flex flex-col hover:-translate-y-[3px] hover:shadow-lg transition-all" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
             <span className="text-4xl mb-4">🏆</span>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Excellent Results</h3>
-            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">Consistent SEE results with above 90% pass rate. Producing district toppers every year since 2075 B.S.</p>
-            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">🏅 90%+ Pass Rate | District Toppers Every Year</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">{content.feature3Title || 'Excellent Results'}</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-6 flex-1">{content.feature3Desc || `Consistent SEE results with above ${content.statsPassRate || '90%+'} pass rate. Producing district toppers every year since 2075 B.S.`}</p>
+            <div className="text-xs font-bold text-gray-800 bg-gray-50 p-2 rounded-lg text-center border border-gray-100">🏅 {content.feature3Badge || `${content.statsPassRate || '90%+'} Pass Rate | District Toppers Every Year`}</div>
           </motion.div>
         </div>
       </div>
@@ -892,52 +835,52 @@ export default function Home() {
       <div className="w-full bg-white border-y border-gray-200 py-12 px-4 md:px-8">
          <div className="max-w-7xl mx-auto">
             <div className="flex flex-col items-center text-center mb-10">
-               <h2 className="text-[22px] font-bold text-gray-900">Why Choose Shikshantar Academy?</h2>
+               <h2 className="text-[22px] font-bold text-gray-900">{content.whyChooseTitle || 'Why Choose Shikshantar Academy?'}</h2>
                <div className="w-10 h-1 bg-[var(--accent)] mt-2 mb-3 rounded-full"></div>
-               <p className="text-gray-600">Trusted by 200+ families in Siraha</p>
+               <p className="text-gray-600">{content.whyChooseSub || `Trusted by ${content.statsStudents || '200+'} Families in Siraha`}</p>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">🏫</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">Modern Infrastructure</h4>
-                    <p className="text-[13px] text-gray-600">Well-equipped classrooms, computer lab, science lab and library</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc1Title || 'Modern Infrastructure'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc1Desc || 'Well-equipped classrooms, computer lab, science lab and library'}</p>
                   </div>
                </div>
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">🔬</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">Science & Computer Lab</h4>
-                    <p className="text-[13px] text-gray-600">Hands-on learning with modern equipment for Class 8 and above</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc2Title || 'Science & Computer Lab'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc2Desc || 'Hands-on learning with modern equipment for Class 8 and above'}</p>
                   </div>
                </div>
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">🌐</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">English Medium</h4>
-                    <p className="text-[13px] text-gray-600">English as primary medium of instruction for all major subjects</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc3Title || 'English Medium'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc3Desc || 'English as primary medium of instruction for all major subjects'}</p>
                   </div>
                </div>
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">📊</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">Regular Assessments</h4>
-                    <p className="text-[13px] text-gray-600">5 examinations per year with transparent result publishing on portal</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc4Title || 'Regular Assessments'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc4Desc || '5 examinations per year with transparent result publishing on portal'}</p>
                   </div>
                </div>
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">💰</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">Affordable Fees</h4>
-                    <p className="text-[13px] text-gray-600">Quality education at affordable rates starting NRs. 600/month</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc5Title || 'Affordable Fees'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc5Desc || 'Quality education at affordable rates starting NRs. 600/month'}</p>
                   </div>
                </div>
                <div className="bg-gray-50 p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-gray-100 border-l-4 border-l-[var(--primary)] flex items-start gap-4">
                   <span className="text-[32px]">📍</span>
                   <div>
-                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">Central Location</h4>
-                    <p className="text-[13px] text-gray-600">Conveniently located at Bastipur-5, Siraha — easily accessible</p>
+                    <h4 className="font-bold text-[15px] text-gray-900 mb-1">{content.wc6Title || 'Central Location'}</h4>
+                    <p className="text-[13px] text-gray-600">{content.wc6Desc || 'Conveniently located at Bastipur-5, Siraha — easily accessible'}</p>
                   </div>
                </div>
             </div>
@@ -950,33 +893,31 @@ export default function Home() {
       <div className="w-full bg-[var(--primary)] py-[50px] px-4 md:px-10 text-white shadow-inner">
          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 items-center">
             <div className="flex-1">
-               <h2 className="text-[28px] font-bold text-white mb-4">🎓 Admissions Open for 2084 B.S.</h2>
+               <h2 className="text-[28px] font-bold text-white mb-4">{content.admissionsTitle || '🎓 Admissions Open for 2084 B.S.'}</h2>
                <p className="text-[15px] text-white/90 leading-[1.7] mb-6 max-w-xl">
-                 Shikshantar Academy is now accepting admission applications for academic year 2084-2085 B.S. for Play Group to Class 10.
+                 {content.admissionsDesc || 'Shikshantar Academy is now accepting admission applications for academic year 2084-2085 B.S. for Play Group to Class 10.'}
                </p>
                <ul className="space-y-3 mb-8">
-                 <li className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> Play Group to Class 10</li>
-                 <li className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> Online & offline admission available</li>
-                 <li className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> Affordable fee structure</li>
-                 <li className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> English medium curriculum</li>
-                 <li className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> Results portal access for all students</li>
+                 {(content.admissionsBullets || 'Play Group to Class 10\nOnline & offline admission available\nAffordable fee structure\nEnglish medium curriculum\nResults portal access for all students').split('\n').filter(Boolean).map((bullet, idx) => (
+                    <li key={idx} className="flex items-center gap-3"><span className="text-green-400 text-lg">✅</span> {bullet}</li>
+                 ))}
                </ul>
             </div>
             
             <div className="w-full lg:w-80 bg-white rounded-xl shadow-2xl p-6 text-gray-900 shrink-0">
-               <h3 className="text-lg font-bold text-center mb-4 text-[var(--primary)] flex items-center justify-center gap-2">📋 Quick Admission Info</h3>
+               <h3 className="text-lg font-bold text-center mb-4 text-[var(--primary)] flex items-center justify-center gap-2">📋 {content.admInfoTitle || 'Quick Admission Info'}</h3>
                <div className="h-px bg-gray-200 w-full mb-4"></div>
                <div className="space-y-4 mb-6 text-sm font-medium">
-                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📅</span> <div className="mt-0.5">Session: 2084-2085 B.S.</div></div>
-                  <div className="flex items-start gap-3"><span className="text-lg leading-none">🏫</span> <div className="mt-0.5">Classes: PG to Class 10</div></div>
-                  <div className="flex items-start gap-3"><span className="text-lg leading-none">💰</span> <div className="mt-0.5">Fee from: NRs. 600/month</div></div>
-                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📍</span> <div className="mt-0.5">Bastipur-5, Siraha</div></div>
-                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📞</span> <div className="mt-0.5">9800000000</div></div>
+                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📅</span> <div className="mt-0.5">Session: {content.admInfoSession || '2084-2085 B.S.'}</div></div>
+                  <div className="flex items-start gap-3"><span className="text-lg leading-none">🏫</span> <div className="mt-0.5">Classes: {content.admInfoClasses || 'PG to Class 10'}</div></div>
+                  <div className="flex items-start gap-3"><span className="text-lg leading-none">💰</span> <div className="mt-0.5">Fee from: {content.admInfoFee || 'NRs. 600/month'}</div></div>
+                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📍</span> <div className="mt-0.5">{content.admInfoLocation || 'Bastipur-5, Siraha'}</div></div>
+                  <div className="flex items-start gap-3"><span className="text-lg leading-none">📞</span> <div className="mt-0.5">{content.contactPhone || '9800000000'}</div></div>
                </div>
                <div className="h-px bg-gray-200 w-full mb-4"></div>
                <div className="flex flex-col gap-3">
                   <Link to="/admission" className="w-full bg-[var(--accent)] text-white py-3 rounded-lg text-center font-bold hover:bg-[#cc4400] transition-colors shadow-sm">📝 Apply for Admission</Link>
-                  <a href="tel:9800000000" className="w-full bg-white text-gray-700 border-2 border-gray-200 py-3 rounded-lg text-center font-bold hover:bg-gray-50 hover:border-gray-300 transition-colors">📞 Call Us Now</a>
+                  <a href={`tel:${content.contactPhone || '9800000000'}`} className="w-full bg-white text-gray-700 border-2 border-gray-200 py-3 rounded-lg text-center font-bold hover:bg-gray-50 hover:border-gray-300 transition-colors">📞 Call Us Now</a>
                </div>
             </div>
          </div>
@@ -1051,21 +992,21 @@ export default function Home() {
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section>
            <div className="flex flex-col items-center text-center mb-10">
-               <h2 className="text-[22px] font-bold text-gray-900">💬 What Parents Say</h2>
+               <h2 className="text-[22px] font-bold text-gray-900">{content.testiTitle || '💬 What Parents Say'}</h2>
                <div className="w-10 h-1 bg-[var(--accent)] mt-2 mb-3 rounded-full"></div>
-               <p className="text-gray-600">Trusted by families across Siraha</p>
+               <p className="text-gray-600">{content.testiSub || 'Trusted by families across Siraha'}</p>
            </div>
            
            <div className="flex flex-col md:flex-row gap-6">
               <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] border border-gray-100 p-6 flex-1 relative">
                  <span className="absolute top-4 right-4 text-6xl text-[var(--primary)] opacity-[0.07] font-serif leading-none">"</span>
                  <div className="flex gap-1 mb-3 text-yellow-400 text-sm">⭐⭐⭐⭐⭐</div>
-                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"My son's results have improved significantly since joining Shikshantar. The teachers are dedicated and the portal helps us track everything easily."</p>
+                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"{content.testi1Text || "My son's results have improved significantly since joining Shikshantar. The teachers are dedicated and the portal helps us track everything easily."}"</p>
                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">RP</div>
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">{content.testi1Initials || 'RP'}</div>
                     <div>
-                      <div className="font-bold text-gray-900 text-sm">Ram Prasad Sharma</div>
-                      <div className="text-xs text-gray-500">Parent of Class 10 Student</div>
+                      <div className="font-bold text-gray-900 text-sm">{content.testi1Author || 'Ram Prasad Sharma'}</div>
+                      <div className="text-xs text-gray-500">{content.testi1Role || 'Parent of Class 10 Student'}</div>
                     </div>
                  </div>
               </div>
@@ -1073,12 +1014,12 @@ export default function Home() {
               <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] border border-gray-100 p-6 flex-1 relative">
                  <span className="absolute top-4 right-4 text-6xl text-[var(--primary)] opacity-[0.07] font-serif leading-none">"</span>
                  <div className="flex gap-1 mb-3 text-yellow-400 text-sm">⭐⭐⭐⭐⭐</div>
-                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"Best school in Siraha for affordable quality education. My daughter got A+ in Science and Mathematics in SEE."</p>
+                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"{content.testi2Text || "Best school in Siraha for affordable quality education. My daughter got A+ in Science and Mathematics in SEE."}"</p>
                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">SD</div>
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold">{content.testi2Initials || 'SD'}</div>
                     <div>
-                      <div className="font-bold text-gray-900 text-sm">Sunita Devi Thapa</div>
-                      <div className="text-xs text-gray-500">Parent of SEE Graduate 2081</div>
+                      <div className="font-bold text-gray-900 text-sm">{content.testi2Author || 'Sunita Devi Thapa'}</div>
+                      <div className="text-xs text-gray-500">{content.testi2Role || 'Parent of SEE Graduate 2081'}</div>
                     </div>
                  </div>
               </div>
@@ -1086,12 +1027,12 @@ export default function Home() {
               <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.07)] border border-gray-100 p-6 flex-1 relative">
                  <span className="absolute top-4 right-4 text-6xl text-[var(--primary)] opacity-[0.07] font-serif leading-none">"</span>
                  <div className="flex gap-1 mb-3 text-yellow-400 text-sm">⭐⭐⭐⭐⭐</div>
-                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"The online portal is very helpful. We can check fee receipts and results anytime from our phone. Very convenient for parents."</p>
+                 <p className="text-gray-600 italic text-sm mb-6 leading-relaxed relative z-10">"{content.testi3Text || "The online portal is very helpful. We can check fee receipts and results anytime from our phone. Very convenient for parents."}"</p>
                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">ML</div>
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">{content.testi3Initials || 'ML'}</div>
                     <div>
-                      <div className="font-bold text-gray-900 text-sm">Mohan Lal Yadav</div>
-                      <div className="text-xs text-gray-500">Parent of Class 9 Student</div>
+                      <div className="font-bold text-gray-900 text-sm">{content.testi3Author || 'Mohan Lal Yadav'}</div>
+                      <div className="text-xs text-gray-500">{content.testi3Role || 'Parent of Class 9 Student'}</div>
                     </div>
                  </div>
               </div>
@@ -1121,8 +1062,8 @@ export default function Home() {
                 <span className="text-5xl text-gray-200 absolute -bottom-8 font-serif leading-[0]">"</span>
               </blockquote>
               <div className="mt-4">
-                <p className="font-extrabold text-gray-900 text-lg">Mr. Pappu Jha</p>
-                <p className="text-sm text-[var(--primary)] font-bold">Principal, Shikshantar Academy</p>
+                <p className="font-extrabold text-gray-900 text-lg">{content.principalName || 'Mr. Pappu Jha'}</p>
+                <p className="text-sm text-[var(--primary)] font-bold">{content.principalTitle || 'Principal, Shikshantar Academy'}</p>
               </div>
             </div>
           </div>
@@ -1133,32 +1074,24 @@ export default function Home() {
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           ADD NEW SECTION 5 — CONTACT STRIP
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="w-full bg-[#F8FAFC] py-[40px] px-4 md:px-8 border-t border-gray-200 mt-auto">
-         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
-               <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">📍</div>
-               <h4 className="font-bold text-gray-900 text-[16px]">Find Us</h4>
-               <p className="text-sm text-gray-600 leading-relaxed font-medium">Bastipur-5, Karjanha Municipality<br/>Ward No. 05, Siraha,<br/>Madhesh Pradesh, Nepal</p>
-            </div>
-            
-            <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
-               <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">📞</div>
-               <h4 className="font-bold text-gray-900 text-[16px]">Call Us</h4>
-               <p className="text-sm text-gray-600 leading-relaxed font-medium">9800000000</p>
-               <p className="text-xs text-gray-500">Sunday–Friday, 9:30 AM–4:00 PM</p>
-            </div>
-            
-            <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
-               <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">🔗</div>
-               <h4 className="font-bold text-gray-900 text-[16px]">Quick Access</h4>
-               <div className="flex flex-wrap justify-center md:justify-start gap-2 max-w-[280px]">
-                  <Link to="/admission" className="text-xs font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-full hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-colors">📝 Admission Form</Link>
-                  <Link to="/auth" className="text-xs font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-full hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-colors">💰 Fee Structure</Link>
-                  <Link to="/auth" className="text-xs font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-4 py-2 rounded-full hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-colors">📊 Results Portal</Link>
-               </div>
-            </div>
-         </div>
-      </div>
+      {isAdmin && (
+        <div className="w-full bg-[#F8FAFC] py-[40px] px-4 md:px-8 border-t border-gray-200 mt-auto">
+           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
+                 <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">📍</div>
+                 <h4 className="font-bold text-gray-900 text-[16px]">Find Us</h4>
+                 <p className="text-sm text-gray-600 leading-relaxed font-medium whitespace-pre-wrap">{content.findUsAddress || 'Bastipur-5, Karjanha Municipality\nWard No. 05, Siraha,\nMadhesh Pradesh, Nepal'}</p>
+              </div>
+              
+              <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
+                 <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">📞</div>
+                 <h4 className="font-bold text-gray-900 text-[16px]">Call Us</h4>
+                 <p className="text-sm text-gray-600 leading-relaxed font-medium">{content.contactPhone || '9800000000'}</p>
+                 <p className="text-xs text-gray-500">Sunday–Friday, 9:30 AM–4:00 PM</p>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* Fullscreen Lightbox Modal */}
       {expandedImage && (

@@ -19,7 +19,7 @@ import Admission from './pages/Admission';
 import AdminAdmissions from './pages/AdminAdmissions';
 import UserApprovals from './pages/UserApprovals';
 import Profile from './pages/Profile';
-import ThemeSettings from './pages/ThemeSettings';
+import Settings from './pages/Settings';
 import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -193,34 +193,43 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedRole = urlParams.get('previewRole');
+    
+    if (forcedRole) {
+      setUserRole(forcedRole);
+      setIsAuthenticated(forcedRole !== 'guest');
+      setLoading(false);
+    }
+
     let unSubDoc: (() => void) | null = null;
     
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (forcedRole) return; // prevent overriding the forced state
+      
       if (user) {
         // Fetch role from Firestore for security
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           
+          let roleToSet = 'student';
+          
           if (user.email === 'rahulsah4534@gmail.com') {
-            setUserRole('admin');
-            localStorage.setItem('userRole', 'admin');
+            roleToSet = 'admin';
             try {
               await setDoc(doc(db, 'users', user.uid), { role: 'admin', email: user.email, activeSessions: arrayUnion(localSessionId) }, { merge: true });
             } catch (e) {
               console.error("Failed to persist admin role:", e);
             }
           } else if (userDoc.exists()) {
-             const data = userDoc.data();
-             const role = data.role || 'student';
-             setUserRole(role);
-             localStorage.setItem('userRole', role);
+             roleToSet = userDoc.data().role || 'student';
              try {
                await setDoc(doc(db, 'users', user.uid), { activeSessions: arrayUnion(localSessionId) }, { merge: true });
              } catch(e) {}
-          } else {
-            setUserRole('student');
-            localStorage.setItem('userRole', 'student');
           }
+          
+          setUserRole(roleToSet);
+          localStorage.setItem('userRole', roleToSet);
           
           // Setup real-time listener for cross-device logout
           unSubDoc = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
@@ -318,8 +327,8 @@ export default function App() {
             element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} 
           />
           <Route 
-            path="theme-settings" 
-            element={isAuthenticated && (userRole === 'admin') ? <ThemeSettings /> : <Navigate to="/" />} 
+            path="settings" 
+            element={isAuthenticated && (userRole === 'admin') ? <Settings /> : <Navigate to="/" />} 
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>

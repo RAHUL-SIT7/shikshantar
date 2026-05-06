@@ -220,7 +220,7 @@ export default function Layout({
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
       nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
       nav.push({ name: 'Administrative User Management', href: '/user-approvals', icon: Shield, group: 5 });
-      nav.push({ name: 'Theme Settings', href: '/theme-settings', icon: Settings, group: 5 });
+      nav.push({ name: 'Smart Settings', href: '/settings', icon: Settings, group: 5 });
       nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
     }
     
@@ -638,15 +638,15 @@ export default function Layout({
               <div>
                 <h4 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-4 border-b border-white/20 pb-2 inline-block">Quick Links</h4>
                 <ul className="space-y-2 text-sm opacity-90 font-medium">
-                  <li><Link to="/about" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> About Us</Link></li>
-                  <li><Link to="/admission" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Admission Form</Link></li>
-                  <li><Link to="/notices" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Notice Board</Link></li>
-                  <li><Link to="/gallery" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Photo Gallery</Link></li>
-                  <li><Link to="/alumni" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Alumni / Success</Link></li>
-                  <li><Link to="/faq" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> FAQ</Link></li>
-                  <li><Link to="/contact" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Contact Us</Link></li>
+                  <li><Link to="/about" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> About Us</Link></li>
+                  <li><Link to="/admission" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Admission Form</Link></li>
+                  <li><Link to="/notices" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Notice Board</Link></li>
+                  <li><Link to="/gallery" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Photo Gallery</Link></li>
+                  <li><Link to="/alumni" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Alumni / Success</Link></li>
+                  <li><Link to="/faq" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> FAQ</Link></li>
+                  <li><Link to="/contact" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Contact Us</Link></li>
                   {!isAuthenticated && (
-                    <li><Link to="/login" className="hover:bg-white hover:text-[var(--primary)] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Login Portal</Link></li>
+                    <li><Link to="/login" className="hover:bg-white hover:text-[#1a2744] px-3 py-1.5 rounded-lg -ml-3 transition-colors flex items-center gap-2 w-fit"><span className="w-1.5 h-1.5 bg-[var(--accent)] rounded-full inline-block"></span> Login Portal</Link></li>
                   )}
                 </ul>
               </div>

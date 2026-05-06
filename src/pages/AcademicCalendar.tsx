@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Link as LinkIcon, Trash2, Calendar } from 'lucide-react';
+import { Upload, Link as LinkIcon, Trash2, Calendar, X } from 'lucide-react';
 import { db, storage } from '../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
@@ -17,6 +17,7 @@ export default function AcademicCalendar() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTaskRef = useRef<any>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -91,7 +92,47 @@ export default function AcademicCalendar() {
         finalType = selectedFiles[0].type === 'application/pdf' ? 'pdf' : 'image';
         
         for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
+          let file = selectedFiles[i];
+          
+          if (finalType === 'image') {
+             try {
+                file = await new Promise((resolve, reject) => {
+                  const img = new Image();
+                  const url = URL.createObjectURL(file);
+                  img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 1920;
+                    if (width > height && width > max_size) {
+                      height *= max_size / width;
+                      width = max_size;
+                    } else if (height > max_size) {
+                      width *= max_size / height;
+                      height = max_size;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { resolve(file); return; }
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0,0,width,height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                      if (blob) {
+                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+                      } else {
+                        resolve(file);
+                      }
+                    }, 'image/jpeg', 0.85);
+                  };
+                  img.onerror = () => resolve(file);
+                  img.src = url;
+                });
+             } catch(e) {}
+          }
+
           const extension = file.name.split('.').pop() || 'tmp';
           const storageRef = ref(storage, `calendar/academic_calendar_${Date.now()}_${i}.${extension}`);
           
@@ -228,7 +269,16 @@ export default function AcademicCalendar() {
               ) : (
                 <div className={`grid gap-4 w-full ${calendarUrls.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                   {calendarUrls.map((url, idx) => (
-                    <img key={idx} src={url} alt={`Academic Calendar Page ${idx + 1}`} className="max-w-full h-auto rounded shadow-sm border border-[#e5e7eb] mx-auto" />
+                    <img 
+                      key={idx} 
+                      src={url} 
+                      alt={`Academic Calendar Page ${idx + 1}`} 
+                      className="max-w-full h-auto rounded shadow-sm border border-[#e5e7eb] mx-auto cursor-pointer hover:shadow-md transition-shadow bg-gray-50 object-cover" 
+                      onClick={() => setExpandedImage(url)}
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ))}
                 </div>
               )
@@ -240,6 +290,27 @@ export default function AcademicCalendar() {
            )}
         </div>
       </div>
+
+      {expandedImage && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/90 flex justify-center items-center backdrop-blur-sm cursor-zoom-out p-4"
+          onClick={() => setExpandedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-white hover:text-white bg-white/20 hover:bg-white/40 rounded-full p-3 transition-all backdrop-blur-md shadow-lg z-[10000]"
+            onClick={(e) => { e.stopPropagation(); setExpandedImage(null); }}
+          >
+            <X className="w-7 h-7" />
+          </button>
+          <img 
+            src={expandedImage} 
+            alt="Expanded Calendar" 
+            className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg drop-shadow-2xl shadow-black ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()} 
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
     </div>
   );
 }
