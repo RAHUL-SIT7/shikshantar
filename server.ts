@@ -31,9 +31,10 @@ async function startServer() {
   app.post("/api/payment/khalti/initiate", async (req, res) => {
     try {
       const { return_url, website_url, amount, purchase_order_id, purchase_order_name, customer_info } = req.body;
-      const secretKey = process.env.VITE_KHALTI_SECRET_KEY || "bWluZV8xMjM0"; // Sandbox default test key wait, we need real sandbox key for Khalti
-      // khalti sandbox key format usually starts with Key live_ or Key test_
-      const authKey = process.env.VITE_KHALTI_SECRET_KEY || "Key test_secret_key_from_dashboard";
+      const authKey = process.env.VITE_KHALTI_SECRET_KEY;
+      if (!authKey || authKey === "Key test_secret_key_from_dashboard") {
+         return res.status(400).json({ error: "API keys are not configured properly. Please configure VITE_KHALTI_SECRET_KEY in the environment." });
+      }
 
       const khaltiResponse = await fetch("https://a.khalti.com/api/v2/epayment/initiate/", {
         method: "POST",

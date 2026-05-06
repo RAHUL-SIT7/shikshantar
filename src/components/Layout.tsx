@@ -191,6 +191,7 @@ export default function Layout({
     { name: 'Photo Gallery', href: '/gallery', icon: Image, group: 4 },
     { name: 'Academic Calendar', href: '/calendar', icon: Calendar, group: 4 },
     { name: 'Admission Form', href: '/admission', icon: FileText, group: 4 },
+    { name: 'Fee Structure', href: '/fee-structure', icon: CreditCard, group: 4 },
     { name: 'Alumni / Success', href: '/alumni', icon: GraduationCap, group: 4 },
     { name: 'FAQ', href: '/faq', icon: HelpCircle, group: 4 },
     { name: 'Contact Us', href: '/contact', icon: Phone, group: 4 },

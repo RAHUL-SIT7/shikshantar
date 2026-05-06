@@ -116,7 +116,7 @@ export default function Account() {
   const getStudentDue = () => {
       let totalDue = 0;
       studentRecord.fees?.forEach((f: any) => {
-          if (f.status === 'due') {
+          if (f.status === 'due' || Number(f.dueAmount) > 0) {
               totalDue += Number(f.dueAmount || 0);
           }
       });
@@ -295,7 +295,7 @@ export default function Account() {
                <h3 className="text-lg font-black text-emerald-800 flex items-center justify-center md:justify-start gap-2">
                  ✅ All fees cleared for this month
                </h3>
-               <p className="text-emerald-700 text-sm font-medium mt-1">Next due: Shrawan 2084</p>
+               <p className="text-emerald-700 text-sm font-medium mt-1">Thank you for keeping your account up to date.</p>
            </div>
         </div>
       )}
@@ -349,8 +349,8 @@ export default function Account() {
              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-6 gap-2 md:gap-3">
                {MONTHS.map((m, idx) => {
                  const feeDoc = studentRecord.fees?.find((f: any) => f.month === m);
-                 const isPaid = feeDoc?.status === 'paid';
-                 const isDue = feeDoc?.status === 'due';
+                 const isPaid = feeDoc?.status === 'paid' || (Number(feeDoc?.paidAmount) > 0 && Number(feeDoc?.dueAmount) === 0);
+                 const isDue = feeDoc?.status === 'due' || Number(feeDoc?.dueAmount) > 0;
                  return (
                     <div key={m} className={`p-2 md:p-3 rounded-xl border flex flex-col items-center justify-center gap-1 md:gap-2 transition-all cursor-pointer hover:shadow-md ${
                        isPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
