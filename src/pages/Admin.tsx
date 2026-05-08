@@ -7,7 +7,6 @@ import { BookOpen, Users, Folder, AlertCircle, FileSpreadsheet, Edit2, Search, S
 import { UploadTab } from '../components/admin/UploadTab';
 import { ManualEntryTab } from '../components/admin/ManualEntryTab';
 import { ViewManageTab } from '../components/admin/ViewManageTab';
-import { ReportCardsTab } from '../components/admin/ReportCardsTab';
 
 import { StudentResult } from '../data/resultsState';
 
@@ -210,7 +209,7 @@ export default function Admin() {
                  </div>
               </div>
 
-              <button onClick={teacherSetupSave} disabled={assignedClasses.length === 0 || assignedSubjects.length === 0} className={`w-full py-4 rounded-xl font-black text-lg transition-transform active:scale-95 shadow-md ${assignedClasses.length > 0 && assignedSubjects.length > 0 ? '- text-white hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              <button onClick={teacherSetupSave} disabled={assignedClasses.length === 0 || assignedSubjects.length === 0} className={`w-full py-4 rounded-xl font-black text-lg transition-transform active:scale-95 shadow-md ${assignedClasses.length > 0 && assignedSubjects.length > 0 ? 'bg-[var(--primary)] text-white hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
                   Save Configuration
               </button>
           </div>
@@ -255,17 +254,14 @@ export default function Admin() {
 
        {/* Tabs Header */}
        <div className="flex overflow-x-auto bg-white rounded-xl border border-gray-200 p-2 gap-2 shadow-sm font-bold scrollbar-hide">
-           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('manual')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'manual' ? 'bg-[var(--primary)] text-white shadow-md' : 'bg-transparent text-gray-600 hover:opacity-90'}`}>
                <Edit2 className="w-4 h-4"/> Manual Entry
            </button>
-           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
+           <button onClick={()=>setActiveTab('upload')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'upload' ? 'bg-[var(--primary)] text-white shadow-md' : 'bg-transparent text-gray-600 hover:opacity-90'}`}>
                <Upload className="w-4 h-4"/> Excel Upload
            </button>
-           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
-               <BookOpen className="w-4 h-4"/> History
-           </button>
-           <button onClick={()=>setActiveTab('reportcards')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'reportcards' ? 'bg-[var(--primary)] text-white shadow-md' : 'text-gray-600 hover:opacity-90'}`}>
-               <FileSpreadsheet className="w-4 h-4"/> Report Cards
+           <button onClick={()=>setActiveTab('history')} className={`flex-shrink-0 px-6 py-3 rounded-lg flex items-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[var(--primary)] text-white shadow-md' : 'bg-transparent text-gray-600 hover:opacity-90'}`}>
+               <BookOpen className="w-4 h-4"/> Manage & Reports
            </button>
        </div>
 
@@ -309,17 +305,6 @@ export default function Admin() {
                            setStatus={setStatus} 
                            userRole={userRole} 
                            assignedClasses={assignedClasses} 
-                       />
-                   )}
-                   {activeTab === 'reportcards' && (
-                       <ReportCardsTab 
-                           EXAM_TYPES={dynamicExamTypes} 
-                           allClasses={DEFAULT_CLASSES} 
-                           data={data} 
-                           setStatus={setStatus} 
-                           userRole={userRole} 
-                           assignedClasses={assignedClasses} 
-
                        />
                    )}
                </>

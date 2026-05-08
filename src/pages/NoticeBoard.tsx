@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { formatBSDate } from '../lib/nepaliDate';
 import { db, auth } from '../firebase';
 import { collection, doc, onSnapshot, query, orderBy, addDoc, updateDoc, deleteDoc, Timestamp, arrayUnion, where } from 'firebase/firestore';
@@ -38,6 +39,7 @@ export default function NoticeBoard() {
   });
 
   const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
 
   useEffect(() => {
     let unsub = () => {};
@@ -79,12 +81,14 @@ export default function NoticeBoard() {
         // Check Expiry
         if (n.validUntil && new Date(n.validUntil) < new Date()) return false;
         
-        if (role === 'teacher') {
-           return n.targets?.includes('All') || n.targets?.includes('Teachers Only');
+        if (n.targets?.includes('All')) return true;
+
+        if (role === 'teacher' || role === 'Teacher') {
+           return n.targets?.includes('Teachers Only');
         } else if (role === 'student') {
-           return n.targets?.includes('All') || n.targets?.includes('Students Only') || n.targets?.includes(`Class ${studentClass}`);
+           return n.targets?.includes('Students Only') || (studentClass ? n.targets?.includes(`Class ${studentClass}`) : false);
         } else {
-           // guest
+           // guest or parent
            return n.targets?.includes('Guest User');
         }
      });
@@ -165,9 +169,18 @@ export default function NoticeBoard() {
       }
   };
 
-  const handleDelete = async (id: string) => {
-      if (window.confirm("Are you sure? This notice will be removed for all users.")) {
-         await deleteDoc(doc(db, 'notices', id));
+  const handleDelete = (notice: any) => {
+      setDeleteConfirm(notice);
+  };
+
+  const confirmDelete = async () => {
+      if (!deleteConfirm) return;
+      try {
+          await deleteDoc(doc(db, 'notices', deleteConfirm.id));
+          setDeleteConfirm(null);
+      } catch (error: any) {
+          console.error("Delete error:", error);
+          alert("Delete failed: " + (error.message || 'Unknown error'));
       }
   };
 
@@ -214,6 +227,12 @@ export default function NoticeBoard() {
 
   return (
     <div className="relative h-full flex flex-col pb-20 md:pb-0">
+      <Helmet>
+        <title>Notice Board | Shikshantar Academy</title>
+        <meta name="description" content="Stay updated with the latest notices, announcements, and news from Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/noticeboard" />
+      </Helmet>
+      
       
       {/* HEADER SECTION */}
       {role === 'admin' ? (
@@ -286,9 +305,18 @@ export default function NoticeBoard() {
       {/* NOTICES LIST */}
       <div className="flex flex-col gap-4">
          {loading ? (
-             <div className="bg-white rounded-xl p-10 flex flex-col items-center justify-center text-center shadow-sm border border-gray-200">
-                 <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                 <p className="text-gray-500 font-medium tracking-wide">Loading notices...</p>
+             <div className="space-y-4">
+               {[1, 2, 3].map((i) => (
+                 <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex gap-4 animate-pulse">
+                   <div className="hidden sm:block w-36 h-28 bg-gray-200 rounded-xl flex-shrink-0"></div>
+                   <div className="flex-1 space-y-3">
+                     <div className="w-20 h-5 bg-gray-200 rounded-full"></div>
+                     <div className="w-3/4 h-6 bg-gray-200 rounded"></div>
+                     <div className="w-full h-4 bg-gray-200 rounded"></div>
+                     <div className="w-2/3 h-4 bg-gray-200 rounded"></div>
+                   </div>
+                 </div>
+               ))}
              </div>
          ) : visibleNotices.length === 0 ? (
             <div className="bg-white rounded-xl p-10 flex flex-col items-center justify-center text-center shadow-sm border border-gray-200">
@@ -318,8 +346,19 @@ export default function NoticeBoard() {
                     {/* Left Border Accent */}
                     <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isUrgent ? 'bg-red-500' : isDraft ? 'bg-gray-400' : 'bg-blue-500'}`}></div>
                     
-                    {/* Unread Dot */}
-                    {isUnread && <div className="absolute right-4 top-4 w-3 h-3 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>}
+                    {/* Corner Actions / Markers */}
+                    <div className="absolute right-4 top-4 flex gap-2 items-center">
+                       {role === 'admin' && (
+                           <button 
+                              onClick={(e) => { e.stopPropagation(); handleDelete(notice); }} 
+                              className="text-gray-300 hover:text-red-600 transition-colors p-1"
+                              title="Permanently Delete Notification"
+                           >
+                              <Trash2 className="w-[18px] h-[18px]" />
+                           </button>
+                       )}
+                       {isUnread && <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>}
+                    </div>
 
                     <div className="p-5 pl-6">
                        <div className="flex flex-wrap items-center gap-2 mb-2 pr-6">
@@ -361,7 +400,7 @@ export default function NoticeBoard() {
                                 <div className="flex flex-wrap items-center gap-2 mt-6 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                                    <button onClick={() => openNoticePanel(notice)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-sm font-bold transition-colors"><Edit2 className="w-4 h-4"/> Edit</button>
                                    <button onClick={() => handleDuplicate(notice)} className="flex items-center gap-1.5 px-3 py-1.5 text-primary text-gray-600 hover:bg-gray-100 rounded text-sm font-bold transition-colors"><Copy className="w-4 h-4"/> Duplicate</button>
-                                   <button onClick={() => handleDelete(notice.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-sm font-bold transition-colors ml-auto"><Trash2 className="w-4 h-4"/> Delete</button>
+                                   <button onClick={() => handleDelete(notice)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-sm font-bold transition-colors ml-auto"><Trash2 className="w-4 h-4"/> Delete</button>
                                 </div>
                              )}
                           </div>
@@ -506,6 +545,36 @@ export default function NoticeBoard() {
                </div>
             </div>
          </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2 text-red-600">
+                 <Trash2 className="w-5 h-5"/> Delete Notice
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                 Are you sure you want to permanently delete this notice?
+                 <br/><br/>
+                 It will be erased permanently from the database and removed from the view of: <span className="font-bold">{Array.isArray(deleteConfirm.targets) && deleteConfirm.targets.length > 0 ? deleteConfirm.targets.join(', ') : (deleteConfirm.targets || 'all users')}</span>.
+              </p>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                 <button 
+                    onClick={() => setDeleteConfirm(null)}
+                    className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                 >
+                    Cancel
+                 </button>
+                 <button 
+                    onClick={confirmDelete}
+                    className="px-4 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm transition-colors"
+                 >
+                    Delete Permanently
+                 </button>
+              </div>
+           </div>
+        </div>
       )}
     </div>
   );

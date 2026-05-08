@@ -26,7 +26,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
   const [examType, setExamType] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [subjectConfigs, setSubjectConfigs] = useState<Record<string, {fullMarks: number, passMarks: number}>>({});
+  const [subjectConfigs, setSubjectConfigs] = useState<Record<string, {fullMarks: number | '', passMarks: number | ''}>>({});
   
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -134,10 +134,14 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
     loadStudents();
   }, [selectedClass, selectedSubject, examType, data]);
 
-  const handleMarkChange = (idx: number, val: string, subj?: string) => {
+  const handleMarkChange = (idx: number, rawVal: string, subj?: string) => {
+      let val = rawVal.replace(/[^0-9.]/g, '');
+      val = val.replace(/^0+(?=\d)/, '');
+      
       const v = Number(val);
       const subjConfig = subjectConfigs[subj || selectedSubject] || { fullMarks: 100, passMarks: 40 };
-      if (val !== '' && (v > subjConfig.fullMarks || v < 0)) return; // prevent invalid
+      const maxMarks = subjConfig.fullMarks === '' ? Infinity : subjConfig.fullMarks;
+      if (val !== '' && (v > maxMarks || v < 0)) return; // prevent invalid
       const newS = [...students];
       if (subj) {
           newS[idx].subjectMarks[subj] = val;
@@ -512,11 +516,11 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                <div className="flex gap-2">
                                    <div className="flex-1">
                                        <label className="text-[10px] text-gray-400">Full</label>
-                                       <input type="number" value={subjectConfigs[subj]?.fullMarks ?? 100} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
+                                       <input type="number" value={subjectConfigs[subj]?.fullMarks ?? 100} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {passMarks:40}), fullMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
                                    </div>
                                    <div className="flex-1">
                                        <label className="text-[10px] text-gray-400">Pass</label>
-                                       <input type="number" value={subjectConfigs[subj]?.passMarks ?? 40} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
+                                       <input type="number" value={subjectConfigs[subj]?.passMarks ?? 40} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {fullMarks:100}), passMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
                                    </div>
                                </div>
                            </div>
@@ -528,11 +532,11 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    <div className="col-span-1 lg:col-span-4 flex gap-4 mt-2">
                       <div className="flex-1">
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
+                         <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
                       </div>
                       <div className="flex-1">
                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pass Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.passMarks ?? 40} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {fullMarks:100}), passMarks: Number(e.target.value)||0}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
+                         <input type="number" value={subjectConfigs[selectedSubject]?.passMarks ?? 40} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {fullMarks:100}), passMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
                       </div>
                    </div>
                 )
@@ -590,7 +594,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                        dynamicSubjects.map((subj: string, sIndex: number) => (
                                            <td key={subj} className="p-3 min-w-[130px]">
                                                <div className="flex flex-col gap-1 items-center">
-                                                   <input type="number" 
+                                                   <input type="text" inputMode="decimal" 
                                                       value={std.subjectMarks[subj] || ''} 
                                                       onChange={e => handleMarkChange(i, e.target.value, subj)} 
                                                       disabled={std.subjectAbsents[subj]}
@@ -614,7 +618,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                                {std.isAbsent ? (
                                                    <span className="font-bold text-red-500 flex items-center h-10">AB (Absent)</span>
                                                ) : (
-                                                   <input type="number" 
+                                                   <input type="text" inputMode="decimal" 
                                                       value={std.tempMark} 
                                                       onChange={e => handleMarkChange(i, e.target.value)} 
                                                       className={`w-full px-3 py-2 border rounded-md font-black text-lg focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
@@ -650,7 +654,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                            <p className="text-xs font-bold text-gray-600 mb-1 truncate">{subj}</p>
                                            <div className="flex items-center gap-2">
                                               <input type="checkbox" checked={std.subjectAbsents[subj] || false} onChange={e => handleAbsentChange(i, e.target.checked, subj)} className="w-4 h-4 accent-red-600" />
-                                              <input type="number" 
+                                              <input type="text" inputMode="decimal" 
                                                   value={std.subjectMarks[subj] || ''} 
                                                   onChange={e => handleMarkChange(i, e.target.value, subj)} 
                                                   disabled={std.subjectAbsents[subj]}
@@ -671,7 +675,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                                      {std.isAbsent ? (
                                          <div className="h-12 flex items-center justify-center bg-red-50 border border-red-200 text-red-600 font-bold rounded-lg">AB (Absent)</div>
                                      ) : (
-                                         <input type="number" 
+                                         <input type="text" inputMode="decimal" 
                                            value={std.tempMark} 
                                            onChange={e => handleMarkChange(i, e.target.value)} 
                                            className={`w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}

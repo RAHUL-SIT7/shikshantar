@@ -1,5 +1,6 @@
 import { Activity, Edit2, Save, X, Plus, Trash2, Upload, Image as ImageIcon, Leaf } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'motion/react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -128,6 +129,12 @@ export default function Facilities() {
 
   return (
     <div className="flex flex-col gap-6 p-2 md:p-6 text-primary min-h-screen">
+      <Helmet>
+        <title>Facilities | Shikshantar Academy</title>
+        <meta name="description" content="Explore the modern facilities, science labs, computer labs, and library at Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/facilities" />
+      </Helmet>
+      
       {/* Header section with Edit controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-xl border shadow-sm">
         <div>

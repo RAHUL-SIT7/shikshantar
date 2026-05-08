@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
+const MONTHS = ['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
 
 export default function Account() {
   const [studentRecord, setStudentRecord] = useState<any>(null);

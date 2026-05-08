@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, where, get
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { motion } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 import { BarChart, Bar, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid, YAxis } from 'recharts';
 const logoImage = "https://i.postimg.cc/SxGS5WxY/logo.png";
 const principalImg = "https://i.postimg.cc/7LmLCgvb/606350985-1458678509597899-5556893883060728495-n-jpg-stp-dst-jpegr-tt6-nc-cat-111-ccb-1-7-nc-sid-7.jpg";
@@ -75,7 +76,7 @@ export default function Home() {
             let tTotal = 0;
             const today = new Date();
             
-            const monthNames = ['Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Asoj', 'Kartik', 'Mangsir', 'Poush'];
+            const monthNames = ['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
             const monthlySums: Record<string, number> = {};
             monthNames.forEach(m => monthlySums[m] = 0);
 
@@ -97,10 +98,10 @@ export default function Home() {
             setFeeChartData([
               { name: 'Baisakh', expected: 300000, collected: monthlySums['Baisakh'] },
               { name: 'Jestha', expected: 300000, collected: monthlySums['Jestha'] },
-              { name: 'Ashadh', expected: 300000, collected: monthlySums['Ashadh'] },
+              { name: 'Asar', expected: 300000, collected: monthlySums['Asar'] },
               { name: 'Shrawan', expected: 300000, collected: monthlySums['Shrawan'] },
               { name: 'Bhadra', expected: 300000, collected: monthlySums['Bhadra'] },
-              { name: 'Asoj', expected: 300000, collected: monthlySums['Asoj'] },
+              { name: 'Ashwin', expected: 300000, collected: monthlySums['Ashwin'] },
               { name: 'Kartik', expected: 300000, collected: monthlySums['Kartik'] },
               { name: 'Mangsir', expected: 300000, collected: monthlySums['Mangsir'] },
               { name: 'Poush', expected: 300000, collected: monthlySums['Poush'] },
@@ -319,10 +320,10 @@ export default function Home() {
   const [feeChartData, setFeeChartData] = useState([
     { name: 'Baisakh', expected: 300000, collected: 0 },
     { name: 'Jestha', expected: 300000, collected: 0 },
-    { name: 'Ashadh', expected: 300000, collected: 0 },
+    { name: 'Asar', expected: 300000, collected: 0 },
     { name: 'Shrawan', expected: 300000, collected: 0 },
     { name: 'Bhadra', expected: 300000, collected: 0 },
-    { name: 'Asoj', expected: 300000, collected: 0 },
+    { name: 'Ashwin', expected: 300000, collected: 0 },
     { name: 'Kartik', expected: 300000, collected: 0 },
     { name: 'Mangsir', expected: 300000, collected: 0 },
     { name: 'Poush', expected: 300000, collected: 0 },
@@ -714,6 +715,31 @@ export default function Home() {
   // --- Public View below ---
   return (
     <div className="flex flex-col bg-[#F5F6FA] w-full min-h-full">
+      <Helmet>
+        <title>{content.tagline2 || 'Shikshantar Academy'} | Outstanding Education in Siraha</title>
+        <meta name="description" content={content.description ? content.description.slice(0, 160) : 'Shikshantar Academy provides quality education, expert faculty, and modern facilities from Play Group to Class 10 in Siraha, Nepal.'} />
+        <meta name="keywords" content="Shikshantar Academy, School in Siraha, Best school in Bastipur, Quality Education Nepal, SEE Preparation, English Medium School Siraha" />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np" />
+        <link rel="preload" href={logoImage} as="image" />
+        <meta property="og:title" content={`${content.tagline2 || 'Shikshantar Academy'} | Inspiring Minds`} />
+        <meta property="og:description" content={content.description ? content.description.slice(0, 160) : 'Nurturing minds and building character in the heart of Siraha. Modern facilities, expert faculty, and a commitment to excellence.'} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            "name": "Shikshantar Academy",
+            "description": content.description || "Nurturing minds and building character in the heart of Siraha.",
+            "image": logoImage,
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Siraha",
+              "addressRegion": "Madhesh Pradesh",
+              "addressCountry": "NP"
+            },
+            "telephone": content.contactPhone || "9800000000"
+          })}
+        </script>
+      </Helmet>
       
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           FIX 1 — NOTICE TICKER BAR
@@ -739,7 +765,7 @@ export default function Home() {
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section className="bg-gradient-to-br from-[var(--primary)] to-blue-900 rounded-xl p-8 md:p-12 shadow-lg relative overflow-hidden text-white flex flex-col">
           <div className="absolute inset-0 opacity-[0.08] mix-blend-overlay flex items-center justify-center pointer-events-none">
-            <img src={logoUrl} alt="School Logo" className="w-[150%] h-[150%] md:w-full md:h-full object-cover md:object-contain p-10 max-w-2xl blur-[1px]" referrerPolicy="no-referrer" />
+            <img src={logoUrl} alt="School Logo" className="w-[150%] h-[150%] md:w-full md:h-full object-cover md:object-contain p-10 max-w-2xl opacity-50" referrerPolicy="no-referrer" fetchPriority="high" />
           </div>
           <div className="absolute -right-20 -top-20 w-64 h-64 border border-white/10 bg-blue-500 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
           
@@ -976,7 +1002,7 @@ export default function Home() {
                  {galleryImages.slice(0, 4).map((img, idx) => (
                     <div key={idx} className="h-[160px] rounded-xl overflow-hidden cursor-pointer group shadow-[0_2px_8px_rgba(0,0,0,0.07)] border border-gray-200 relative" onClick={() => setExpandedImage(img.image)}>
                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors z-10 pointer-events-none"></div>
-                       <img src={img.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={img.caption || `Gallery ${idx}`} referrerPolicy="no-referrer" />
+                       <img src={img.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={img.caption || `Gallery ${idx}`} referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     </div>
                  ))}
               </div>
@@ -1086,7 +1112,7 @@ export default function Home() {
               <div className="flex flex-col items-center md:items-start text-center md:text-left gap-3">
                  <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-[24px] text-[var(--primary)] mb-1">📞</div>
                  <h4 className="font-bold text-gray-900 text-[16px]">Call Us</h4>
-                 <p className="text-sm text-gray-600 leading-relaxed font-medium">{content.contactPhone || '9800000000'}</p>
+                 <a href={`tel:${content.contactPhone || '9800000000'}`} className="text-sm text-gray-600 leading-relaxed font-medium hover:text-[var(--primary)] transition-colors">{content.contactPhone || '9800000000'}</a>
                  <p className="text-xs text-gray-500">Sunday–Friday, 9:30 AM–4:00 PM</p>
               </div>
            </div>

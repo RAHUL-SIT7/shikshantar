@@ -383,13 +383,32 @@ export default function UserApprovals() {
         {/* Table Area */}
         <div className="overflow-x-auto min-h-[400px]">
           {isUsersLoading ? (
-            <div className="flex flex-col items-center justify-center p-20 gap-4">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-500 font-bold animate-pulse">Loading Identity Data...</p>
+            <div className="w-full">
+               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                 <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 flex gap-4">
+                    <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                 </div>
+                 <div className="divide-y divide-gray-100">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="px-6 py-4 flex gap-4 items-center animate-pulse">
+                         <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                         <div className="flex-1 space-y-2">
+                           <div className="w-1/3 h-4 bg-gray-200 rounded"></div>
+                           <div className="w-1/4 h-3 bg-gray-100 rounded"></div>
+                         </div>
+                         <div className="w-24 h-6 bg-gray-200 rounded-full"></div>
+                         <div className="w-20 h-8 bg-gray-200 rounded-lg"></div>
+                      </div>
+                    ))}
+                 </div>
+               </div>
             </div>
           ) : (
-            <table className="w-full text-left whitespace-nowrap">
-              <thead>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left whitespace-nowrap min-w-[600px]">
+                <thead>
                 <tr className="text-primary text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                   <th className="p-4 px-6 uppercase tracking-wider">User Information</th>
                   <th className="p-4 px-6 uppercase tracking-wider">Contact & ID</th>
@@ -509,6 +528,7 @@ export default function UserApprovals() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </section>

@@ -13,6 +13,8 @@ import ScholarshipTab from '../components/fee_management/ScholarshipTab';
 
 export default function AccountAdmin() {
   const [activeTab, setActiveTab] = useState('student_ledger');
+  const [ledgerFilterStatus, setLedgerFilterStatus] = useState('All');
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [userRole, setUserRole] = useState('teacher'); // Default restrictive
   const [targetStudentId, setTargetStudentId] = useState<string | undefined>(undefined);
   
@@ -38,6 +40,8 @@ export default function AccountAdmin() {
           const settingsDoc = await getDoc(doc(db, 'settings', 'fee_structure'));
           const structs = settingsDoc.exists() ? (settingsDoc.data().academic || []) : [];
           setFeeStructures(structs);
+          const academicYear = settingsDoc.exists() ? (settingsDoc.data().academicYear || '2023-2024') : '2023-2024';
+          setStats(prev => ({ ...prev, academicYear }));
 
           // 2. Fetch students
           const studSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
@@ -52,13 +56,14 @@ export default function AccountAdmin() {
           // Or read from studentFees if we save them individually.
           // For now, let's keep it simple: read 'studentFees' to get due per student.
           const feesSnap = await getDocs(collection(db, 'studentFees'));
-          const feesList = feesSnap.docs.map(d => d.data());
+          const feesList = feesSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
 
           // Merge into studentData
           const mergedStudents = studentsList.map(s => {
               const studentFees = feesList.filter(f => f.studentId === s.id);
               const struct = structs.find((st: any) => st.className === s.class);
-              let baseFee = struct?.tuition ? Number(String(struct.tuition).replace(/[^0-9.]/g, '')) : 1000;
+              let baseFee = s.monthlyFee ? Number(s.monthlyFee) : (struct?.tuition ? Number(String(struct.tuition).replace(/[^0-9.]/g, '')) : 1000);
+              const originalTuition = baseFee;
               
               if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
                  baseFee = Math.max(0, baseFee - Number(s.scholarshipAmount));
@@ -69,8 +74,13 @@ export default function AccountAdmin() {
                  name: s.fullName || s.name,
                  class: s.class,
                  monthlyFee: baseFee,
+                 originalTuition: originalTuition,
                  scholarshipStatus: s.scholarshipStatus,
                  scholarshipAmount: s.scholarshipAmount,
+                 examFee: Number(s.examFee || 0),
+                 computerFee: Number(s.computerFee || 0),
+                 transportFee: Number(s.transportFee || 0),
+                 otherFee: Number(s.otherFee || 0),
                  guardianName: s.guardianName || 'Unknown',
                  guardianPhone: s.parentPhone || s.phone || '',
                  fees: studentFees // all fee records
@@ -156,6 +166,7 @@ export default function AccountAdmin() {
      { id: 'record_payment', label: 'Record Payment', roles: ['admin'] },
      { id: 'fee_structure', label: 'Fee Structure', roles: ['admin'] },
      { id: 'history', label: 'Transaction History', roles: ['admin', 'teacher'] },
+     { id: 'reports', label: 'Reports & Analytics', roles: ['admin'] },
   ];
 
   const TABS = ALL_TABS.filter(t => t.roles.includes(userRole));
@@ -178,7 +189,7 @@ export default function AccountAdmin() {
           </div>
           <div>
             <p className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">NRs. {stats.collectedThisYear.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-500 font-medium mt-1">Academic Year 2083-2084</p>
+            <p className="text-[10px] text-gray-500 font-medium mt-1">Academic Year {(stats as any).academicYear || '2023-2024'}</p>
           </div>
         </div>
 
@@ -197,7 +208,7 @@ export default function AccountAdmin() {
         {/* Card 3 */}
         <div 
            className="bg-white rounded-xl p-4 md:p-5 border-l-4 border-l-[var(--accent)] border border-gray-100 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer flex flex-col justify-between"
-           onClick={() => { setActiveTab('student_ledger'); /* Optionally emit event or update state to filter by defaulter */ }}
+           onClick={() => { setActiveTab('student_ledger'); setLedgerFilterStatus('Defaulter'); }}
         >
           <div className="flex justify-between items-start mb-2">
             <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase leading-tight tracking-wider">Defaulters</p>
@@ -247,7 +258,7 @@ export default function AccountAdmin() {
                <button 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${ activeTab === tab.id ? '- -' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }`}
+                  className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${ activeTab === tab.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }`}
                >
                   {tab.label}
                </button>
@@ -258,13 +269,39 @@ export default function AccountAdmin() {
       {/* Active Tab Content */}
       <div className="min-h-[500px]">
          {loading ? (
-             <div className="p-10 text-center font-bold text-gray-500 animate-pulse">Loading fees data...</div>
+             <div className="space-y-4">
+               <div className="w-full h-12 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center px-4">
+                 <div className="w-1/4 h-6 bg-gray-200 rounded animate-pulse"></div>
+               </div>
+               <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="p-4 flex gap-4 items-center">
+                       <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+                       <div className="flex-1 space-y-2">
+                          <div className="w-1/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="w-1/3 h-3 bg-gray-100 rounded animate-pulse"></div>
+                       </div>
+                       <div className="w-32 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                    </div>
+                  ))}
+               </div>
+             </div>
          ) : (
              <>
-                 {activeTab === 'student_ledger' && <StudentLedgerTab studentsData={studentsData} onRecordPayment={(id: string) => {
-                    setTargetStudentId(id);
-                    setActiveTab('record_payment');
-                 }} />}
+                 {activeTab === 'student_ledger' && <StudentLedgerTab 
+                     studentsData={studentsData} 
+                     initialFilterStatus={ledgerFilterStatus}
+                     onFilterStatusChange={setLedgerFilterStatus}
+                     onRefresh={fetchFeeData}
+                     onRecordPayment={(id: string) => {
+                        setTargetStudentId(id);
+                        setActiveTab('record_payment');
+                     }} 
+                     onViewLedger={(id: string) => {
+                        setHistorySearchTerm(id);
+                        setActiveTab('history');
+                     }}
+                 />}
                  {activeTab === 'record_payment' && <RecordPaymentTab initialStudentId={targetStudentId} studentsData={studentsData} onRefresh={fetchFeeData} />}
                  {activeTab === 'fee_structure' && (
                      <div className="-mt-8">
@@ -272,7 +309,8 @@ export default function AccountAdmin() {
                      </div>
                  )}
                  {activeTab === 'scholarship_students' && <ScholarshipTab studentsData={studentsData} />}
-                 {activeTab === 'history' && <TransactionHistoryTab transactionsData={transactionsData} onRefresh={fetchFeeData} />}
+                 {activeTab === 'history' && <TransactionHistoryTab initialSearchTerm={historySearchTerm} onSearchTermChange={setHistorySearchTerm} transactionsData={transactionsData} onRefresh={fetchFeeData} />}
+                 {activeTab === 'reports' && <ReportsAnalyticsTab students={studentsData} transactions={transactionsData} />}
              </>
          )}
       </div>

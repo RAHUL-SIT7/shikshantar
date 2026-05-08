@@ -5,41 +5,27 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FileDown, Users, TrendingUp, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { exportToExcel } from '../../lib/excelExport';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#ec4899'];
 
-export default function ReportsAnalyticsTab() {
-  const [students, setStudents] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-
-  useEffect(() => {
-    let unsubS = () => {};
-    let unsubT = () => {};
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsubS = onSnapshot(collection(db, 'financial_students'), (snap) => {
-          setStudents(snap.docs.map(skip => skip.data()));
-        }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'financial_students'));
-        unsubT = onSnapshot(query(collection(db, 'financial_transactions'), orderBy('date', 'desc')), (snap) => {
-          setTransactions(snap.docs.map(skip => skip.data()));
-        }, (err: any) => handleFirestoreError(err, OperationType.LIST, 'financial_transactions'));
-      } else {
-        setStudents([]);
-        setTransactions([]);
-      }
-    });
-
-    return () => { unsubS(); unsubT(); unsubAuth(); };
-  }, []);
+export default function ReportsAnalyticsTab({ students, transactions }: { students: any[], transactions: any[] }) {
 
   // Aggregations
-  const totalCollected = students.reduce((sum, s) => sum + (s.paid || 0), 0);
-  const totalDues = students.reduce((sum, s) => sum + (s.due || 0), 0);
-  const defaulters = students.filter(s => (s.due || 0) > 0);
+  
+  const enrichedStudents = students.map(s => {
+    const due = s.fees?.filter((f:any) => f.status === 'due').reduce((acc: number, f:any) => acc + Number(f.dueAmount || 0), 0) || 0;
+    const paid = s.fees?.filter((f:any) => f.status === 'paid').reduce((acc: number, f:any) => acc + Number(f.paidAmount || f.totalFee || 0), 0) || 0;
+    return { ...s, due, paid };
+  });
+
+  const totalCollected = enrichedStudents.reduce((sum, s) => sum + s.paid, 0);
+  const totalDues = enrichedStudents.reduce((sum, s) => sum + s.due, 0);
+  const defaulters = enrichedStudents.filter(s => s.due > 0);
 
   // Method Pie Chart
   const methodData = Object.entries(
-    transactions.filter(t => t.type === 'payment').reduce((acc, t) => {
+    transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => {
       acc[t.method] = (acc[t.method] || 0) + Number(t.amount);
       return acc;
     }, {} as Record<string, number>)
@@ -47,54 +33,63 @@ export default function ReportsAnalyticsTab() {
 
   // Class Bar Chart
   const classData = Object.entries(
-    students.reduce((acc, s) => {
+    enrichedStudents.reduce((acc, s) => {
        if (!acc[s.class]) acc[s.class] = { class: s.class, paid: 0, due: 0 };
-       acc[s.class].paid += s.paid || 0;
-       acc[s.class].due += s.due || 0;
+       acc[s.class].paid += s.paid;
+       acc[s.class].due += s.due;
        return acc;
     }, {} as Record<string, any>)
   ).map(x => x[1] as any).sort((a: any, b: any) => {
-     // A simple sort by class name logic could go here
+     // Sort numerically if possible
+     const numA = parseInt(a.class, 10);
+     const numB = parseInt(b.class, 10);
+     if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
      return (a.class || '').localeCompare(b.class || '');
   });
 
-  const exportMonthlyReport = () => {
-    const headers = ['Date', 'Receipt No', 'Student', 'Class', 'Method', 'Amount'];
-    const csvRows = [headers.join(',')];
+  const exportMonthlyReport = async () => {
+    const columns = [
+       { header: 'Date', key: 'date', width: 20 },
+       { header: 'Receipt No', key: 'receiptNo', width: 15 },
+       { header: 'Student', key: 'studentName', width: 30 },
+       { header: 'Class', key: 'class', width: 10 },
+       { header: 'Method', key: 'method', width: 15 },
+       { header: 'Amount', key: 'amount', width: 15 }
+    ];
+    
     const currentMonth = new Date().getMonth();
-    
-    transactions.filter(t => new Date(t.date).getMonth() === currentMonth).forEach(t => {
-       csvRows.push([
-          formatBSDate(t.date),
-          t.receiptNo,
-          `"${t.studentName}"`,
-          t.class,
-          t.method,
-          t.amount
-       ].join(','));
-    });
-    
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Monthly_Collection_${formatBSDate(new Date())}.csv`;
-    a.click();
+    const exportData = transactions
+       .filter(t => new Date(t.date).getMonth() === currentMonth)
+       .map(t => ({
+          date: formatBSDate(t.date) || '',
+          receiptNo: t.receiptNo || '',
+          studentName: t.studentName || '',
+          class: t.class || '',
+          method: t.method || '',
+          amount: t.amount || 0
+       }));
+       
+    await exportToExcel('Monthly_Collection', 'Monthly Collection Report', columns, exportData);
   };
 
-  const exportFullLedger = () => {
-     const headers = ['Student ID', 'Name', 'Class', 'Paid', 'Due'];
-     const csvRows = [headers.join(',')];
-     students.forEach(s => {
-        csvRows.push([s.id, `"${s.name}"`, s.class, s.paid || 0, s.due || 0].join(','));
-     });
+  const exportFullLedger = async () => {
+     const columns = [
+        { header: 'Student ID', key: 'id', width: 20 },
+        { header: 'Name', key: 'name', width: 30 },
+        { header: 'Class', key: 'class', width: 10 },
+        { header: 'Paid', key: 'paid', width: 15 },
+        { header: 'Due', key: 'due', width: 15 }
+     ];
      
-     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-     const url = window.URL.createObjectURL(blob);
-     const a = document.createElement('a');
-     a.href = url;
-     a.download = `Full_Ledger_${formatBSDate(new Date())}.csv`;
-     a.click();
+     const exportData = enrichedStudents.map(s => ({
+        id: s.id || '',
+        name: s.name || '',
+        class: s.class || '',
+        paid: s.paid || 0,
+        due: s.due || 0
+     }));
+     
+     await exportToExcel('Full_Ledger', 'Full Ledger Report', columns, exportData);
   };
 
   return (

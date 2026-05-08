@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Upload, Link as LinkIcon, Image as ImageIcon, Trash2, CheckCircle, Circle, X } from 'lucide-react';
 import { db, storage } from '../firebase';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
@@ -276,6 +277,12 @@ export default function Gallery() {
 
   return (
     <div className="w-full max-w-7xl mx-auto bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
+      <Helmet>
+        <title>Gallery | Shikshantar Academy</title>
+        <meta name="description" content="View photos of events, classroom activities, and campus life at Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/gallery" />
+      </Helmet>
+      
       <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <span>Categories</span>
         <div className="flex gap-2">
@@ -408,6 +415,8 @@ export default function Gallery() {
                     alt={teacher.name}
                     className="w-full h-full object-cover shadow-sm text-primary"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
+                    decoding="async"
                   />
                 )}
               </div>

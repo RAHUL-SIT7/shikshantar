@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { HelpCircle, Search, Edit2, Trash2, Plus, ArrowUp, ArrowDown, ChevronDown, ChevronUp, MapPin, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -237,6 +238,12 @@ export default function FAQ() {
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] pb-12 pt-6">
+      <Helmet>
+        <title>FAQ & Help | Shikshantar Academy</title>
+        <meta name="description" content="Find answers to frequently asked questions about Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/faq" />
+      </Helmet>
+      
       <div className="max-w-[1000px] mx-auto px-4">
         
         {toast && (
@@ -295,7 +302,7 @@ export default function FAQ() {
                 <button 
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${selectedCategory === cat ? '- text-white' : 'bg-white text-gray-600 border border-gray-200 hover:opacity-90'}`}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${selectedCategory === cat ? 'bg-[var(--primary)] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:opacity-90'}`}
                 >
                   {cat} {cat !== 'All' && `(${faqs.filter(f => f.category === cat && (isAdmin || f.published)).length})`}
                 </button>

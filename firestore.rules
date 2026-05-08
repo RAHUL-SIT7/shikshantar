@@ -87,7 +87,7 @@ service cloud.firestore {
     // 5. Secure Public Admission Forms
     match /admissions/{document=**} {
         allow create: if true; 
-        allow read, update, delete: if isAdmin();
+        allow read, update, delete: if isAdmin() || isTeacher();
     }
     
     // Notices / Notice Board
@@ -103,27 +103,27 @@ service cloud.firestore {
     // Financial Data (Fee Management)
     match /feeStructure/{document=**} {
         allow read: if isSignedIn();
-        allow write: if isAdmin();
+        allow write: if isAdmin() || isTeacher();
     }
 
     match /studentFees/{document=**} {
-        allow read: if isAdmin() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin();
+        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
+        allow write: if isAdmin() || isTeacher();
     }
 
     match /financial_students/{studentId} {
-        allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin());
-        allow write: if isAdmin();
+        allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin() || isTeacher());
+        allow write: if isAdmin() || isTeacher();
     }
 
     match /financial_transactions/{transactionId} {
-        allow read: if isAdmin() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin();
+        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
+        allow write: if isAdmin() || isTeacher();
     }
 
     match /transactions/{transactionId} {
-        allow read: if isAdmin() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin();
+        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
+        allow write: if isAdmin() || isTeacher();
     }
   }
 }

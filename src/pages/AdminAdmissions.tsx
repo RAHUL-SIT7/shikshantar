@@ -4,6 +4,7 @@ import { db, auth } from '../firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown, Settings, Plus, Download } from 'lucide-react';
+import { exportToExcel } from '../lib/excelExport';
 
 export default function AdminAdmissions() {
   const [admissions, setAdmissions] = useState<any[]>([]);
@@ -40,7 +41,14 @@ export default function AdminAdmissions() {
         const fetchFormConfig = async () => {
           const configDoc = await getDoc(doc(db, 'settings', 'admissionFormConfig'));
           if (configDoc.exists() && configDoc.data().fields) {
-            setFormFields(configDoc.data().fields);
+            let fetchedFields = configDoc.data().fields;
+            fetchedFields = fetchedFields.map((f: any) => {
+              if (f.id === 'gradeAppliedFor') {
+                  return { ...f, options: ['Play Group', 'Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9'] };
+              }
+              return f;
+            });
+            setFormFields(fetchedFields);
           } else {
             setFormFields([
                 { id: 'studentName', label: 'Student Full Name', type: 'text', required: true },
@@ -50,7 +58,7 @@ export default function AdminAdmissions() {
                 { id: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
                 { id: 'email', label: 'Email Address', type: 'email', required: false },
                 { id: 'address', label: 'Residential Address', type: 'textarea', required: true },
-                { id: 'gradeAppliedFor', label: 'Grade Applied For', type: 'select', options: ['Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2'], required: true },
+                { id: 'gradeAppliedFor', label: 'Grade Applied For', type: 'select', options: ['Play Group', 'Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9'], required: true },
                 { id: 'previousSchool', label: 'Previous School Attended (If any)', type: 'text', required: false }
             ]);
           }
@@ -162,45 +170,26 @@ export default function AdminAdmissions() {
     return <div className="p-8 text-center text-gray-500">Loading admissions data...</div>;
   }
 
-  const handleExportCSV = () => {
+  const handleExportExcel = async () => {
     if (admissions.length === 0) {
       alert("No data to export");
       return;
     }
 
-    // Build headers based on form fields plus standard ones
-    const dynamicHeaders = formFields.map(f => f.label);
-    const standardHeaders = ['Date Submitted', 'Status'];
-    const csvHeaders = [...dynamicHeaders, ...standardHeaders];
+    const columns = formFields.map(f => ({ header: f.label, key: f.id, width: 25 }));
+    columns.push({ header: 'Date Submitted', key: 'submittedAt', width: 20 });
+    columns.push({ header: 'Status', key: 'status', width: 15 });
 
-    // Build rows
-    const rows = admissions.map(adm => {
-      const rowData = formFields.map(f => {
-        // Enclose in quotes to handle commas inside text
-        const raw = adm[f.id] || '';
-        return `"${String(raw).replace(/"/g, '""')}"`;
-      });
-      // Date and Status
+    const exportData = admissions.map(adm => {
       const dateRaw = adm.submittedAt ? (adm.submittedAt.toDate ? adm.submittedAt.toDate() : new Date(adm.submittedAt)) : new Date();
-      rowData.push(`"${formatBSDateTime(dateRaw)}"`);
-      rowData.push(`"${adm.status || 'Pending'}"`);
-      return rowData.join(',');
+      return {
+        ...adm,
+        submittedAt: formatBSDateTime(dateRaw),
+        status: adm.status || 'Pending'
+      };
     });
 
-    const csvContent = 
-      "Shikshantar Academy\n" + 
-      "Admission List Report\n\n" + 
-      csvHeaders.join(',') + "\n" + 
-      rows.join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Admission_List_${formatBSDate(new Date())}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    await exportToExcel('Admission_List', 'Admission List Report', columns, exportData);
   };
 
   return (
@@ -215,10 +204,10 @@ export default function AdminAdmissions() {
             Total Applications: {admissions.length}
           </div>
           <button 
-            onClick={handleExportCSV}
+            onClick={handleExportExcel}
             className="bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] hover:bg-[#dcfce7] px-3 py-2 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
           >
-            <Download className="w-4 h-4"/> Export CSV List
+            <Download className="w-4 h-4"/> Export to Excel
           </button>
         </div>
       </div>

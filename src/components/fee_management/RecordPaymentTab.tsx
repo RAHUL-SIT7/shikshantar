@@ -9,7 +9,7 @@ import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import signatureImg from '../../assets/signature.svg';
 
-const MONTHS = ['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'];
+const MONTHS = ['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
 
 interface OtherFee {
   id: string;
@@ -60,6 +60,27 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
     }
   };
 
+  const handleBrowserPrint = async () => {
+     if (!receiptRef.current) return;
+     try {
+         const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3 });
+         let printWindow = window.open('', '_blank');
+         if(printWindow) {
+             printWindow.document.write(`
+                 <html>
+                     <head><title>Print Receipt</title></head>
+                     <body style="margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 20px;">
+                         <img src="${dataUrl}" style="max-width: 100%; height: auto;" onload="window.print();window.close();" />
+                     </body>
+                 </html>
+             `);
+             printWindow.document.close();
+         }
+     } catch(e) {
+         console.error(e);
+     }
+  };
+
   useEffect(() => {
     if (initialStudentId && studentsData.length > 0) {
        const initialStud = studentsData.find(s => s.id === initialStudentId);
@@ -100,11 +121,15 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
   const tuitionFee = selectedStudent?.monthlyFee || 0;
   const calculatedMonthsTotal = selectedMonths.reduce((acc, month) => {
       const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === month);
-      return acc + (feeDoc ? Number(feeDoc.dueAmount || 0) : tuitionFee);
+      return acc + (feeDoc ? Number(feeDoc.dueAmount || feeDoc.totalFee || 0) : tuitionFee);
   }, 0);
   const otherFeesTotal = otherFees.reduce((acc, curr) => acc + Number(curr.amount), 0);
   const discountAmount = discount ? Number(discount) : 0;
   const calculatedTotal = Math.max(0, calculatedMonthsTotal + otherFeesTotal - discountAmount);
+  useEffect(() => {
+     setCustomAmount('');
+  }, [calculatedMonthsTotal, otherFeesTotal, discountAmount, selectedStudent?.id]);
+
   const amountToCollect = customAmount !== '' ? Number(customAmount) : calculatedTotal;
   const balanceAfter = amountToCollect < calculatedTotal ? calculatedTotal - amountToCollect : 0;
 
@@ -113,6 +138,15 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
     setProcessing(true);
     try {
       const receiptNo = `RCP-2083-${Math.floor(Math.random()*10000).toString().padStart(4, '0')}`;
+      const receiptMonthsData = selectedMonths.map(m => {
+          const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === m);
+          return {
+             month: m,
+             totalFee: feeDoc ? Number(feeDoc.totalFee || feeDoc.dueAmount || 0) : tuitionFee,
+             breakdown: feeDoc?.breakdown || { tuition: tuitionFee }
+          };
+      });
+
       const payload = {
         receiptNo,
         studentId: selectedStudent.id,
@@ -126,6 +160,7 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
         recordedBy: 'Admin',
         remark,
         months: selectedMonths,
+        receiptMonthsData,
         otherFees: otherFees,
         discount: discountAmount
       };
@@ -145,6 +180,7 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
           collectedBy: 'Admin',
           status: 'SUCCESS',
           months: selectedMonths,
+          receiptMonthsData,
           otherFees: otherFees,
           discount: discountAmount,
           remarks: remark,
@@ -346,11 +382,20 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                            <div key={fee.id} className="flex gap-3 items-center animate-in fade-in slide-in-from-top-2 duration-200">
                               <input 
                                  type="text" 
+                                 list="feeTypeSuggestions"
                                  value={fee.name} 
                                  onChange={(e) => updateOtherFee(fee.id, 'name', e.target.value)} 
                                  placeholder="Description (e.g. Late Fine)"
                                  className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none"
                               />
+                              <datalist id="feeTypeSuggestions">
+                                  <option value="Annual Charges" />
+                                  <option value="Computer Fee" />
+                                  <option value="Transportation Fee" />
+                                  <option value="Late Fine" />
+                                  <option value="Exam Fee" />
+                                  <option value="Event Fee" />
+                              </datalist>
                               <div className="relative w-32">
                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">रू</span>
                                  <input 
@@ -547,25 +592,49 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
                </div>
 
                <div className="border-b-2 border-solid border-gray-800 pb-4 mb-4 space-y-2">
-                  {receipt.months?.length > 0 && receipt.months.map((m: string) => {
-                    const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === m);
-                    const netPerMonth = feeDoc ? Number(feeDoc.totalFee || feeDoc.dueAmount || 0) : tuitionFee;
-                    return (
-                      <div key={m} className="flex justify-between">
-                        <span>{m} 2083 Tuition</span>
-                        <span>NRs. {netPerMonth.toLocaleString()}</span>
-                      </div>
-                    );
-                  })}
+                  {receipt.receiptMonthsData?.length > 0 ? receipt.receiptMonthsData.map((md: any, idx: number) => (
+                      <React.Fragment key={`${md.month}-${idx}`}>
+                          <div className="flex justify-between font-bold mt-2 text-base">
+                             <span>{md.month} 2083 Monthly Dues</span>
+                             <span>NRs. {md.totalFee.toLocaleString()}</span>
+                          </div>
+                          {md.breakdown && Object.entries(md.breakdown).map(([k, v]) => {
+                             if(Number(v) > 0 && k !== 'scholarship') {
+                                return <div key={k} className="flex justify-between text-gray-600 text-sm pl-4">
+                                   <span className="capitalize">{k === 'other' ? 'Other/Transport Fee' : `${k} Fee`}</span>
+                                   <span>NRs. {Number(v).toLocaleString()}</span>
+                                </div>
+                             }
+                             if(Number(v) > 0 && k === 'scholarship') {
+                                return <div key={k} className="flex justify-between text-emerald-600 text-sm pl-4 italic">
+                                   <span>Scholarship Discount</span>
+                                   <span>- NRs. {Number(v).toLocaleString()}</span>
+                                </div>
+                             }
+                             return null;
+                          })}
+                      </React.Fragment>
+                  )) : (
+                     receipt.months?.length > 0 && receipt.months.map((m: string, idx: number) => {
+                       const feeDoc = selectedStudent?.fees?.find((f: any) => f.month === m);
+                       const netPerMonth = feeDoc ? Number(feeDoc.totalFee || feeDoc.dueAmount || 0) : tuitionFee;
+                       return (
+                         <div key={`${m}-${idx}`} className="flex justify-between">
+                           <span>{m} 2083 Tuition</span>
+                           <span>NRs. {netPerMonth.toLocaleString()}</span>
+                         </div>
+                       );
+                     })
+                  )}
                   {receipt.otherFees?.length > 0 && receipt.otherFees.map((f: any, idx: number) => (
-                    <div key={idx} className="flex justify-between">
-                      <span>{f.name}</span>
+                    <div key={idx} className="flex justify-between font-bold mt-2 py-1 border-t border-dashed border-gray-200">
+                      <span>{f.name} (Late Fine/Misc)</span>
                       <span>NRs. {Number(f.amount).toLocaleString()}</span>
                     </div>
                   ))}
                   {receipt.discount > 0 && (
-                    <div className="flex justify-between">
-                      <span>Discount</span>
+                    <div className="flex justify-between font-bold text-red-600 mt-2 py-1 border-t border-dashed border-gray-200">
+                      <span>Adjustment/Discount</span>
                       <span>- NRs. {Number(receipt.discount).toLocaleString()}</span>
                     </div>
                   )}
@@ -612,14 +681,19 @@ export default function RecordPaymentTab({ initialStudentId, studentsData, onRef
              </div>
 
              <div className="p-4 text-primary border-t border-gray-200 mt-auto flex flex-col gap-3">
-               <button onClick={downloadReceipt} className="w-full py-3 bg-white border border-gray-300 text-gray-800 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors shadow-sm">
+               <div className="flex gap-3">
+                 <button onClick={() => setReceipt(null)} className="flex-1 py-3 bg-white border border-gray-300 text-gray-800 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors shadow-sm">
+                    ✕ Close
+                 </button>
+                 <button onClick={downloadReceipt} className="flex-1 py-3 bg-white border border-gray-300 text-gray-800 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors shadow-sm">
+                    ⬇️ Save PDF
+                 </button>
+               </div>
+               <button onClick={handleBrowserPrint} className="w-full py-4 bg-primary text-white rounded-xl font-black shadow-lg flex justify-center items-center gap-2 hover:bg-blue-800 transition-colors text-lg tracking-wide uppercase">
                   🖨️ Print Receipt
                </button>
                <button onClick={() => window.open(`https://wa.me/977${selectedStudent?.guardianPhone || ''}?text=${encodeURIComponent(`Namaste ${selectedStudent?.guardianName || ''} ji, ${receipt.studentName} (Class ${receipt.class}) ko ${receipt.months.join(', ')} 2083 ko fee NRs. ${receipt.amount} prapta bhayo. Receipt: ${receipt.receiptNo}. - Shikshantar Academy, Siraha`)}`, '_blank')} className="w-full py-3 bg-[#25D366] text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 hover:bg-[#128C7E] transition-colors">
                   📱 WhatsApp to Parent
-               </button>
-               <button onClick={() => setReceipt(null)} className="w-full py-3 bg-transparent text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors">
-                  ✕ Close
                </button>
              </div>
           </div>

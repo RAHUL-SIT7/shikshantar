@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Info, Target, Eye, Heart, History as HistoryIcon, User, Edit2, Save, X, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
@@ -50,6 +51,12 @@ export default function About() {
 
   return (
     <div className="flex flex-col max-w-6xl mx-auto pb-12">
+      <Helmet>
+        <title>About Us | Shikshantar Academy</title>
+        <meta name="description" content="Learn about the history, mission, and vision of Shikshantar Academy, providing excellence in education in Siraha." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/about" />
+      </Helmet>
+      
       {isAdmin && (
         <div className="flex justify-end w-full mb-6">
           {isEditing ? (

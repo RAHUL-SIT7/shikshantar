@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
@@ -11,7 +12,7 @@ export default function ContactUs() {
     phone: '+977-9807790805',
     address: 'Bastipur-5, Siraha',
     mapEmbedUrl: 'https://maps.google.com/maps?q=Bastipur-5,Siraha&t=&z=15&ie=UTF8&iwloc=&output=embed',
-    googleMapsUrl: 'https://maps.app.goo.gl/q8YLvXQxb6aJyqHn9',
+    googleMapsUrl: 'https://maps.app.goo.gl/uYRQ8xyjmWMyQkbu7',
     facebookUrl: '',
     websiteUrl: ''
   });
@@ -51,6 +52,12 @@ export default function ContactUs() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
+      <Helmet>
+        <title>Contact Us | Shikshantar Academy</title>
+        <meta name="description" content="Get in touch with Shikshantar Academy. Find our location, phone number, and email address." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/contactus" />
+      </Helmet>
+      
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-primary">Contact Us</h1>
         {isAdmin && !isEditing && (
@@ -119,14 +126,15 @@ export default function ContactUs() {
                 </div>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="flex items-start gap-4 p-4 rounded-lg bg-green-50 border border-green-100">
+              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="flex items-start gap-4 p-4 rounded-lg bg-green-50 border border-green-100 items-center">
                 <div className="bg-green-600 p-3 rounded-full text-white shrink-0">
                   <Phone className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg">Call Us</h3>
-                  <p className="text-gray-600 mt-1">{data.phone}</p>
+                  <a href={`tel:${data.phone}`} className="text-gray-600 mt-1 hover:text-green-600 transition-colors block">{data.phone}</a>
                 </div>
+                <a href={`tel:${data.phone}`} className="shrink-0 bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-green-700 transition">Call Now</a>
               </motion.div>
 
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="flex items-start gap-4 p-4 rounded-lg bg-purple-50 border border-purple-100">
@@ -135,7 +143,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">Email Us</h3>
-                  <p className="text-gray-600 mt-1">{data.email}</p>
+                  <a href={`mailto:${data.email}`} className="text-gray-600 mt-1 hover:text-purple-600 transition-colors block">{data.email}</a>
                 </div>
               </motion.div>
               

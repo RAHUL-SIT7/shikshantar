@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
 import { Search, Printer, Edit2, CornerUpLeft, Download, Calendar, Filter, ChevronRight, ChevronDown, Receipt, FileDown, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -9,9 +9,19 @@ import autoTable from 'jspdf-autotable';
 import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
 import 'nepali-datepicker-reactjs/dist/index.css';
 import NepaliDate from 'nepali-date-converter';
+import { exportToExcel } from '../../lib/excelExport';
 
-export default function TransactionHistoryTab({ transactionsData, onRefresh }: { transactionsData: any[], onRefresh: () => void }) {
-  const [searchTerm, setSearchTerm] = useState('');
+export default function TransactionHistoryTab({ transactionsData, onRefresh, initialSearchTerm = '', onSearchTermChange }: { transactionsData: any[], onRefresh: () => void, initialSearchTerm?: string, onSearchTermChange?: (val: string) => void }) {
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+
+  useEffect(() => {
+     setSearchTerm(initialSearchTerm);
+  }, [initialSearchTerm]);
+
+  const handleSearchChange = (val: string) => {
+     setSearchTerm(val);
+     if (onSearchTermChange) onSearchTermChange(val);
+  };
   const [filterClass, setFilterClass] = useState('All');
   const [filterMethod, setFilterMethod] = useState('All');
   const [filterCollectedBy, setFilterCollectedBy] = useState('All');
@@ -40,6 +50,27 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
     } catch (err) {
       console.error('Failed to generate PDF', err);
     }
+  };
+
+  const handleBrowserPrint = async () => {
+     if (!receiptRef.current) return;
+     try {
+         const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3 });
+         let printWindow = window.open('', '_blank');
+         if(printWindow) {
+             printWindow.document.write(`
+                 <html>
+                     <head><title>Print Receipt</title></head>
+                     <body style="margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 20px;">
+                         <img src="${dataUrl}" style="max-width: 100%; height: auto;" onload="window.print();window.close();" />
+                     </body>
+                 </html>
+             `);
+             printWindow.document.close();
+         }
+     } catch(e) {
+         console.error(e);
+     }
   };
 
   const generatePDFReport = () => {
@@ -104,37 +135,38 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
       return acc;
   }, {});
 
-  const exportCSV = () => {
-     const headers = ['Date (B.S.)', 'Date (A.D.)', 'Receipt No', 'Student', 'Class', 'Amount', 'Method', 'Collected By', 'Status'];
-     const csvRows = [headers.join(',')];
-     
-     filteredHistory.forEach(tx => {
-        let adDate = '';
-        if (tx.timestamp) {
-            adDate = new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleString();
-        }
-        csvRows.push([
-           tx.date,
-           `"${adDate}"`,
-           tx.receipt || tx.id,
-           `"${tx.studentName || ''}"`,
-           tx.class,
-           tx.amount || 0,
-           tx.method,
-           tx.collectedBy,
-           tx.status
-        ].join(','));
-     });
-     
-     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-     const url = window.URL.createObjectURL(blob);
-     const a = document.createElement('a');
-     a.setAttribute('hidden', '');
-     a.setAttribute('href', url);
-     a.setAttribute('download', `Transactions_${formatBSDate(new Date())}.csv`);
-     document.body.appendChild(a);
-     a.click();
-     document.body.removeChild(a);
+  const exportCSV = async () => {
+    const columns = [
+       { header: 'Date (B.S.)', key: 'dateBs', width: 15 },
+       { header: 'Date (A.D.)', key: 'dateAd', width: 25 },
+       { header: 'Receipt No', key: 'receiptNo', width: 15 },
+       { header: 'Student', key: 'studentName', width: 25 },
+       { header: 'Class', key: 'studentClass', width: 15 },
+       { header: 'Amount', key: 'amount', width: 15 },
+       { header: 'Method', key: 'method', width: 15 },
+       { header: 'Collected By', key: 'collectedBy', width: 20 },
+       { header: 'Status', key: 'status', width: 15 }
+    ];
+
+    const exportData = filteredHistory.map(tx => {
+       let adDate = '';
+       if (tx.timestamp) {
+           adDate = new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleString();
+       }
+       return {
+           dateBs: tx.date || '',
+           dateAd: adDate,
+           receiptNo: tx.receipt || tx.id,
+           studentName: tx.studentName || '',
+           studentClass: tx.class || '',
+           amount: tx.amount || 0,
+           method: tx.method || '',
+           collectedBy: tx.collectedBy || '',
+           status: tx.status || ''
+       };
+    });
+
+    await exportToExcel('Transaction_History', 'Transaction History Report', columns, exportData);
   };
 
   const handleEditSubmit = async () => {
@@ -197,7 +229,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
              type="text" 
              placeholder="Search receipt no or student..."
              value={searchTerm}
-             onChange={e => setSearchTerm(e.target.value)}
+             onChange={e => handleSearchChange(e.target.value)}
              className="w-full pl-10 pr-4 py-2.5 border-primary text-primary border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none"
            />
          </div>
@@ -272,7 +304,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
             </select>
 
             <button onClick={exportCSV} className="bg-orange-50 border border-orange-100 text-orange-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-orange-100 transition-colors shrink-0 flex gap-2 items-center">
-               <Download className="w-4 h-4"/> CSV
+               <Download className="w-4 h-4"/> EXCEL
             </button>
             <button onClick={generatePDFReport} className="bg-blue-50 border border-blue-100 text-blue-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-blue-100 transition-colors shrink-0 flex gap-2 items-center">
                <Printer className="w-4 h-4"/> PDF
@@ -450,13 +482,16 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh }: {
               </div>
 
               <div className="p-4 bg-white border-t border-gray-200 space-y-3">
+                <div className="flex gap-3">
+                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-primary text-primary border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">✕ Close</button>
+                   <button onClick={downloadReceipt} className="flex-1 py-3 border-blue-600 text-blue-600 border rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-blue-50 transition-colors"><FileDown className="w-4 h-4 inline mr-1"/> PDF</button>
+                </div>
+                <button onClick={handleBrowserPrint} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest shadow-lg flex justify-center items-center gap-2 hover:bg-blue-800 transition-colors text-[14px]">
+                   🖨️ Print Receipt
+                </button>
                 <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Namaste, we have received a payment of NRs. ${receipt.amount} for ${receipt.studentName}. Receipt No: ${receipt.receipt || receipt.id}. Thank you.`)}`, '_blank')} className="w-full py-3 bg-[#25D366] text-white rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-md flex justify-center items-center gap-2 hover:bg-[#128C7E] transition-colors">
                    📱 Send WhatsApp Confirmation
                 </button>
-                <div className="flex gap-3">
-                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-primary text-primary border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">Close</button>
-                   <button onClick={downloadReceipt} className="flex-1 py-3 bg-blue-600 text-white border border-blue-600 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg flex justify-center items-center gap-2 hover:bg-blue-700 transition-colors"><FileDown className="w-4 h-4"/> Download A5 PDF</button>
-                </div>
               </div>
            </div>
          </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { formatBSDate, getBSYearMonthDate } from '../lib/nepaliDate';
-import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin, Phone, HelpCircle, GraduationCap } from 'lucide-react';
+import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin, Phone, HelpCircle, GraduationCap, Award } from 'lucide-react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, where, updateDoc, doc, getDoc, arrayUnion } from 'firebase/firestore';
@@ -114,7 +114,7 @@ export default function Layout({
         }
       });
 
-      if (user && role === 'admin') {
+      if (user && (role === 'admin' || role === 'teacher')) {
         const qAdmissions = query(collection(db, 'admissions'), where('status', '==', 'Pending'));
         unsubAdmissions = onSnapshot(qAdmissions, (snap) => {
           setPendingAdmissions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -184,47 +184,53 @@ export default function Layout({
 
   // Base navigation for all roles
   const baseNavigation = [
-    { name: 'Home Dashboard', href: '/', icon: Home, group: 1 },
-    { name: 'Notice Board', href: '/notices', icon: Megaphone, group: 1 },
-    { name: 'About Us', href: '/about', icon: Info, group: 4 },
-    { name: 'Facilities', href: '/facilities', icon: Building, group: 4 },
-    { name: 'Photo Gallery', href: '/gallery', icon: Image, group: 4 },
-    { name: 'Academic Calendar', href: '/calendar', icon: Calendar, group: 4 },
-    { name: 'Admission Form', href: '/admission', icon: FileText, group: 4 },
-    { name: 'Fee Structure', href: '/fee-structure', icon: CreditCard, group: 4 },
-    { name: 'Alumni / Success', href: '/alumni', icon: GraduationCap, group: 4 },
-    { name: 'FAQ', href: '/faq', icon: HelpCircle, group: 4 },
-    { name: 'Contact Us', href: '/contact', icon: Phone, group: 4 },
+    { name: 'Home Dashboard', href: '/', icon: Home, group: 'Menu' },
+    { name: 'Facilities', href: '/facilities', icon: Building, group: 'Menu' },
+    { name: 'Scholarship', href: '/scholarship', icon: Award, group: 'Menu' },
+    { name: 'Fee Structure', href: '/fee-structure', icon: CreditCard, group: 'Menu' },
+    { name: 'Admission Form', href: '/admission', icon: FileText, group: 'Menu' },
+    { name: 'Academic Calendar', href: '/calendar', icon: Calendar, group: 'Menu' },
+    { name: 'Alumni / Success', href: '/alumni', icon: GraduationCap, group: 'Menu' },
+    { name: 'Notice Board', href: '/notices', icon: Megaphone, group: 'Menu' },
+    { name: 'About Us', href: '/about', icon: Info, group: 'Menu' },
+    { name: 'FAQ', href: '/faq', icon: HelpCircle, group: 'Menu' },
+    { name: 'Contact Us', href: '/contact', icon: Phone, group: 'Menu' },
   ];
 
   // Role specific navigation
   const getRoleNavigation = () => {
-    let nav = [...baseNavigation];
+    // Add an index to preserve the original order within the same group
+    let nav = [...baseNavigation].map((item, index) => ({ ...item, originalIndex: index }));
     
     if (!isAuthenticated) {
-      return nav.sort((a, b) => a.group - b.group);
+      return nav;
     }
 
     if (role === 'student') {
-      nav.push({ name: 'Academic Result', href: '/result', icon: FileText, group: 3 });
-      nav.push({ name: 'My Fee Status', href: '/account', icon: CreditCard, group: 3 });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
+      nav.push({ name: 'My Results', href: '/result', icon: FileText, group: 'My Portal', originalIndex: nav.length });
+      nav.push({ name: 'My Fee Status', href: '/account', icon: CreditCard, group: 'My Portal', originalIndex: nav.length });
+      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
     } else if (role === 'teacher') {
-      nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User, group: 2 });
-      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
-      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
+      nav.push({ name: 'Manage Admissions', href: '/admin-admissions', icon: User, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
     } else if (role === 'admin') {
       nav = nav.filter(item => item.name !== 'Fee Structure');
-      nav.push({ name: 'Admissions List', href: '/admin-admissions', icon: User, group: 2 });
-      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 3 });
-      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 3 });
-      nav.push({ name: 'Administrative User Management', href: '/user-approvals', icon: Shield, group: 5 });
-      nav.push({ name: 'Smart Settings', href: '/settings', icon: Settings, group: 5 });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 6 });
+      nav.push({ name: 'Manage Admissions', href: '/admin-admissions', icon: User, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'User Management', href: '/user-approvals', icon: Shield, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Settings', href: '/settings', icon: Settings, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
     }
     
-    return nav.sort((a, b) => a.group - b.group);
+    const groupOrder = ['Menu', 'My Portal', 'Administration'];
+    return nav.sort((a, b) => {
+      const groupDiff = groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group);
+      if (groupDiff !== 0) return groupDiff;
+      return a.originalIndex - b.originalIndex;
+    });
   };
 
   const navigation = getRoleNavigation();
@@ -233,7 +239,7 @@ export default function Layout({
   const currentUid = auth.currentUser?.uid || studentId || 'guest';
   const unreadNoticesCount = recentNotices.filter(n => (!n.readBy || !n.readBy.includes(currentUid)) && !localReads.includes(n.id)).length;
   const unreadAdmissionsCount = pendingAdmissions.filter(a => (!a.readBy || !a.readBy.includes(currentUid)) && !localReads.includes(a.id)).length;
-  const unreadUrgentCount = role === 'admin' ? unreadNoticesCount + unreadAdmissionsCount : unreadNoticesCount;
+  const unreadUrgentCount = (role === 'admin' || role === 'teacher') ? unreadNoticesCount + unreadAdmissionsCount : unreadNoticesCount;
 
   const markAsRead = async (noticeId: string, isAdmission: boolean, e: React.MouseEvent, preventDefault = true) => {
     if (preventDefault) {
@@ -313,7 +319,7 @@ export default function Layout({
       <aside className="w-[220px] bg-primary text-white flex-col py-5 hidden md:flex shrink-0 print:hidden">
         <div className="px-5 pb-[30px] flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-white p-1 mb-3 shadow-md flex items-center justify-center">
-            <img src={logoUrl} alt="Shikshantar Academy Logo" className="w-full h-full object-contain rounded-full" />
+            <img src={logoUrl} alt="Shikshantar Academy Logo" className="w-full h-full object-contain rounded-full" fetchPriority="high" />
           </div>
           <h1 className="text-[1.2rem] tracking-[1px] mb-[5px] font-bold">SHIKSHANTAR</h1>
           <span className="text-[0.7rem] opacity-80 block uppercase">Academy | Siraha</span>
@@ -338,15 +344,18 @@ export default function Layout({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="px-5 text-[0.65rem] font-bold uppercase tracking-[1px] opacity-50 mb-2 shrink-0">Menu</div>
           <nav className="flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
             <ul className="list-none p-0 m-0 pb-4">
               {navigation.map((item, index) => {
                 const Icon = item.icon;
-                const showSeparator = index > 0 && navigation[index - 1].group !== item.group;
+                const showGroupHeader = index === 0 || navigation[index - 1].group !== item.group;
                 return (
                   <React.Fragment key={item.name}>
-                    {showSeparator && <li className="my-2 border-t border-white/10 mx-4"></li>}
+                    {showGroupHeader && (
+                      <li className={`px-5 py-2 text-[0.65rem] font-bold uppercase tracking-[1px] text-white/50 bg-primary sticky top-0 z-10 ${index !== 0 ? 'mt-2 border-t border-white/10 pt-4' : ''}`}>
+                        {item.group as string}
+                      </li>
+                    )}
                     <li>
                       <Link
                         to={item.href}
@@ -484,19 +493,27 @@ export default function Layout({
             </div>
 
             <ul className="list-none p-0 m-0">
-              {navigation.map((item) => {
+              {navigation.map((item, index) => {
                 const Icon = item.icon;
+                const showGroupHeader = index === 0 || navigation[index - 1].group !== item.group;
                 return (
-                  <li key={item.name}>
-                    <Link
-                      to={item.href}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-3 px-6 py-3.5 text-[0.95rem] border-l-4 ${ location.pathname === item.href ? 'bg-white/10 -' : 'border-transparent active:bg-white/5' }`}
-                    >
-                      <Icon className="w-5 h-5 opacity-80" />
-                      {item.name}
-                    </Link>
-                  </li>
+                  <React.Fragment key={item.name}>
+                    {showGroupHeader && (
+                      <li className={`px-6 py-2 text-[0.7rem] font-bold uppercase tracking-[1px] text-white/50 bg-primary sticky top-0 z-10 ${index !== 0 ? 'mt-2 border-t border-white/10 pt-4' : ''}`}>
+                        {item.group as string}
+                      </li>
+                    )}
+                    <li>
+                      <Link
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`flex items-center gap-3 px-6 py-3.5 text-[0.95rem] border-l-4 ${ location.pathname === item.href ? 'bg-white/10 -' : 'border-transparent active:bg-white/5' }`}
+                      >
+                        <Icon className="w-5 h-5 opacity-80" />
+                        {item.name}
+                      </Link>
+                    </li>
+                  </React.Fragment>
                 );
               })}
               {isAuthenticated ? (
@@ -522,7 +539,7 @@ export default function Layout({
         <header className="bg-white p-5 flex justify-between items-center shadow-[0_1px_3px_rgba(0,0,0,0.05)] shrink-0 z-30 hidden md:flex print:hidden relative">
           {role === 'admin' && location.pathname === '/' ? (
              <div className="flex items-center gap-3">
-               <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" />
+               <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-full border border-gray-200 shadow-sm" fetchPriority="high" />
                <div className="flex flex-col justify-center">
                   <h1 className="text-base font-bold text-primary leading-none mb-1">Shikshantar Academy | Siraha</h1>
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none">Admin Control Panel</p>
@@ -622,7 +639,7 @@ export default function Layout({
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white rounded-full p-1 shadow-md">
-                    <img src={logoUrl} alt="Logo" className="w-full h-full object-contain rounded-full" />
+                    <img src={logoUrl} alt="Logo" className="w-full h-full object-contain rounded-full" fetchPriority="high" />
                   </div>
                   <div>
                     <h3 className="font-bold text-lg tracking-wide leading-tight">SHIKSHANTAR</h3>

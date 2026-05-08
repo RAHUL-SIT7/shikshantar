@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Search, MapPin, Award, Briefcase, GraduationCap, Edit2, Trash2, Star, Plus, Mail, X, CheckCircle2, BarChart2, PieChart, ChevronDown } from 'lucide-react';
 
 const initialAlumni = [
@@ -287,6 +288,12 @@ export default function Alumni() {
 
   return (
     <div className="bg-[#F5F6FA] min-h-screen pb-12 relative animate-in fade-in duration-500">
+      <Helmet>
+        <title>Alumni Network | Shikshantar Academy</title>
+        <meta name="description" content="Connect with the alumni network of Shikshantar Academy. See where our graduates are today." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/alumni" />
+      </Helmet>
+      
       
       {/* Admin Toolbar */}
       {actualAdmin && (

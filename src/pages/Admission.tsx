@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from 'react-helmet-async';
 import { createPortal } from "react-dom";
 import { db } from "../firebase";
 import {
@@ -61,7 +62,15 @@ export default function Admission() {
 
         if (docSnap.exists() && docSnap.data().fields) {
           const data = docSnap.data();
-          setFormFields(data.fields);
+          let fetchedFields = data.fields;
+          // Ensure gradeAppliedFor is up to Class 9 and has Play Group setup correctly
+          fetchedFields = fetchedFields.map((f: any) => {
+            if (f.id === 'gradeAppliedFor') {
+                return { ...f, options: ['Play Group', 'Nursery', 'LKG', 'UKG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9'] };
+            }
+            return f;
+          });
+          setFormFields(fetchedFields);
           setIsAdmissionOpen(data.isAdmissionOpen !== false);
           setAdmissionClosedMessage(
             data.admissionClosedMessage ||
@@ -127,7 +136,7 @@ export default function Admission() {
               label: "Grade Applied For",
               type: "select",
               options: [
-                "PG",
+                "Play Group",
                 "Nursery",
                 "LKG",
                 "UKG",
@@ -140,7 +149,6 @@ export default function Admission() {
                 "Class 7",
                 "Class 8",
                 "Class 9",
-                "Class 10",
               ],
               required: true,
             },
@@ -154,7 +162,7 @@ export default function Admission() {
           setFormFields(defaultFields);
           const initialData: Record<string, string> = {
             gender: "Male",
-            gradeAppliedFor: "PG",
+            gradeAppliedFor: "Play Group",
           };
           defaultFields.forEach((f) => {
             if (f.type !== "select") initialData[f.id] = "";
@@ -295,6 +303,12 @@ export default function Admission() {
   if (isLoadingFields) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
+      <Helmet>
+        <title>Admissions | Shikshantar Academy</title>
+        <meta name="description" content="Apply for admission to Shikshantar Academy. Check fee structures, requirements, and enroll online." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/admission" />
+      </Helmet>
+      
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <p className="text-gray-500">Loading Form Layout...</p>
       </div>
@@ -332,7 +346,7 @@ export default function Admission() {
             </h2>
             <p className="text-[#6b7280] text-sm text-center sm:text-left">
               Please fill out the form below to apply for admission to
-              Shikshantar Academy.
+              Shikshantar Academy for classes Playgroup to Class 9.
             </p>
           </div>
 

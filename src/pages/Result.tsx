@@ -320,9 +320,22 @@ export default function Result() {
       </div>
       
       {loading ? (
-           <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100 max-w-2xl mx-auto mt-8 flex flex-col items-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-              <p className="font-bold text-gray-500">Checking for results...</p>
+           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 max-w-2xl mx-auto mt-8 flex flex-col p-8 space-y-6">
+              <div className="flex gap-4 items-center">
+                 <div className="w-16 h-16 bg-gray-200 rounded-2xl animate-pulse"></div>
+                 <div className="space-y-2 flex-1">
+                    <div className="w-1/3 h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="w-1/4 h-4 bg-gray-100 rounded animate-pulse"></div>
+                 </div>
+              </div>
+              <div className="space-y-3">
+                 {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="w-full h-10 bg-gray-50 rounded-lg animate-pulse flex items-center px-4 justify-between">
+                       <div className="w-1/3 h-4 bg-gray-200 rounded"></div>
+                       <div className="w-1/4 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                 ))}
+              </div>
            </div>
       ) : !currentResult ? (
           <div className="bg-white rounded-3xl p-8 md:p-12 text-center shadow-sm border border-gray-100 max-w-2xl mx-auto mt-8">

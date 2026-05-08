@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Calendar, MapPin, Phone, Mail } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -31,6 +32,12 @@ export default function Events() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <Helmet>
+        <title>Events | Shikshantar Academy</title>
+        <meta name="description" content="Discover upcoming and recent events, sports meets, and cultural programs at Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/events" />
+      </Helmet>
+      
       <div className="md:col-span-2 flex flex-col gap-5">
         <section className="bg-[#ffffff] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb]">
           <div className="text-[0.75rem] font-bold uppercase text-[#6b7280] mb-4">School Events</div>

@@ -1,8 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Edit2, Trash2, X, Save, BellRing, CheckCircle2 } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Search, Edit2, Trash2, X, Save, BellRing, CheckCircle2, Download, FileArchive, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { StudentResult } from '../../data/resultsState';
 import { doc, writeBatch, deleteDoc, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
+import jsPDF from 'jspdf';
+import { toCanvas } from 'html-to-image';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
+import { ReportCardTemplate } from './ReportCardTemplate';
 
 export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRole, assignedClasses }: any) {
   const [filterClass, setFilterClass] = useState('');
@@ -11,6 +17,10 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
   
   const [editingRecord, setEditingRecord] = useState<StudentResult | null>(null);
   const [editReason, setEditReason] = useState('');
+  
+  const [generating, setGenerating] = useState(false);
+  const [printPreviewStudent, setPrintPreviewStudent] = useState<any | null>(null);
+  const hiddenPdfRef = useRef<HTMLDivElement>(null);
   
   const allowedClasses = userRole === 'admin' ? allClasses : assignedClasses;
 
@@ -277,6 +287,119 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
       return Array.from(types);
   }, [data, filterClass, EXAM_TYPES]);
 
+   const generatePDFBlob = async (element: HTMLElement): Promise<Blob> => {
+      const canvas = await toCanvas(element, { pixelRatio: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      return pdf.output('blob');
+   };
+
+   const handleDownloadSingle = async (std: any) => {
+      setPrintPreviewStudent(std);
+      setGenerating(true);
+      setStatus({type: 'success', message: `Generating PDF for ${std.studentName}...`});
+      
+      setTimeout(async () => {
+          if (hiddenPdfRef.current) {
+              try {
+                 const blob = await generatePDFBlob(hiddenPdfRef.current);
+                 saveAs(blob, `${std.studentName}_${std.class}_${std.examType}_ReportCard.pdf`);
+                 setStatus({type: 'success', message: `Downloaded ${std.studentName}'s Report Card.`});
+              } catch(e) {
+                 setStatus({type: 'error', message: 'Failed to generate PDF.'});
+              }
+          }
+          setGenerating(false);
+          setPrintPreviewStudent(null);
+      }, 1000); 
+   };
+
+   const getFilePrefix = () => {
+       if (filterClass && filterExam) return `Class_${filterClass}_${filterExam}`;
+       if (filterClass) return `Class_${filterClass}_AllExams`;
+       if (filterExam) return `AllClasses_${filterExam}`;
+       return `All_Results`;
+   };
+
+   const handleDownloadZip = async () => {
+      if(filteredData.length === 0) return;
+      setGenerating(true);
+      setStatus({type: 'success', message: `Starting batch generation for ${filteredData.length} students...`});
+      
+      const zip = new JSZip();
+      for (let i = 0; i < filteredData.length; i++) {
+          const std = filteredData[i];
+          setPrintPreviewStudent(std);
+          await new Promise(r => setTimeout(r, 600)); 
+          if (hiddenPdfRef.current) {
+              const blob = await generatePDFBlob(hiddenPdfRef.current);
+              zip.file(`${std.class}_${std.examType}_${std.rank}_${std.studentName}_${std.studentId}.pdf`, blob);
+          }
+       }
+       
+       zip.generateAsync({type:"blob"}).then(function(content) {
+           saveAs(content, `${getFilePrefix()}_ReportCards.zip`);
+           setStatus({type: 'success', message: 'ZIP file generated successfully!'});
+           setGenerating(false);
+           setPrintPreviewStudent(null);
+       });
+   };
+
+   const handleDownloadExcel = () => {
+       if (filteredData.length === 0) return;
+       
+       const excelData = filteredData.map((std: any) => {
+           const row: any = {
+               'Roll/ID': std.studentId,
+               'Student Name': std.studentName,
+               'Class': std.class,
+               'Exam': std.examType
+           };
+           
+           if (std.subjects) {
+               Object.keys(std.subjects).forEach(subj => {
+                   const marks = std.subjects[subj];
+                   const fm = marks.fullMarks;
+                   const displayOm = marks.obtained;
+                   let grade = 'AB';
+                   let gpa = 0.0;
+                   if (displayOm !== 'AB') {
+                       const pct = (displayOm / fm) * 100;
+                       if (pct >= 90) { grade = 'A+'; gpa = 4.0; }
+                       else if (pct >= 80) { grade = 'A'; gpa = 3.6; }
+                       else if (pct >= 70) { grade = 'B+'; gpa = 3.2; }
+                       else if (pct >= 60) { grade = 'B'; gpa = 2.8; }
+                       else if (pct >= 50) { grade = 'C+'; gpa = 2.4; }
+                       else if (pct >= 40) { grade = 'C'; gpa = 2.0; }
+                       else if (pct >= 35) { grade = 'D'; gpa = 1.6; }
+                       else { grade = 'NG'; gpa = 0.0; }
+                   }
+
+                   row[`${subj} (Total)`] = displayOm;
+                   row[`${subj} (Grade)`] = grade;
+                   row[`${subj} (GPA)`] = gpa.toFixed(1);
+               });
+           }
+
+           row['Total'] = std.total;
+           row['Full Total'] = std.fullTotal;
+           row['Percentage'] = parseFloat(std.percentage.toFixed(2));
+           row['Grade'] = std.grade;
+           row['GPA'] = std.gpa || '-';
+           row['Rank'] = std.rank;
+           
+           return row;
+       });
+
+       const ws = XLSX.utils.json_to_sheet(excelData);
+       const wb = XLSX.utils.book_new();
+       XLSX.utils.book_append_sheet(wb, ws, "Results");
+       XLSX.writeFile(wb, `${getFilePrefix()}_Results.xlsx`);
+   };
+
   // Check if all in filtered view are published
   const allPublished = filteredData.length > 0 && filteredData.every(r => r.published);
 
@@ -303,15 +426,25 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                 <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
                 <input type="text" placeholder="Search name or ID..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-primary" />
             </div>
-            
-            <button 
-                onClick={handlePublishResults} 
-                disabled={isPublishing || filteredData.length === 0 || allPublished}
-                className={`w-full md:w-auto px-6 py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all shadow-sm ${(isPublishing || filteredData.length === 0) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : allPublished ? 'bg-green-100 border border-green-300 text-green-700 cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] active:scale-95'}`}
-            >
-                {allPublished || publishSuccess ? <CheckCircle2 className="w-4 h-4" /> : <BellRing className="w-4 h-4" />}
-                {allPublished ? '✓ Published ' : isPublishing ? 'Publishing...' : 'Publish to Students'}
-            </button>
+
+            <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1">
+                <button onClick={handleDownloadExcel} disabled={generating || filteredData.length === 0} className={`whitespace-nowrap px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all ${generating || filteredData.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#107c41] text-white hover:bg-[#0c5a2f] active:scale-95'}`}>
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Excel
+                </button>
+                <button onClick={handleDownloadZip} disabled={generating || filteredData.length === 0} className={`whitespace-nowrap px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-all ${generating || filteredData.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-indigo-800 text-white hover:from-blue-800 hover:to-indigo-900 active:scale-95'}`}>
+                    {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />}
+                    ZIP
+                </button>
+                <button 
+                    onClick={handlePublishResults} 
+                    disabled={isPublishing || filteredData.length === 0 || allPublished}
+                    className={`whitespace-nowrap px-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${(isPublishing || filteredData.length === 0) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : allPublished ? 'bg-green-100 border border-green-300 text-green-700 cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] active:scale-95'}`}
+                >
+                    {allPublished || publishSuccess ? <CheckCircle2 className="w-4 h-4" /> : <BellRing className="w-4 h-4" />}
+                    {allPublished ? 'Published ' : isPublishing ? 'Publishing...' : 'Publish'}
+                </button>
+            </div>
         </div>
 
         {classStats && (
@@ -412,8 +545,9 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:text-primary hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                                <button onClick={() => deleteRecord(std.studentId, std.examType)} className="p-2 bg-gray-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => setEditingRecord(JSON.parse(JSON.stringify(std)))} className="p-2 bg-gray-100 text-gray-600 rounded-lg md:hover:bg-primary md:hover:text-white transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={() => deleteRecord(std.studentId, std.examType)} className="p-2 bg-gray-100 text-red-500 rounded-lg md:hover:bg-red-500 md:hover:text-white transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDownloadSingle(std)} disabled={generating} className="p-2 bg-gray-100 text-primary rounded-lg md:hover:bg-primary md:hover:text-white transition-colors disabled:opacity-50" title="Download Report Card"><Download className="w-4 h-4" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -467,11 +601,21 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                     </div>
                     <div className="p-4 border-t text-primary flex justify-end gap-2">
                         <button onClick={() => setEditingRecord(null)} className="px-4 py-2 font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button>
-                        <button onClick={saveEdit} disabled={!editReason} className={`px-5 py-2 font-bold rounded-lg flex items-center gap-2 ${editReason ? '- text-white hover:bg-primary-dark shadow-md' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><Save className="w-4 h-4"/> Save Changes</button>
+                        <button onClick={saveEdit} disabled={!editReason} className={`px-5 py-2 font-bold rounded-lg flex items-center gap-2 ${editReason ? 'bg-[var(--primary)] text-white hover:bg-primary-dark shadow-md' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><Save className="w-4 h-4"/> Save Changes</button>
                     </div>
                 </div>
             </div>
         )}
+
+        {/* Hidden Print Container */}
+        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
+            {printPreviewStudent && (
+                 <ReportCardTemplate 
+                    ref={hiddenPdfRef} 
+                    student={printPreviewStudent} 
+                 />
+            )}
+        </div>
     </div>
   );
 }

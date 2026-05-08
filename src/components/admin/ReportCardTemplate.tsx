@@ -48,29 +48,29 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
     ];
 
     return (
-      <div ref={ref} className="bg-white p-4 w-[210mm] min-h-[297mm] mx-auto text-gray-900 font-sans relative flex flex-col shadow-lg" style={{boxSizing: 'border-box'}}>
+      <div ref={ref} className="bg-white p-4 w-[210mm] h-[297mm] mx-auto text-gray-900 font-sans relative flex flex-col shadow-lg print:shadow-none box-border">
          {/* Decorative Border Layer */}
-         <div className="border-[3px] text-primary rounded-sm flex-1 flex flex-col p-1 relative z-0">
-            <div className="border border-primary text-primary rounded-sm flex-1 flex flex-col relative z-0 overflow-hidden">
+         <div className="border-[3px] text-primary border-[#1a2b4c] rounded-sm flex-1 flex flex-col p-1 relative z-0 h-[calc(297mm-2rem)] box-border">
+            <div className="border border-[#1a2b4c] text-primary rounded-sm flex-1 flex flex-col relative z-0 overflow-hidden box-border">
                
                {/* Background Watermark Logo */}
                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.03]" />
+                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.08]" />
                </div>
 
-               <div className="relative z-10 flex flex-col h-full p-6 flex-1">
+               <div className="relative z-10 flex flex-col h-full p-6 flex-1 box-border">
             
             {/* Header */}
-            <div className="flex flex-row justify-between items-center mb-6 pb-4 border-b-2 text-primary">
+            <div className="flex flex-row justify-between items-center mb-4 pb-4 border-b-2 border-[#1a2b4c] text-primary">
                 <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-24 h-24 object-contain" />
                 <div className="text-center flex-1 pr-10">
-                   <h1 className="text-4xl font-black text-primary uppercase tracking-wider mb-1">
+                   <h1 className="text-4xl font-black text-[#1a2b4c] uppercase tracking-wider mb-1">
                      Shikshantar Academy
                    </h1>
                    <h2 className="text-sm font-bold text-gray-600 tracking-widest uppercase mb-1">
                      Karjanha-5, Bastipur, (Siraha)
                    </h2>
-                   <div className="inline-block mt-2 bg-primary text-white px-6 py-1.5 rounded-full shadow-sm">
+                   <div className="inline-block mt-2 bg-[#1a2b4c] text-white px-6 py-1.5 rounded-full shadow-sm">
                       <span className="text-xs uppercase tracking-[0.2em] font-bold">
                         Academic Progress Report
                       </span>
@@ -78,37 +78,35 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                 </div>
             </div>
 
-            <div className="text-center font-black text-xl mb-6 text-gray-800 uppercase tracking-widest border-primary text-primary py-2 border border-blue-100 rounded">
+            <div className="text-center font-black text-xl mb-4 text-[#1a2b4c] uppercase tracking-widest py-2 border border-blue-100 rounded">
                {student.examType} - 2082
             </div>
 
             {/* Student Info Card */}
-            <div className="border-primary text-primary border border-gray-200 rounded-lg p-4 mb-6 grid grid-cols-2 gap-y-3 text-sm font-bold uppercase tracking-wide">
-                <div className="col-span-2 md:col-span-1">Name: <span className="font-medium text-primary ml-2 text-base normal-case">{student.studentName}</span></div>
-                <div className="col-span-2 md:col-span-1 text-right">Class: <span className="font-medium text-primary ml-2">{student.class}</span></div>
-                <div className="col-span-2 md:col-span-1">Regd No: <span className="font-medium text-primary ml-2">{student.studentId || student.rollNo}</span></div>
-                <div className="col-span-2 md:col-span-1 text-right">Roll No: <span className="font-medium text-primary ml-2">{student.rollNo || '-'}</span></div>
+            <div className="border-[#1a2b4c] text-primary border rounded-lg p-3 mb-4 grid grid-cols-2 gap-y-2 text-sm font-bold uppercase tracking-wide flex-none">
+                <div className="col-span-2 md:col-span-1 border-r border-[#1a2b4c]/10">Name: <span className="font-bold text-[#1a2b4c] ml-2 text-base normal-case">{student.studentName}</span></div>
+                <div className="col-span-2 md:col-span-1 pl-4">Class: <span className="font-bold text-[#1a2b4c] ml-2">{student.class}</span></div>
+                <div className="col-span-2 md:col-span-1 border-r border-[#1a2b4c]/10 pt-2 border-t border-[#1a2b4c]/10">Regd No: <span className="font-bold text-[#1a2b4c] ml-2">{student.studentId || student.rollNo}</span></div>
+                <div className="col-span-2 md:col-span-1 pl-4 pt-2 border-t border-[#1a2b4c]/10">Roll No: <span className="font-bold text-[#1a2b4c] ml-2">{student.rollNo || '-'}</span></div>
             </div>
 
             {/* Marks Table */}
-            <div className="rounded-lg overflow-hidden border border-gray-300 mb-6 flex-none">
-               <table className="w-full border-collapse text-sm">
-                  <thead className="bg-primary text-white">
+            <div className="rounded-none border border-[#1a2b4c] mb-4 flex-none box-border">
+               <table className="w-full border-collapse text-[11px] text-[#1a2b4c]">
+                  <thead className="bg-[#f0a4c2] text-[#1a2b4c]">
                      <tr>
-                        <th className="border-r text-primary border-opacity-20 p-2 w-12 text-center font-bold" rowSpan={2}>S.N.</th>
-                        <th className="border-r text-primary border-opacity-20 p-2 text-left font-bold" rowSpan={2}>Subject</th>
-                        <th className="border-r text-primary border-opacity-20 p-2 w-24 text-center font-bold" colSpan={2}>Full / Pass</th>
-                        <th className="border-r text-primary border-opacity-20 p-2 text-center font-bold" colSpan={2}>Marks Obtained</th>
-                        <th className="p-2 w-20 text-center font-bold" rowSpan={2}>Total</th>
+                        <th className="border border-[#1a2b4c] p-2 w-10 text-center" rowSpan={2}>S.N.</th>
+                        <th className="border border-[#1a2b4c] p-2 text-left" rowSpan={2}>Subject</th>
+                        <th className="border border-[#1a2b4c] p-2 w-16 text-center" rowSpan={2}>Full Mark</th>
+                        <th className="border border-[#1a2b4c] p-2 w-16 text-center" rowSpan={2}>Pass Mark</th>
+                        <th className="border border-[#1a2b4c] p-2 text-center" colSpan={2}>Marked Obtained</th>
                      </tr>
-                     <tr className="bg-blue-900 border-t border-blue-800">
-                        <th className="border-r text-primary border-opacity-20 p-1 w-12 text-center text-xs">FM</th>
-                        <th className="border-r text-primary border-opacity-20 p-1 w-12 text-center text-xs">PM</th>
-                        <th className="border-r text-primary border-opacity-20 p-1 w-16 text-center text-xs">TH</th>
-                        <th className="border-r text-primary border-opacity-20 p-1 w-16 text-center text-xs">PR</th>
+                     <tr>
+                        <th className="border border-[#1a2b4c] p-1 w-20 text-center font-normal">Theory</th>
+                        <th className="border border-[#1a2b4c] p-1 w-20 text-center font-normal">Practical</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
+                     <tbody className="bg-transparent bg-pink-50/20">
                      {Object.entries(student.subjects).map(([sub, rawMarks], i) => {
                          const marks: any = rawMarks;
                          const fm = marks.fullMarks;
@@ -116,82 +114,73 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                          const pm = marks.passMarks || Math.round(fm * 0.4);
 
                          return (
-                            <tr key={sub} className="hover:text-primary transition-colors">
-                               <td className="border-r border-gray-200 p-2 text-center text-gray-500 font-bold">{i+1}</td>
-                               <td className="border-r border-gray-200 p-2 font-bold text-gray-800">{sub}</td>
-                               <td className="border-r border-gray-200 p-2 text-center text-gray-600">{fm}</td>
-                               <td className="border-r border-gray-200 p-2 text-center text-gray-600">{pm}</td>
-                               <td className="border-r border-gray-200 p-2 text-center font-black text-primary">{displayOm}</td>
-                               <td className="border-r border-gray-200 p-2 text-center text-gray-400">-</td>
-                               <td className="p-2 text-center font-bold text-primary bg-blue-50/30">{displayOm}</td>
+                            <tr key={sub}>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center">{i+1}.</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 font-bold">{sub}</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center">{fm}</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center">{pm}</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center font-bold">{displayOm}</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center"></td>
                             </tr>
                          );
                      })}
                   </tbody>
-                  <tfoot className="text-primary border-t-2 border-gray-300 font-black">
-                     <tr>
-                        <td colSpan={2} className="p-3 text-right text-gray-600 uppercase tracking-widest">Grand Total</td>
-                        <td className="p-3 text-center border-r border-gray-200">{student.fullTotal || '-'}</td>
-                        <td colSpan={3} className="p-3 text-right border-r border-gray-200 text-gray-600 uppercase tracking-widest">Marks Secured</td>
-                        <td className="p-3 text-center text-xl text-primary bg-blue-50/50">{student.total}</td>
-                     </tr>
-                  </tfoot>
                </table>
             </div>
 
-            {/* Aggregate Row Summary Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-               <div className="border-primary text-primary border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Marks</div>
-                  <div className="text-xl font-black text-primary">{student.total}</div>
-               </div>
-               <div className="border-primary text-primary border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Percentage</div>
-                  <div className="text-xl font-black text-primary">{student.percentage?.toFixed(2)}%</div>
-               </div>
-               <div className="border-primary text-primary border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rank</div>
-                  <div className="text-xl font-black text-primary">{student.rank || '-'}</div>
-               </div>
-               <div className="border-primary text-primary border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Final Grade</div>
-                  <div className="text-xl font-black text-primary">{student.grade}</div>
-               </div>
+            {/* Performance Stats Cards */}
+            <div className="grid grid-cols-4 gap-3 mb-4 flex-none box-border">
+                <div className="border border-[#1a2b4c] rounded-lg p-2 text-center shadow-sm">
+                   <p className="text-[#a0aabf] text-[9px] font-black uppercase tracking-widest mb-1">Total Marks</p>
+                   <p className="text-lg font-black text-[#1a2b4c]">{student.total}</p>
+                </div>
+                <div className="border border-[#1a2b4c] rounded-lg p-2 text-center shadow-sm">
+                   <p className="text-[#a0aabf] text-[9px] font-black uppercase tracking-widest mb-1">Percentage</p>
+                   <p className="text-lg font-black text-[#1a2b4c]">{student.percentage?.toFixed(2)}%</p>
+                </div>
+                <div className="border border-[#1a2b4c] rounded-lg p-2 text-center shadow-sm">
+                   <p className="text-[#a0aabf] text-[9px] font-black uppercase tracking-widest mb-1">Rank</p>
+                   <p className="text-lg font-black text-[#1a2b4c]">{student.rank || '-'}</p>
+                </div>
+                <div className="border border-[#1a2b4c] rounded-lg p-2 text-center shadow-sm">
+                   <p className="text-[#a0aabf] text-[9px] font-black uppercase tracking-widest mb-1">Final Grade</p>
+                   <p className="text-lg font-black text-[#1a2b4c]">{student.grade}</p>
+                </div>
             </div>
 
-            {/* Two Side-by-side Tables */}
-            <div className="flex gap-4 w-full mb-8 font-sans">
-              <div className="flex-1 bg-white border border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full border-collapse text-[11px] h-full">
-                      <thead className="text-primary">
-                         <tr><th className="border-b border-gray-200 p-2 text-left text-gray-500 uppercase tracking-widest font-bold">Traits & Behavioral</th></tr>
-                      </thead>
-                      <tbody className="font-bold text-gray-700 divide-y divide-gray-100">
+            {/* Traits and Performance Table */}
+            <div className="flex gap-4 flex-none box-border min-h-0">
+               {/* left: Traits */}
+               <div className="border border-gray-300 rounded-lg overflow-hidden flex-[0.45] flex flex-col">
+                  <div className="px-4 py-2 bg-white border-b border-gray-200 shrink-0">
+                     <h3 className="text-xs font-black text-[#6b7280] uppercase tracking-widest">Traits & Behavioral</h3>
+                  </div>
+                  <div className="flex flex-col flex-1 bg-white p-3 justify-between">
+                     <div className="flex flex-col space-y-2.5">
                          {behaviorTraits.map((trait, idx) => (
-                           <tr key={idx}>
-                              <td className="p-2 w-3/4">{trait.name}</td>
-                              <td className="p-2 w-1/4 text-center text-primary text-xs">{trait.grade}</td>
-                           </tr>
+                             <div key={idx} className="flex justify-between items-center border-b border-gray-100 pb-1 last:border-0 last:pb-0">
+                                <span className="text-[10px] font-bold text-[#1a2b4c]">{trait.name}</span>
+                                <span className="text-[10px] font-black text-[#1a2b4c]">{trait.grade}</span>
+                             </div>
                          ))}
-                         <tr>
-                            <td colSpan={2} className="p-2 align-top h-[60px] text-gray-500 font-medium">
-                               Remarks: <span className="font-bold text-gray-800 italic">{student.classTeacherRemark || autoRemark}</span>
-                            </td>
-                         </tr>
-                      </tbody>
-                  </table>
-              </div>
+                     </div>
+                     <div className="pt-3 mt-auto">
+                         <span className="font-bold italic text-[#1a2b4c] text-[11px]">Remarks: {student.classTeacherRemark || autoRemark}</span>
+                     </div>
+                  </div>
+               </div>
 
-              <div className="flex-[1.2] bg-white border border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full border-collapse text-[10px] h-full text-center divide-y divide-gray-200">
-                      <thead className="bg-primary text-white">
-                         <tr className="font-bold uppercase tracking-widest">
-                             <th className="p-2 text-left">Performance</th>
-                             <th className="p-2">Grade</th>
-                             <th className="p-2">Percentage</th>
+               {/* Right: Performance Grade mapping */}
+               <div className="border border-[#1a2b4c] rounded-lg overflow-hidden flex-[0.55] flex flex-col">
+                   <table className="w-full text-left bg-white text-[10px] border-collapse h-full">
+                      <thead className="bg-[#1a2b4c] text-white">
+                         <tr>
+                            <th className="px-3 py-2 font-bold uppercase tracking-widest">Performance</th>
+                            <th className="px-3 py-2 font-bold uppercase tracking-widest text-center">Grade</th>
+                            <th className="px-3 py-2 font-bold uppercase tracking-widest text-center">Percentage</th>
                          </tr>
                       </thead>
-                      <tbody className="font-bold text-gray-700 divide-y divide-gray-100 bg-white">
+                      <tbody className="divide-y divide-gray-100 font-bold text-[#1a2b4c]">
                          {[
                            ['Outstanding', 'A+', '90% & above'],
                            ['Excellent', 'A', '80% to 89%'],
@@ -203,31 +192,39 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                            ['Insufficient', 'D', '20% to 29%'],
                            ['Very insufficient', 'E', '19% and below'],
                          ].map((row, i) => (
-                           <tr key={i} className="hover:text-primary">
-                             <td className="py-1 px-3 text-left">{row[0]}</td>
-                             <td className="py-1 px-3 text-primary font-black">{row[1]}</td>
-                             <td className="py-1 px-3 text-gray-500">{row[2]}</td>
+                           <tr key={i}>
+                             <td className="px-3 py-1.5">{row[0]}</td>
+                             <td className="px-3 py-1.5 text-center">{row[1]}</td>
+                             <td className="px-3 py-1.5 text-center text-gray-500">{row[2]}</td>
                            </tr>
                          ))}
                       </tbody>
-                  </table>
-              </div>
+                   </table>
+               </div>
             </div>
 
-            {/* Footer Signatures */}
-            <div className="flex justify-between items-end mt-auto px-4 pb-4">
-               <div className="flex flex-col items-start justify-end w-32 border-t-2 border-gray-300 pt-2">
-                  <p className="font-bold text-xs text-gray-800 uppercase tracking-widest text-center w-full">Date</p>
-                  <p className="font-medium text-sm text-primary text-center w-full mt-1 text-primary py-1 rounded">{formatBSDate(new Date())}</p>
+            {/* Spacer to push signature to bottom */}
+            <div className="flex-1 min-h-[20px]"></div>
+
+            {/* Footer with Signatures */}
+            <div className="flex justify-between items-end px-2 pt-6 shrink-0 box-border border-t border-gray-100 mt-4">
+               <div className="flex flex-col items-center">
+                  <div className="font-bold italic text-[#1a2b4c] text-[12px] mb-2">{formatBSDate(new Date())}</div>
+                  <div className="w-32 border-b-2 border-[#1a2b4c]"></div>
+                  <div className="mt-1 font-bold text-[#1a2b4c] text-[10px] uppercase">Date</div>
                </div>
-               <div className="flex flex-col items-center justify-end w-40 text-center border-t-2 border-gray-300 pt-2">
-                  <p className="font-bold text-xs text-gray-800 uppercase tracking-widest w-full">Class Teacher</p>
+               
+               <div className="flex flex-col items-center">
+                  <div className="w-32 border-b-2 border-[#1a2b4c] mt-8"></div>
+                  <div className="mt-1 font-bold text-[#1a2b4c] text-[10px] uppercase">Class Teacher</div>
                </div>
-               <div className="flex flex-col items-center justify-end w-32 text-center border-t-2 border-gray-300 pt-2 relative">
-                  <img src={signatureImg} alt="Principal Signature" className="absolute -top-12 h-16 object-contain pointer-events-none" />
-                  <p className="font-bold text-xs text-gray-800 uppercase tracking-widest w-full">Principal</p>
+
+               <div className="flex flex-col items-center">
+                  <div className="w-32 border-b-2 border-[#1a2b4c] mt-8"></div>
+                  <div className="mt-1 font-bold text-[#1a2b4c] text-[10px] uppercase">Principal</div>
                </div>
             </div>
+
          </div>
          </div>
          </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Save, Settings as SettingsIcon, MonitorPlay } from 'lucide-react';
+import { Save, Settings as SettingsIcon, MonitorPlay, Calendar, Plus, Trash2 } from 'lucide-react';
 
 import ThemeSettings from './ThemeSettings';
 
@@ -90,7 +90,10 @@ export default function Settings() {
     }, (err) => {
       handleFirestoreError(err, OperationType.GET, 'settings/home_content');
     });
-    return () => unsub();
+    
+    return () => {
+       unsub();
+    };
   }, []);
 
   const handleSave = async () => {
@@ -108,22 +111,22 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-4 border-b border-gray-200">
+      <div className="flex gap-4 border-b border-gray-200 overflow-x-auto scrollbar-hide">
          <button 
            onClick={() => setActiveTab('content')}
-           className={`px-4 py-3 font-bold border-b-2 transition-colors ${activeTab === 'content' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+           className={`px-4 py-3 font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'content' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
          >
             Home Content Control
          </button>
          <button 
            onClick={() => setActiveTab('theme')}
-           className={`px-4 py-3 font-bold border-b-2 transition-colors ${activeTab === 'theme' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+           className={`px-4 py-3 font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'theme' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
          >
             Theme Details
          </button>
          <button 
            onClick={() => setActiveTab('preview')}
-           className={`px-4 py-3 font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'preview' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+           className={`px-4 py-3 font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'preview' ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
          >
             <MonitorPlay className="w-4 h-4" /> Preview Dashboard
          </button>
@@ -373,6 +376,8 @@ export default function Settings() {
            <ThemeSettings />
         </div>
       )}
+
+
 
       {activeTab === 'preview' && (
         <div className="flex flex-col gap-4">

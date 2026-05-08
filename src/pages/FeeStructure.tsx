@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Edit2, Save, X, Plus, Trash2, Search, Award, User as UserIcon, Users } from 'lucide-react';
@@ -30,6 +31,7 @@ interface LabFee {
 }
 
 interface FeeStructureData {
+  academicYear?: string;
   academic: AcademicFee[];
   transportation: TransportFee[];
   lab: LabFee[];
@@ -37,6 +39,7 @@ interface FeeStructureData {
 }
 
 const defaultData: FeeStructureData = {
+  academicYear: '2023-2024',
   academic: [
     { id: '0', className: 'Play Group', admission: '4000', tuition: '1200', annual: '2500', exam: '500', computer: '0' },
     { id: '1', className: 'Nursery', admission: '5000', tuition: '1500', annual: '3000', exam: '600', computer: '0' },
@@ -89,7 +92,7 @@ const FeeStructure = () => {
   const [generatingFees, setGeneratingFees] = useState(false);
   const [toastMessage, setToastMessage] = useState({ type: '', text: '' });
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [bulkMonth, setBulkMonth] = useState('Shrawan');
+  const [bulkMonth, setBulkMonth] = useState('Baisakh');
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -160,12 +163,61 @@ const FeeStructure = () => {
       setGeneratingFees(false);
   };
 
+  const applyStructureToStudents = async () => {
+      setGeneratingFees(true);
+      try {
+          const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
+          const students = usersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
+          const structMap = new Map();
+          data.academic.forEach(s => structMap.set(s.className, s));
+
+          let batch = writeBatch(db);
+          let count = 0;
+
+          for (const s of students) {
+              const rawClass = s.class || s.studentClass || '';
+              const formattedClass = ['PG', 'Nursery', 'LKG', 'UKG'].includes(rawClass) ? rawClass : `Class ${rawClass}`;
+              const feeStruct = structMap.get(formattedClass) || structMap.get(rawClass);
+
+              if (feeStruct && feeStruct.tuition) {
+                  const tuitionFee = Number(feeStruct.tuition.replace(/[^0-9.]/g, ''));
+                  batch.update(doc(db, 'users', s.id), {
+                      monthlyFee: tuitionFee
+                  });
+                  count++;
+                  if (count === 400) {
+                      await batch.commit();
+                      batch = writeBatch(db);
+                      count = 0;
+                  }
+              }
+          }
+          if (count > 0) {
+              await batch.commit();
+          }
+
+          setToastMessage({ type: 'success', text: `Successfully updated monthly fee for ${students.length} students!` });
+          setTimeout(() => setToastMessage({ type: '', text: '' }), 5000);
+      } catch (err) {
+          console.error("Failed to apply structure:", err);
+          setToastMessage({ type: 'error', text: "Failed to apply fee structure." });
+      } finally {
+          setGeneratingFees(false);
+      }
+  };
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'fee_structure'), (docSnap) => {
       if (docSnap.exists()) {
-        setData(docSnap.data() as FeeStructureData);
+        const mergedData = { ...defaultData, ...docSnap.data() } as FeeStructureData;
+        mergedData.academic = mergedData.academic || defaultData.academic;
+        mergedData.transportation = mergedData.transportation || defaultData.transportation;
+        mergedData.lab = mergedData.lab || defaultData.lab;
+        mergedData.scholarshipPolicy = mergedData.scholarshipPolicy || defaultData.scholarshipPolicy;
+        setData(mergedData);
         if (!editMode) {
-          setEditedData(docSnap.data() as FeeStructureData);
+          setEditedData(mergedData);
         }
       } else {
         setData(defaultData);
@@ -241,9 +293,7 @@ const FeeStructure = () => {
   };
 
   const resetToDefault = () => {
-    if (window.confirm("Are you sure you want to restore the default fee structure? This will overwrite your current draft.")) {
-      setEditedData(defaultData);
-    }
+    setEditedData(defaultData);
   };
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -336,7 +386,13 @@ const FeeStructure = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading fee structure...</div>;
+    return <div className="p-8 text-center text-gray-500">
+      <Helmet>
+        <title>Fee Structure | Shikshantar Academy</title>
+        <meta name="description" content="View the detailed fee structure for different classes at Shikshantar Academy." />
+        <link rel="canonical" href="https://shikshantaracademy.edu.np/feestructure" />
+      </Helmet>
+      Loading fee structure...</div>;
   }
 
   const currentData = editMode ? editedData : data;
@@ -347,7 +403,17 @@ const FeeStructure = () => {
         <div>
           <h2 className="text-2xl font-bold text-primary flex items-center gap-3">
              Academy Fee Structure
-             <span className="text-sm font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full whitespace-nowrap border border-gray-200">Academic Year 2083-2084</span>
+             {editMode ? (
+               <input 
+                 type="text" 
+                 value={editedData.academicYear || ''} 
+                 onChange={e => setEditedData({ ...editedData, academicYear: e.target.value })}
+                 className="text-sm font-medium bg-white text-gray-800 px-3 py-1 rounded border border-gray-300 w-48 outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="e.g. 2023-2024"
+               />
+             ) : (
+               <span className="text-sm font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full whitespace-nowrap border border-gray-200">Academic Year {currentData.academicYear || '2023-2024'}</span>
+             )}
           </h2>
           <p className="text-sm text-slate-600 mt-1">Comprehensive fee details for all classes</p>
         </div>
@@ -366,21 +432,27 @@ const FeeStructure = () => {
                className="flex justify-center items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
             >
                <Users className="w-4 h-4" />
-               {generatingFees ? 'Calculating...' : 'Apply Structure to Students'}
+               {generatingFees ? 'Calculating...' : 'Generate Due Bills'}
             </button>
 
             {!editMode ? (
-              <button
-                onClick={() => {
-                   if (window.confirm("Warning: Updating this will NOT change previously generated bills. Only future bills will use the new structure. Do you want to continue?")) {
-                      setEditMode(true);
-                   }
-                }}
-                className="flex justify-center items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit Fee Structure
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={applyStructureToStudents}
+                  className="flex justify-center items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  disabled={generatingFees}
+                >
+                  <Users className="w-4 h-4" />
+                  {generatingFees ? 'Applying...' : 'Apply to Students'}
+                </button>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="flex justify-center items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Fee Structure
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-3">
                 <button
@@ -423,7 +495,7 @@ const FeeStructure = () => {
           )}
         </div>
         <div className="p-6 overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left whitespace-nowrap min-w-[700px]">
             <thead>
               <tr className="border-b border-[#e2e8f0]">
                 <th className="pb-4 font-semibold text-slate-700">Class</th>
@@ -440,7 +512,7 @@ const FeeStructure = () => {
                 <tr key={row.id} className="border-b border-slate-100">
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.className} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.className} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].className = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -449,7 +521,7 @@ const FeeStructure = () => {
                   </td>
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.admission} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.admission} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].admission = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -458,7 +530,7 @@ const FeeStructure = () => {
                   </td>
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.tuition} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.tuition} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].tuition = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -467,7 +539,7 @@ const FeeStructure = () => {
                   </td>
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.annual} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.annual} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].annual = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -476,7 +548,7 @@ const FeeStructure = () => {
                   </td>
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.exam} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.exam} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].exam = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -485,7 +557,7 @@ const FeeStructure = () => {
                   </td>
                   <td className="py-3">
                     {editMode ? (
-                      <input className="w-full border p-2 rounded" value={row.computer} onChange={(e) => {
+                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.computer} onChange={(e) => {
                         const newAcademic = [...editedData.academic];
                         newAcademic[index].computer = e.target.value;
                         setEditedData({ ...editedData, academic: newAcademic });
@@ -532,7 +604,7 @@ const FeeStructure = () => {
             )}
           </div>
           <div className="p-6 overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left whitespace-nowrap min-w-[600px]">
               <thead>
                 <tr className="border-b border-[#e2e8f0]">
                   <th className="pb-4 font-semibold text-slate-700 w-1/3">Class</th>
@@ -546,7 +618,7 @@ const FeeStructure = () => {
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="py-3">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded" value={row.className} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.className} onChange={(e) => {
                           const newTransport = [...editedData.transportation];
                           newTransport[index].className = e.target.value;
                           setEditedData({ ...editedData, transportation: newTransport });
@@ -555,7 +627,7 @@ const FeeStructure = () => {
                     </td>
                     <td className="py-3">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded" value={row.route} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.route} onChange={(e) => {
                           const newTransport = [...editedData.transportation];
                           newTransport[index].route = e.target.value;
                           setEditedData({ ...editedData, transportation: newTransport });
@@ -564,7 +636,7 @@ const FeeStructure = () => {
                     </td>
                     <td className="py-3 text-right">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded text-right" value={row.fee} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded text-right" value={row.fee} onChange={(e) => {
                           const newTransport = [...editedData.transportation];
                           newTransport[index].fee = e.target.value;
                           setEditedData({ ...editedData, transportation: newTransport });
@@ -600,7 +672,7 @@ const FeeStructure = () => {
             )}
           </div>
           <div className="p-6 overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left whitespace-nowrap min-w-[600px]">
               <thead>
                 <tr className="border-b border-[#e2e8f0]">
                   <th className="pb-4 font-semibold text-slate-700 w-1/3">Class</th>
@@ -614,7 +686,7 @@ const FeeStructure = () => {
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="py-3">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded" value={row.className} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.className} onChange={(e) => {
                           const newLab = [...editedData.lab];
                           newLab[index].className = e.target.value;
                           setEditedData({ ...editedData, lab: newLab });
@@ -623,7 +695,7 @@ const FeeStructure = () => {
                     </td>
                     <td className="py-3">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded" value={row.subject} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.subject} onChange={(e) => {
                           const newLab = [...editedData.lab];
                           newLab[index].subject = e.target.value;
                           setEditedData({ ...editedData, lab: newLab });
@@ -632,7 +704,7 @@ const FeeStructure = () => {
                     </td>
                     <td className="py-3 text-right">
                       {editMode ? (
-                        <input className="w-full border p-2 rounded text-right" value={row.fee} onChange={(e) => {
+                        <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded text-right" value={row.fee} onChange={(e) => {
                           const newLab = [...editedData.lab];
                           newLab[index].fee = e.target.value;
                           setEditedData({ ...editedData, lab: newLab });
@@ -865,7 +937,7 @@ const FeeStructure = () => {
                   onChange={(e) => setBulkMonth(e.target.value)}
                   className="block w-full border border-slate-300 rounded-lg p-2.5 focus:ring-emerald-500 focus:border-emerald-500 font-bold"
                 >
-                   {['Shrawan', 'Bhadra', 'Ashoj', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra', 'Baisakh', 'Jestha', 'Ashad'].map(m => (
+                   {['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'].map(m => (
                       <option key={m} value={m}>{m}</option>
                    ))}
                 </select>
