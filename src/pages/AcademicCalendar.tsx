@@ -37,28 +37,28 @@ const PageCover = React.forwardRef<HTMLDivElement, { children: React.ReactNode }
   );
 });
 
-const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: number, isAdmin?: boolean, onDateClick?: (monthIndex: number, monthName: string, date: number, currentEvents: string) => void }>(({ month, monthIndex, isAdmin, onDateClick }, ref) => {
+const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: number, isAdmin?: boolean, todayBsDate?: { monthIdx: number, date: number } | null, onDateClick?: (monthIndex: number, monthName: string, date: number, currentEvents: string) => void }>(({ month, monthIndex, isAdmin, todayBsDate, onDateClick }, ref) => {
   return (
     <div className="page bg-white shadow-[inset_0_0_5px_rgba(0,0,0,0.1)] h-full w-full relative border border-gray-300" ref={ref}>
-      <div className="p-5 h-full flex flex-col">
-        <div className="text-center mb-2 border-b-2 border-primary pb-2 flex-none relative">
-          <div className="absolute left-0 top-1 text-gray-300 font-bold opacity-30 text-5xl pointer-events-none tracking-tighter -mt-2 -ml-2">{monthIndex + 1}</div>
-          <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="absolute right-0 top-0 w-8 h-8 object-contain opacity-50 grayscale" />
-          <h2 className="text-2xl lg:text-3xl font-black text-primary uppercase tracking-widest relative z-10">{month.name}</h2>
-          <p className="text-gray-500 font-bold tracking-[0.3em] text-[10px] mt-1">Shikshantar Academy | 2083 B.S.</p>
+      <div className="p-3 md:p-5 h-full flex flex-col">
+        <div className="text-center mb-1 md:mb-2 border-b-2 border-primary pb-1 md:pb-2 flex-none relative">
+          <div className="absolute left-0 top-1 text-gray-300 font-bold opacity-30 text-4xl md:text-5xl pointer-events-none tracking-tighter -mt-2 -ml-2">{monthIndex + 1}</div>
+          <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="hidden md:block absolute right-0 top-0 w-8 h-8 object-contain opacity-50 grayscale" />
+          <h2 className="text-xl lg:text-3xl font-black text-primary uppercase tracking-widest relative z-10">{month.name}</h2>
+          <p className="text-gray-500 font-bold tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-[10px] mt-0.5 md:mt-1">Shikshantar Academy | 2083 B.S.</p>
         </div>
         
         <div className="flex-1 flex flex-col mb-1 relative overflow-hidden">
           <div className="grid grid-cols-7 gap-1 mb-1 flex-none">
             {WEEK_DAYS.map((day, i) => (
-              <div key={day} className={`text-center font-bold text-[9px] uppercase pb-1 border-b border-gray-200 ${(i === 0 || i === 6) ? 'text-red-500' : 'text-gray-600'}`}>
+              <div key={day} className={`text-center font-bold text-[8px] md:text-[9px] uppercase pb-0.5 md:pb-1 border-b border-gray-200 ${(i === 0 || i === 6) ? 'text-red-500' : 'text-gray-600'}`}>
                 {day}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-0.5 text-center flex-1">
+          <div className="grid grid-cols-7 gap-[1px] md:gap-0.5 text-center flex-1">
             {Array.from({ length: month.startDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="border-transparent rounded flex flex-col bg-gray-50/20"></div>
+              <div key={`empty-${i}`} className="border-transparent flex flex-col bg-gray-50/20"></div>
             ))}
             {Array.from({ length: month.days }).map((_, i) => {
               const date = i + 1;
@@ -66,18 +66,19 @@ const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: 
               const isWeekend = (globalDayIndex === 0 || globalDayIndex === 6); // Sunday & Saturday
               const dayEvents = month.events ? month.events.filter((e: any) => e.date === date) : [];
               const isEvent = dayEvents.length > 0;
+              const isToday = todayBsDate?.monthIdx === monthIndex && todayBsDate?.date === date;
               
               return (
                 <div 
                    key={date} 
                    onClick={() => isAdmin && onDateClick && onDateClick(monthIndex, month.name, date, dayEvents.map((e: any) => e.name).join(', '))}
-                   className={`p-0.5 min-h-[30px] border shadow-sm border-gray-100/80 rounded flex flex-col items-center justify-start font-bold relative transition-colors ${isWeekend ? 'text-red-600 bg-red-50/40 border-red-100' : 'text-gray-800 bg-white hover:bg-blue-50'} ${isEvent && !isWeekend ? 'bg-blue-50/40' : ''} ${isAdmin ? 'cursor-pointer hover:ring-2 hover:ring-blue-400 z-10' : ''}`}
+                   className={`p-px md:p-0.5 min-h-[1.75rem] md:min-h-[30px] border shadow-[0_1px_2px_rgba(0,0,0,0.02)] border-gray-100/80 rounded-[2px] md:rounded flex flex-col items-center justify-start font-bold relative transition-colors ${isWeekend ? 'text-red-600 bg-red-50/40 border-red-100' : 'text-gray-800 bg-white hover:bg-blue-50'} ${isEvent && !isWeekend ? 'bg-blue-50/40' : ''} ${isAdmin ? 'cursor-pointer hover:ring-2 hover:ring-blue-400 z-10' : ''} ${isToday ? 'ring-2 ring-primary bg-blue-50/50 z-20 shadow-md transform scale-[1.02]' : ''}`}
                 >
-                  <span className="text-[11px] md:text-[13px]">{date}</span>
+                  <span className={`text-[10px] md:text-[13px] leading-tight mt-0.5 ${isToday ? 'bg-primary text-white w-5 h-5 rounded-full flex items-center justify-center -mt-0.5' : ''}`}>{date}</span>
                   {isEvent && (
-                     <div className="flex flex-col gap-0.5 mt-px w-full items-center px-px">
+                     <div className="flex flex-col gap-px w-full items-center px-px mt-px">
                        {dayEvents.map((e: any, idx: number) => (
-                         <div key={idx} className={`w-full text-[5px] md:text-[6px] leading-[1.1] text-center rounded px-[1px] py-px truncate ${isWeekend ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`} title={e.name}>{e.name}</div>
+                         <div key={idx} className={`w-full text-[4px] md:text-[6px] leading-none text-center rounded-sm px-[1px] py-px truncate ${isWeekend ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`} title={e.name}>{e.name}</div>
                        ))}
                      </div>
                   )}
@@ -89,19 +90,19 @@ const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: 
         
         {/* Events Section */}
         {month.events && month.events.length > 0 && (
-          <div className="flex-none bg-blue-50/70 p-2 rounded-lg border border-blue-100 text-[10px] mb-2 overflow-y-auto max-h-20 default-scrollbar">
-             <div className="font-bold text-primary mb-1 uppercase tracking-wider text-[8px] sticky top-0 bg-blue-50/90 z-10 flex justify-between">
+          <div className="flex-none bg-blue-50/70 p-1.5 md:p-2 rounded-lg border border-blue-100 text-[10px] mb-1 md:mb-2 overflow-y-auto max-h-16 md:max-h-20 default-scrollbar">
+             <div className="font-bold text-primary mb-1 uppercase tracking-wider text-[7px] md:text-[8px] sticky top-0 bg-blue-50/90 z-10 flex justify-between">
                 <span>Key Events / Holidays</span>
              </div>
-             <ul className="text-gray-700 list-none pl-1 space-y-0.5">
+             <ul className="text-gray-700 list-none pl-1 space-y-0.5 md:space-y-1">
                 {month.events.map((e: any, i: number) => (
-                   <li key={i} className="flex gap-2 items-start"><span className="font-bold w-3 shrink-0 text-blue-600">{e.date}</span><span className="leading-tight">{e.name}</span></li>
+                   <li key={i} className="flex gap-2 items-start text-[8px] md:text-[10px]"><span className="font-bold w-3 shrink-0 text-blue-600">{e.date}</span><span className="leading-tight">{e.name}</span></li>
                 ))}
              </ul>
           </div>
         )}
         
-        <div className="flex-none mt-auto pt-2 border-t border-gray-200 flex justify-between text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+        <div className="flex-none mt-auto pt-1.5 md:pt-2 border-t border-gray-200 flex justify-between text-[8px] md:text-[10px] text-gray-400 font-bold uppercase tracking-wider">
           <span>{month.name}</span>
           <span>Page {monthIndex + 1} / 12</span>
         </div>
@@ -117,6 +118,7 @@ export default function AcademicCalendar() {
   const [monthsData, setMonthsData] = useState<any[]>(DEFAULT_MONTHS_2083);
   const [customEventsData, setCustomEventsData] = useState<any>({});
   const [isReady, setIsReady] = useState(false);
+  const [todayBsDate, setTodayBsDate] = useState<{ monthIdx: number, date: number } | null>(null);
   
   const role = auth.currentUser ? (localStorage.getItem('userRole') || 'student') : 'guest';
   const isAdmin = role === 'admin';
@@ -169,6 +171,7 @@ export default function AcademicCalendar() {
         const currentDate = new NepaliDate();
         defaultMonthIdx = currentDate.getMonth();
         setSelectedMonth(defaultMonthIdx.toString());
+        setTodayBsDate({ monthIdx: currentDate.getMonth(), date: currentDate.getDate() });
      } catch (e) {}
 
      const unsub = onSnapshot(doc(db, 'settings', 'calendar_2083'), (snap) => {
@@ -376,7 +379,7 @@ export default function AcademicCalendar() {
             size="stretch"
             minWidth={280}
             maxWidth={500}
-            minHeight={400}
+            minHeight={450}
             maxHeight={750}
             maxShadowOpacity={0.6}
             showCover={true}
@@ -401,7 +404,7 @@ export default function AcademicCalendar() {
             </PageCover>
 
             {monthsData.map((month, index) => (
-               <CalendarPage key={month.name} month={month} monthIndex={index} isAdmin={isAdmin} onDateClick={handleDateClick} />
+               <CalendarPage key={month.name} month={month} monthIndex={index} isAdmin={isAdmin} onDateClick={handleDateClick} todayBsDate={todayBsDate} />
             ))}
 
             <PageCover>

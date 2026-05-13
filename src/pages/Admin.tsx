@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { BookOpen, Users, Folder, AlertCircle, FileSpreadsheet, Edit2, Search, Settings, Loader2, Upload, CheckCircle } from 'lucide-react';
 
 import { UploadTab } from '../components/admin/UploadTab';
@@ -33,22 +33,6 @@ export default function Admin() {
   }, [data]);
 
   useEffect(() => {
-    // Determine role (simplified for demo, usually from Auth)
-    const storedRole = localStorage.getItem('userRole') || 'admin';
-    setUserRole(storedRole as any);
-
-    if (storedRole === 'teacher') {
-        const savedClasses = JSON.parse(localStorage.getItem('teacherClasses') || '[]');
-        const savedSubs = JSON.parse(localStorage.getItem('teacherSubjects') || '[]');
-        setAssignedClasses(savedClasses);
-        setAssignedSubjects(savedSubs);
-        if (savedClasses.length > 0) setIsTeacherSetupDone(true);
-    } else {
-        setIsTeacherSetupDone(true);
-    }
-  }, []);
-
-  useEffect(() => {
      let unsubExams: any;
      let unsubSummary: any;
      let unsubResults: any;
@@ -65,7 +49,14 @@ export default function Admin() {
                  const mapId = `${sub.examId}_${sub.studentId}`;
                  if (!resultsBySummaryId[mapId]) resultsBySummaryId[mapId] = {};
                  resultsBySummaryId[mapId][sub.subject] = {
-                     fullMarks: sub.fullMarks, obtained: sub.marks
+                     fullMarks: sub.fullMarks, 
+                     obtained: sub.marks,
+                     thMarks: sub.thMarks,
+                     prMarks: sub.prMarks,
+                     thFull: sub.thFull,
+                     prFull: sub.prFull,
+                     thPass: sub.thPass,
+                     prPass: sub.prPass
                  };
              });
 
@@ -127,8 +118,32 @@ export default function Admin() {
          }
      };
 
-     const unsubAuth = onAuthStateChanged(auth, (user) => {
+     const unsubAuth = onAuthStateChanged(auth, async (user) => {
          if (user) {
+             const storedRole = localStorage.getItem('userRole') || 'admin';
+             setUserRole(storedRole as any);
+
+             if (storedRole === 'teacher') {
+                 // Fetch assigned classes from Firestore
+                 try {
+                     const uDoc = await getDoc(doc(db, 'users', user.uid));
+                     if (uDoc.exists()) {
+                         const uData = uDoc.data();
+                         setAssignedClasses(uData.class ? [uData.class] : []);
+                         // Subjects can still be taken from local storage or updated similarly later
+                         setAssignedSubjects(JSON.parse(localStorage.getItem('teacherSubjects') || '[]'));
+                         if (uData.class) setIsTeacherSetupDone(true);
+                     } else {
+                         setIsTeacherSetupDone(true);
+                     }
+                 } catch (e) {
+                     console.error("Failed to fetch teacher profile:", e);
+                     setIsTeacherSetupDone(true);
+                 }
+             } else {
+                 setIsTeacherSetupDone(true);
+             }
+
              subscribeToResults();
          } else {
              if (unsubExams) unsubExams();
@@ -154,20 +169,6 @@ export default function Admin() {
     }
   }, [status]);
 
-  const teacherSetupSave = () => {
-      localStorage.setItem('teacherClasses', JSON.stringify(assignedClasses));
-      localStorage.setItem('teacherSubjects', JSON.stringify(assignedSubjects));
-      setIsTeacherSetupDone(true);
-      setStatus({type: 'success', message: 'Teacher profile configured.'});
-  };
-
-  const handleTeacherClassToggle = (c: string) => {
-      setAssignedClasses(prev => prev.includes(c) ? prev.filter(x => x!==c) : [...prev, c]);
-  };
-  const handleTeacherSubjectToggle = (s: string) => {
-      setAssignedSubjects(prev => prev.includes(s) ? prev.filter(x => x!==s) : [...prev, s]);
-  };
-
   const allowedClasses = userRole === 'admin' ? DEFAULT_CLASSES : assignedClasses;
 
   // Derive Summary Card Stats
@@ -185,36 +186,6 @@ export default function Admin() {
           pendingClasses: pendingClasses > 0 ? pendingClasses : 0
       };
   }, [data]);
-
-  if (userRole === 'teacher' && !isTeacherSetupDone) {
-      return (
-          <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-10">
-              <h2 className="text-2xl font-black text-primary mb-2 text-center">Teacher Initial Setup</h2>
-              <p className="text-gray-500 text-center mb-8">Please configure your assigned classes and subjects. You will only be able to manage results for these selections.</p>
-              
-              <div className="mb-6">
-                 <label className="font-bold block mb-3 text-gray-700 uppercase tracking-widest text-sm">Assigned Classes</label>
-                 <div className="flex flex-wrap gap-2">
-                    {DEFAULT_CLASSES.map(c => (
-                        <button key={c} onClick={() => handleTeacherClassToggle(c)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedClasses.includes(c) ? 'bg-[var(--primary)] text-white' : 'bg-white text-gray-600 hover:opacity-90'}`}>Class {c}</button>
-                    ))}
-                 </div>
-              </div>
-              <div className="mb-8">
-                 <label className="font-bold block mb-3 text-gray-700 uppercase tracking-widest text-sm">Assigned Subjects</label>
-                 <div className="flex flex-wrap gap-2">
-                    {SUBJECTS.map(s => (
-                        <button key={s} onClick={() => handleTeacherSubjectToggle(s)} className={`px-4 py-2 rounded-lg font-bold border transition-colors ${assignedSubjects.includes(s) ? 'bg-[#10b981] text-white border-[#10b981]' : 'bg-white text-gray-600 hover:opacity-90'}`}>{s}</button>
-                    ))}
-                 </div>
-              </div>
-
-              <button onClick={teacherSetupSave} disabled={assignedClasses.length === 0 || assignedSubjects.length === 0} className={`w-full py-4 rounded-xl font-black text-lg transition-transform active:scale-95 shadow-md ${assignedClasses.length > 0 && assignedSubjects.length > 0 ? 'bg-[var(--primary)] text-white hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-                  Save Configuration
-              </button>
-          </div>
-      );
-  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -3,8 +3,11 @@ import { formatBSDate, formatBSDateTime } from '../lib/nepaliDate';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown, Settings, Plus, Download } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle2, XCircle, Trash2, Edit2, Save, X, ArrowUpDown, ArrowUp, ArrowDown, Settings, Plus, Download, FileDown } from 'lucide-react';
 import { exportToExcel } from '../lib/excelExport';
+import { exportToPDF } from '../lib/pdfExport';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function AdminAdmissions() {
   const [admissions, setAdmissions] = useState<any[]>([]);
@@ -192,6 +195,29 @@ export default function AdminAdmissions() {
     await exportToExcel('Admission_List', 'Admission List Report', columns, exportData);
   };
 
+  const handleExportPDF = async () => {
+    if (admissions.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    const head = ['Date', 'Student Name', 'Grade', 'Parent Name', 'Contact', 'Status'];
+
+    const body = admissions.map(adm => {
+      const dateRaw = adm.submittedAt ? (adm.submittedAt.toDate ? adm.submittedAt.toDate() : new Date(adm.submittedAt)) : null;
+      return [
+        dateRaw ? formatBSDate(dateRaw) : 'N/A',
+        adm.studentName || '-',
+        adm.gradeAppliedFor || '-',
+        adm.parentName || '-',
+        adm.contactNumber || '-',
+        adm.status || 'Pending'
+      ];
+    });
+
+    await exportToPDF('Admission Applications Report', head, body, `Admission_List_${formatBSDate(new Date())}`, true);
+  };
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#e5e7eb] max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 py-2 border-b border-gray-100 gap-4">
@@ -203,6 +229,12 @@ export default function AdminAdmissions() {
           <div className="border-primary text-primary px-4 py-2 flex items-center rounded border border-gray-200 text-sm font-bold border-primary text-primary">
             Total Applications: {admissions.length}
           </div>
+          <button 
+            onClick={handleExportPDF}
+            className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 px-3 py-2 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
+          >
+            <FileDown className="w-4 h-4"/> Export to PDF
+          </button>
           <button 
             onClick={handleExportExcel}
             className="bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] hover:bg-[#dcfce7] px-3 py-2 rounded flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"

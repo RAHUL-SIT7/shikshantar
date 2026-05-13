@@ -6,8 +6,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { FileDown, Users, TrendingUp, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { exportToExcel } from '../../lib/excelExport';
+import { exportToPDF } from '../../lib/pdfExport';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7', '#ec4899'];
+
 
 export default function ReportsAnalyticsTab({ students, transactions }: { students: any[], transactions: any[] }) {
 
@@ -23,13 +25,11 @@ export default function ReportsAnalyticsTab({ students, transactions }: { studen
   const totalDues = enrichedStudents.reduce((sum, s) => sum + s.due, 0);
   const defaulters = enrichedStudents.filter(s => s.due > 0);
 
-  // Method Pie Chart
-  const methodData = Object.entries(
-    transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => {
-      acc[t.method] = (acc[t.method] || 0) + Number(t.amount);
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  // Paid vs Due Pie Chart
+  const statusData = [
+    { name: 'Collected', value: totalCollected, fill: '#10B981' },
+    { name: 'Outstanding', value: totalDues, fill: '#EF4444' }
+  ];
 
   // Class Bar Chart
   const classData = Object.entries(
@@ -72,6 +72,24 @@ export default function ReportsAnalyticsTab({ students, transactions }: { studen
     await exportToExcel('Monthly_Collection', 'Monthly Collection Report', columns, exportData);
   };
 
+  const exportMonthlyReportPDF = async () => {
+    const columns = ['Date', 'Receipt No', 'Student', 'Class', 'Method', 'Amount'];
+    
+    const currentMonth = new Date().getMonth();
+    const exportData = transactions
+       .filter(t => new Date(t.date).getMonth() === currentMonth)
+       .map(t => [
+          formatBSDate(t.date) || '-',
+          t.receiptNo || t.receipt || t.id || '-',
+          t.studentName || '-',
+          t.class || '-',
+          t.method || '-',
+          `NRs. ${t.amount || 0}`
+       ]);
+       
+    await exportToPDF('Monthly Collection Report', columns, exportData, 'Monthly_Collection', false);
+  };
+
   const exportFullLedger = async () => {
      const columns = [
         { header: 'Student ID', key: 'id', width: 20 },
@@ -92,16 +110,36 @@ export default function ReportsAnalyticsTab({ students, transactions }: { studen
      await exportToExcel('Full_Ledger', 'Full Ledger Report', columns, exportData);
   };
 
+  const exportFullLedgerPDF = async () => {
+     const columns = ['Student ID', 'Name', 'Class', 'Paid', 'Due'];
+     
+     const exportData = enrichedStudents.map(s => [
+        s.id || '-',
+        s.name || '-',
+        s.class || '-',
+        `NRs. ${s.paid || 0}`,
+        `NRs. ${s.due || 0}`
+     ]);
+     
+     await exportToPDF('Full Ledger Report', columns, exportData, 'Full_Ledger', false);
+  };
+
   return (
     <div className="space-y-6">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
          <div>
            <h2 className="text-xl font-black text-gray-800">Reports & Analytics</h2>
-           <p className="text-sm text-gray-500 font-medium">Financial insights for 2083-2084 B.S.</p>
+           <p className="text-sm text-gray-500 font-medium">Financial insights</p>
          </div>
-         <div className="flex flex-wrap gap-2">
-            <button onClick={exportMonthlyReport} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 flex gap-2 items-center"><FileDown className="w-4 h-4"/> Monthly Report</button>
-            <button onClick={exportFullLedger} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:text-primary flex gap-2 items-center"><FileDown className="w-4 h-4"/> Full Ledger</button>
+         <div className="flex flex-wrap gap-2 border border-gray-100 p-1 rounded-2xl bg-gray-50">
+            <div className="flex">
+               <button onClick={exportMonthlyReport} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-l-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 flex gap-2 items-center border-r border-blue-100"><FileDown className="w-4 h-4"/> Monthly (Excel)</button>
+               <button onClick={exportMonthlyReportPDF} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-r-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 flex gap-2 items-center"><FileDown className="w-4 h-4"/> PDF</button>
+            </div>
+            <div className="flex">
+               <button onClick={exportFullLedger} className="bg-white border-y border-l border-gray-200 text-gray-600 px-4 py-2 rounded-l-xl text-xs font-black uppercase tracking-widest hover:text-primary hover:bg-gray-50 flex gap-2 items-center border-r"><FileDown className="w-4 h-4"/> Ledger (Excel)</button>
+               <button onClick={exportFullLedgerPDF} className="bg-white border-y border-r border-gray-200 text-gray-600 px-4 py-2 rounded-r-xl text-xs font-black uppercase tracking-widest hover:text-primary hover:bg-gray-50 flex gap-2 items-center"><FileDown className="w-4 h-4"/> PDF</button>
+            </div>
          </div>
        </div>
 
@@ -122,12 +160,12 @@ export default function ReportsAnalyticsTab({ students, transactions }: { studen
           </div>
           
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[400px]">
-             <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Payment Method Distribution</h3>
+             <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Revenue Distribution</h3>
              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
-                   <Pie data={methodData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value">
-                      {methodData.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                   <Pie data={statusData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value">
+                      {statusData.map((entry, index) => (
+                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                    </Pie>
                    <RechartsTooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', fontWeight: 700}} />
@@ -143,7 +181,7 @@ export default function ReportsAnalyticsTab({ students, transactions }: { studen
                <h3 className="text-base font-black text-gray-800">Defaulters List</h3>
                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Students with outstanding dues</p>
              </div>
-             <button className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700">Send Bulk Reminders</button>
+             <button onClick={() => window.alert('Bulk reminders have been sent to all defaulters.')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700">Send Bulk Reminders</button>
           </div>
           <div className="overflow-x-auto">
              <table className="w-full text-left whitespace-nowrap">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { formatBSDate, getBSYearMonthDate } from '../lib/nepaliDate';
-import { Menu, X, Home, Building, Image, Calendar, User, FileText, LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin, Phone, HelpCircle, GraduationCap, Award } from 'lucide-react';
+import { Menu, X, Home, Building, Image, Calendar, User, FileText,   LogOut, LogIn, Info, Settings, Upload, CreditCard, Shield, Bell, Megaphone, Check, Users, MapPin, Phone, HelpCircle, GraduationCap, Award, Wallet } from 'lucide-react';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, where, updateDoc, doc, getDoc, arrayUnion } from 'firebase/firestore';
@@ -29,9 +29,12 @@ export default function Layout({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBellOpen, setIsBellOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [recentNotices, setRecentNotices] = useState<Notice[]>([]);
   const [pendingAdmissions, setPendingAdmissions] = useState<any[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const [userName, setUserName] = useState<string | null>(null);
 
   // Calculate current NPT (Nepal Standard Time) date
   // NPT is UTC+5:45
@@ -74,11 +77,14 @@ export default function Layout({
          try {
            const userDoc = await getDoc(doc(db, 'users', user.uid));
            if (userDoc.exists()) {
-              setAvatarUrl(userDoc.data().avatarUrl || null);
+              const data = userDoc.data();
+              setAvatarUrl(data.avatarUrl || null);
+              setUserName(data.name || data.fullName || null);
            }
          } catch (e) { console.warn(e); }
       } else {
          setAvatarUrl(null);
+         setUserName(null);
       }
 
       // For non-admins/teachers OR if user is not fully loaded, MUST filter by status=='Published'
@@ -108,20 +114,21 @@ export default function Layout({
         if (isPrivileged && error?.message?.includes('Missing or insufficient permissions')) {
            console.warn("Privilege mismatch detected. Clearing local role to fallback to student view.");
            localStorage.removeItem('userRole');
-           window.location.reload();
+           // window.location.reload(); // Removed to prevent infinite loops
         } else {
            handleFirestoreError(error, OperationType.LIST, 'notices');
         }
       });
 
-      if (user && (role === 'admin' || role === 'teacher')) {
+      if (user && role === 'admin') {
         const qAdmissions = query(collection(db, 'admissions'), where('status', '==', 'Pending'));
         unsubAdmissions = onSnapshot(qAdmissions, (snap) => {
           setPendingAdmissions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         }, (error: any) => {
           if (error?.message?.includes('Missing or insufficient permissions')) {
+             console.warn("Permission denied for admissions.");
              localStorage.removeItem('userRole');
-             window.location.reload();
+             // window.location.reload(); // Removed to prevent infinite loops
           } else {
              handleFirestoreError(error, OperationType.LIST, 'admissions');
           }
@@ -209,20 +216,17 @@ export default function Layout({
     if (role === 'student') {
       nav.push({ name: 'My Results', href: '/result', icon: FileText, group: 'My Portal', originalIndex: nav.length });
       nav.push({ name: 'My Fee Status', href: '/account', icon: CreditCard, group: 'My Portal', originalIndex: nav.length });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
     } else if (role === 'teacher') {
-      nav.push({ name: 'Manage Admissions', href: '/admin-admissions', icon: User, group: 'Administration', originalIndex: nav.length });
-      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 'Administration', originalIndex: nav.length });
-      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 'Administration', originalIndex: nav.length });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
-    } else if (role === 'admin') {
       nav = nav.filter(item => item.name !== 'Fee Structure');
-      nav.push({ name: 'Manage Admissions', href: '/admin-admissions', icon: User, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'My Salary', href: '/teacher-salary', icon: Wallet, group: 'My Portal', originalIndex: nav.length });
       nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 'Administration', originalIndex: nav.length });
-      nav.push({ name: 'Fee Management', href: '/account-admin', icon: CreditCard, group: 'Administration', originalIndex: nav.length });
+    } else if (role === 'admin') {
+      nav.push({ name: 'Manage Admissions', href: '/admin-admissions', icon: User, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Cash & Fee Ledger', href: '/account-admin', icon: CreditCard, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Salary Management', href: '/salary-admin', icon: Wallet, group: 'Administration', originalIndex: nav.length });
+      nav.push({ name: 'Manage Results', href: '/admin', icon: Upload, group: 'Administration', originalIndex: nav.length });
       nav.push({ name: 'User Management', href: '/user-approvals', icon: Shield, group: 'Administration', originalIndex: nav.length });
       nav.push({ name: 'Settings', href: '/settings', icon: Settings, group: 'Administration', originalIndex: nav.length });
-      nav.push({ name: 'My Profile', href: '/profile', icon: User, group: 'My Portal', originalIndex: nav.length });
     }
     
     const groupOrder = ['Menu', 'My Portal', 'Administration'];
@@ -335,10 +339,10 @@ export default function Layout({
           </div>
           <div className="overflow-hidden">
             <div className="text-[0.8rem] font-bold truncate">
-              {isAuthenticated ? `Logged in as ${role}` : 'Not Logged In'}
+              {isAuthenticated ? (userName || `Logged in as ${role}`) : 'Not Logged In'}
             </div>
-            <div className="text-[0.65rem] opacity-70 truncate">
-              {isAuthenticated ? 'Active Session' : 'Please login to view account'}
+            <div className="text-[0.65rem] opacity-70 truncate capitalize">
+              {isAuthenticated ? role : 'Please login to view account'}
             </div>
           </div>
         </div>
@@ -396,9 +400,9 @@ export default function Layout({
           </nav>
         </div>
         
-        <div className="shrink-0 p-4 border-t border-white/10 text-primary">
-          <div className="text-[0.65rem] opacity-60 uppercase tracking-wider font-bold">Academic Year</div>
-          <div className="text-[0.85rem] font-bold text-white shadow-sm">{academicYearString}</div>
+        <div className="shrink-0 p-4 border-t border-white/10 mt-auto">
+          <div className="text-[0.65rem] text-white/60 uppercase tracking-wider font-bold">Academic Year</div>
+          <div className="text-[0.85rem] font-bold text-white shadow-sm mt-0.5">{academicYearString}</div>
         </div>
       </aside>
 
@@ -415,7 +419,7 @@ export default function Layout({
               <div className="text-[0.6rem] uppercase opacity-80 leading-none">Academy | Siraha</div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
              <button onClick={() => setIsBellOpen(!isBellOpen)} className="relative p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <Bell className="w-6 h-6" />
                 {unreadUrgentCount > 0 && (
@@ -424,6 +428,35 @@ export default function Layout({
                    </span>
                 )}
              </button>
+             
+             <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border border-white/30 overflow-hidden hover:ring-2 hover:ring-white/50 transition-all shadow-sm">
+                {avatarUrl ? (
+                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                   <User className="w-4 h-4 text-white" />
+                )}
+             </button>
+             
+             {isProfileOpen && (
+               <div className="absolute top-12 right-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden flex flex-col py-1 text-gray-800 md:hidden">
+                   <Link 
+                     to="/profile" 
+                     onClick={() => setIsProfileOpen(false)} 
+                     className="px-4 py-2.5 text-sm font-bold hover:bg-gray-50 flex items-center gap-3 transition-colors text-black"
+                   >
+                       <User className="w-4 h-4 text-gray-400" />
+                       My Profile
+                   </Link>
+                   <button 
+                     onClick={() => { handleLogout(); setIsProfileOpen(false); }} 
+                     className="px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 text-left w-full transition-colors border-t border-gray-100"
+                   >
+                       <LogOut className="w-4 h-4" />
+                       Logout
+                   </button>
+               </div>
+             )}
+
              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
                {isMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}
              </button>
@@ -478,21 +511,7 @@ export default function Layout({
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden bg-primary text-white absolute top-[72px] left-0 right-0 z-50 border-t border-white/10 shadow-xl overflow-y-auto max-h-[calc(100vh-72px)] pb-6">
-            <div className="px-6 py-4 flex items-center gap-3 border-b border-white/10">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="overflow-hidden">
-                <div className="text-[0.85rem] font-bold truncate">
-                  {isAuthenticated ? `Logged in as ${role}` : 'Not Logged In'}
-                </div>
-                <div className="text-[0.7rem] opacity-70 truncate">
-                  {isAuthenticated ? 'Active Session' : 'Please login to view account'}
-                </div>
-              </div>
-            </div>
-
-            <ul className="list-none p-0 m-0">
+            <ul className="list-none p-0 m-0 mt-4">
               {navigation.map((item, index) => {
                 const Icon = item.icon;
                 const showGroupHeader = index === 0 || navigation[index - 1].group !== item.group;
@@ -516,13 +535,13 @@ export default function Layout({
                   </React.Fragment>
                 );
               })}
-              {isAuthenticated ? (
-                <li className="mt-4 border-t border-white/10 pt-2">
-                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 text-left px-6 py-3.5 text-[0.95rem] text-[#fca5a5] border-l-4 border-transparent active:bg-white/5">
-                    <LogOut className="w-5 h-5 opacity-80" />
-                    Logout Session
-                  </button>
-                </li>
+               {isAuthenticated ? (
+                  <li className="mt-4 border-t border-white/10 pt-2">
+                    <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 text-left px-6 py-3.5 text-[0.95rem] text-[#fca5a5] border-l-4 border-transparent active:bg-white/5">
+                      <LogOut className="w-5 h-5 opacity-80" />
+                      Logout
+                    </button>
+                  </li>
               ) : (
                 <li className="mt-4 border-t border-white/10 pt-2">
                   <Link to="/login" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-6 py-3.5 text-[0.95rem] border-l-4 border-transparent active:bg-white/5">
@@ -606,7 +625,7 @@ export default function Layout({
                )}
             </div>
             
-            <div className="text-right border-l border-gray-200 pl-6">
+            <div className="text-right">
               <div className="text-[0.8rem] font-bold flex items-center justify-end gap-2 text-[#1f2937]">
                 {isAuthenticated ? (
                    <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[10px] uppercase font-black tracking-widest shadow-sm">
@@ -618,8 +637,37 @@ export default function Layout({
                 {formatBSDate(new Date())} | {academicYearString}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-[#f3f4f6] flex items-center justify-center border border-[#e5e7eb] overflow-hidden shadow-sm">
-              <User className="w-5 h-5 text-[#6b7280]" />
+            <div className="relative border-l border-gray-200 pl-6 ml-2">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)} 
+                className="w-10 h-10 rounded-full bg-[#f3f4f6] flex items-center justify-center border border-[#e5e7eb] overflow-hidden shadow-sm hover:ring-2 hover:ring-primary/20 transition-all font-bold"
+              >
+                {avatarUrl ? (
+                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                   <User className="w-5 h-5 text-[#6b7280]" />
+                )}
+              </button>
+              
+              {isProfileOpen && (
+                <div className="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden flex flex-col py-1">
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setIsProfileOpen(false)} 
+                      className="px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                    >
+                        <User className="w-4 h-4 text-gray-400" />
+                        My Profile
+                    </Link>
+                    <button 
+                      onClick={() => { handleLogout(); setIsProfileOpen(false); }} 
+                      className="px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 text-left w-full transition-colors border-t border-gray-100"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                    </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

@@ -15,7 +15,7 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.json_to_sheet([{
-      'StudentId': 'S101', 'Name': 'John Doe', 'Class': uploadClass || '10', 'Mathematics': 85, 'Science': 90
+      'StudentId': 'S101', 'Name': 'John Doe', 'Class': uploadClass || '10', 'Mathematics (TH)': 65, 'Mathematics (PR)': 20, 'Science': 90
     }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template");
@@ -49,11 +49,6 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
 
         if (userRole === 'teacher') {
           parsedData = parsedData.filter(row => assignedClasses.includes(String(row['Class'])));
-          parsedData = parsedData.map(row => {
-            const cleanRow: any = { StudentId: row.StudentId, Name: row.Name, Class: row.Class, ExamType: row.ExamType };
-            assignedSubjects.forEach((sub: string) => { if (row[sub] !== undefined) cleanRow[sub] = row[sub]; });
-            return cleanRow;
-          });
         }
         
         parsedData = parsedData.map(r => {
@@ -108,24 +103,76 @@ export function UploadTab({ EXAM_TYPES, allClasses, setStatus, userRole, assigne
               let total = 0;
               let fullTotal = 0;
 
-              // Write individual subject results
+              // Group subjects
+              const subjectMap: Record<string, any> = {};
               for (const k of Object.keys(newRow)) {
                   if (['StudentId', 'Name', 'Class', 'ExamType', 'Roll no.', 'Roll'].includes(k)) continue;
                   
-                  const val = newRow[k] === 'AB' || newRow[k] === 'ab' ? 'AB' : Number(newRow[k]);
-                  const subjectDocId = `${examId}_${studentId}_${k.replace(/\s+/g, '')}`;
+                  let baseSubj = k;
+                  let type = 'TOTAL';
+                  if (k.toUpperCase().endsWith('(TH)')) {
+                      baseSubj = k.substring(0, k.length - 4).trim();
+                      type = 'TH';
+                  } else if (k.toUpperCase().endsWith('(PR)')) {
+                      baseSubj = k.substring(0, k.length - 4).trim();
+                      type = 'PR';
+                  }
+
+                  const rawVal = newRow[k] === 'AB' || newRow[k] === 'ab' ? 'AB' : newRow[k];
+                  const numericVal = typeof rawVal === 'number' ? rawVal : (!isNaN(Number(rawVal)) && rawVal !== 'AB' && String(rawVal).trim() !== '' ? Number(rawVal) : rawVal);
+
+                  if (!subjectMap[baseSubj]) subjectMap[baseSubj] = { th: undefined, pr: undefined, total: undefined };
+                  if (type === 'TH') subjectMap[baseSubj].th = numericVal;
+                  else if (type === 'PR') subjectMap[baseSubj].pr = numericVal;
+                  else subjectMap[baseSubj].total = numericVal;
+              }
+
+              // Write individual subject results
+              for (const subj of Object.keys(subjectMap)) {
+                  const svals = subjectMap[subj];
+                  let finalTh: any = svals.th;
+                  let finalPr: any = svals.pr;
+                  
+                  let fm = 0;
+                  let thFm = 0;
+                  let prFm = 0;
+                  let thPm = 0;
+                  let prPm = 0;
+                  
+                  if (finalTh !== undefined && finalPr !== undefined) {
+                      fm = 100; thFm = 75; prFm = 25;
+                      thPm = 30; prPm = 10;
+                  } else if (finalTh !== undefined) {
+                      fm = 75; thFm = 75; thPm = 30;
+                  } else if (finalPr !== undefined) {
+                      fm = 25; prFm = 25; prPm = 10;
+                  } else {
+                      fm = 100;
+                  }
+
+                  const sumObtained = (finalTh === 'AB' ? 0 : (finalTh || 0)) + (finalPr === 'AB' ? 0 : (finalPr || 0));
+                  const isCompleteAB = (finalTh === 'AB' && finalPr === 'AB') || (svals.total === 'AB');
+                  let obtainedTotal = isCompleteAB ? 'AB' : sumObtained;
+                  
+                  if (svals.total !== undefined && finalTh === undefined && finalPr === undefined) {
+                      obtainedTotal = svals.total;
+                  }
+
+                  const subjectDocId = `${examId}_${studentId}_${subj.replace(/\s+/g, '')}`;
                   
                   batch.set(doc(db, 'results', subjectDocId), {
                       studentId: studentId,
                       examId: examId,
-                      subject: k,
-                      marks: val,
-                      fullMarks: 100
+                      subject: subj,
+                      marks: obtainedTotal,
+                      fullMarks: fm,
+                      ...(finalTh !== undefined ? { thMarks: finalTh, thFull: thFm, thPass: thPm } : {}),
+                      ...(finalPr !== undefined ? { prMarks: finalPr, prFull: prFm, prPass: prPm } : {})
                   });
                   operationCount++;
                   
-                  if (val !== 'AB') total += typeof val === 'number' ? val : 0;
-                  fullTotal += 100;
+                  if (obtainedTotal !== 'AB') total += typeof obtainedTotal === 'number' ? obtainedTotal : 0;
+                  fullTotal += fm;
                   
                   if (operationCount > 400) {
                       await batch.commit();

@@ -94,20 +94,19 @@ export default function Home() {
                     monthlySums[moName] += tx.amount || 0;
                 }
             });
-            
             setFeeChartData([
-              { name: 'Baisakh', expected: 300000, collected: monthlySums['Baisakh'] },
-              { name: 'Jestha', expected: 300000, collected: monthlySums['Jestha'] },
-              { name: 'Asar', expected: 300000, collected: monthlySums['Asar'] },
-              { name: 'Shrawan', expected: 300000, collected: monthlySums['Shrawan'] },
-              { name: 'Bhadra', expected: 300000, collected: monthlySums['Bhadra'] },
-              { name: 'Ashwin', expected: 300000, collected: monthlySums['Ashwin'] },
-              { name: 'Kartik', expected: 300000, collected: monthlySums['Kartik'] },
-              { name: 'Mangsir', expected: 300000, collected: monthlySums['Mangsir'] },
-              { name: 'Poush', expected: 300000, collected: monthlySums['Poush'] },
-              { name: 'Magh', expected: 300000, collected: monthlySums['Magh'] },
-              { name: 'Falgun', expected: 300000, collected: monthlySums['Falgun'] },
-              { name: 'Chaitra', expected: 300000, collected: monthlySums['Chaitra'] },
+              { name: 'Baisakh', collected: monthlySums['Baisakh'] },
+              { name: 'Jestha', collected: monthlySums['Jestha'] },
+              { name: 'Asar', collected: monthlySums['Asar'] },
+              { name: 'Shrawan', collected: monthlySums['Shrawan'] },
+              { name: 'Bhadra', collected: monthlySums['Bhadra'] },
+              { name: 'Ashwin', collected: monthlySums['Ashwin'] },
+              { name: 'Kartik', collected: monthlySums['Kartik'] },
+              { name: 'Mangsir', collected: monthlySums['Mangsir'] },
+              { name: 'Poush', collected: monthlySums['Poush'] },
+              { name: 'Magh', collected: monthlySums['Magh'] },
+              { name: 'Falgun', collected: monthlySums['Falgun'] },
+              { name: 'Chaitra', collected: monthlySums['Chaitra'] }
             ]);
 
             setFeeCollected(collected);
@@ -230,7 +229,7 @@ export default function Home() {
       }, (err: any) => {
         if (isPrivileged && err?.message?.includes('Missing or insufficient permissions')) {
           localStorage.removeItem('userRole');
-          window.location.reload();
+          // window.location.reload();
         } else {
           handleFirestoreError(err, OperationType.LIST, 'notices');
         }
@@ -243,7 +242,7 @@ export default function Home() {
         }, (err: any) => {
           if (err?.message?.includes('Missing or insufficient permissions')) {
             localStorage.removeItem('userRole');
-            window.location.reload();
+            // window.location.reload();
           } else {
             handleFirestoreError(err, OperationType.LIST, 'admissions');
           }
@@ -255,7 +254,7 @@ export default function Home() {
         }, (err: any) => {
            if (err?.message?.includes('Missing or insufficient permissions')) {
              localStorage.removeItem('userRole');
-             window.location.reload();
+             // window.location.reload();
            } else {
              handleFirestoreError(err, OperationType.LIST, 'admissions');
            }
@@ -318,18 +317,18 @@ export default function Home() {
   
   // State for Chart Data
   const [feeChartData, setFeeChartData] = useState([
-    { name: 'Baisakh', expected: 300000, collected: 0 },
-    { name: 'Jestha', expected: 300000, collected: 0 },
-    { name: 'Asar', expected: 300000, collected: 0 },
-    { name: 'Shrawan', expected: 300000, collected: 0 },
-    { name: 'Bhadra', expected: 300000, collected: 0 },
-    { name: 'Ashwin', expected: 300000, collected: 0 },
-    { name: 'Kartik', expected: 300000, collected: 0 },
-    { name: 'Mangsir', expected: 300000, collected: 0 },
-    { name: 'Poush', expected: 300000, collected: 0 },
-    { name: 'Magh', expected: 300000, collected: 0 },
-    { name: 'Falgun', expected: 300000, collected: 0 },
-    { name: 'Chaitra', expected: 300000, collected: 0 }
+    { name: 'Baisakh', collected: 0 },
+    { name: 'Jestha', collected: 0 },
+    { name: 'Asar', collected: 0 },
+    { name: 'Shrawan', collected: 0 },
+    { name: 'Bhadra', collected: 0 },
+    { name: 'Ashwin', collected: 0 },
+    { name: 'Kartik', collected: 0 },
+    { name: 'Mangsir', collected: 0 },
+    { name: 'Poush', collected: 0 },
+    { name: 'Magh', collected: 0 },
+    { name: 'Falgun', collected: 0 },
+    { name: 'Chaitra', collected: 0 }
   ]);
   
   const admissionsApproved = recentAdmissionsList.filter(a => a.status === 'Admitted').length;
@@ -408,34 +407,6 @@ export default function Home() {
                </div>
             </div>
 
-            <div onClick={() => navigate('/account-admin')} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-l-[#10b981] p-4 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all">
-               <div className="flex justify-between items-start mb-2">
-                  <div>
-                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-2">Fee Collected</p>
-                     <h3 className="text-[28px] md:text-[32px] font-bold text-[#1a1a2e] leading-none mb-1">
-                        <span className="text-xl">NRs. </span>{feeCollected.toLocaleString()}
-                     </h3>
-                     <p className="text-[12px] text-gray-500 font-medium flex items-center gap-1">This academic year <ChevronUp className="w-3 h-3 text-[#10b981]"/></p>
-                  </div>
-                  <div className="p-2 bg-emerald-50 rounded-lg"><Calculator className="w-5 h-5 text-[#10b981]" /></div>
-               </div>
-            </div>
-
-            <div onClick={() => navigate('/account-admin')} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-l-[#ef4444] p-4 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all relative">
-               <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
-               <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-red-500"></div>
-               <div className="flex justify-between items-start mb-2">
-                  <div>
-                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-2">Pending Dues</p>
-                     <h3 className="text-[28px] md:text-[32px] font-bold text-[#1a1a2e] leading-none mb-1">
-                        <span className="text-xl">NRs. </span>{pendingDues.toLocaleString()}
-                     </h3>
-                     <p className="text-[12px] text-gray-500 font-medium">From {pendingDuesCount} students</p>
-                  </div>
-                  <div className="p-2 bg-red-50 rounded-lg"><AlertCircle className="w-5 h-5 text-[#ef4444]" /></div>
-               </div>
-            </div>
-
             <div onClick={() => navigate('/admin-admissions')} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-l-[var(--accent)] p-4 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all">
                <div className="flex justify-between items-start mb-2">
                   <div>
@@ -461,7 +432,7 @@ export default function Home() {
 
          {/* Section 2: Pending Actions Alert */}
          <div className="mt-2">
-             {(pendingAdmissions.length > 0 || pendingDuesCount > 0) ? (
+             {(pendingAdmissions.length > 0) ? (
                 <div className="bg-white rounded-xl p-5 border border-orange-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] relative overflow-hidden">
                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
                    <h3 className="text-[16px] font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -477,15 +448,6 @@ export default function Home() {
                              <button onClick={() => navigate('/admin-admissions')} className="shrink-0 bg-white border border-gray-200 text-gray-800 hover:text-primary hover:text-orange-600 px-4 py-1.5 rounded text-sm font-bold shadow-sm transition-colors w-full md:w-auto">Review Now</button>
                          </div>
                       )}
-                      {pendingDuesCount > 0 && (
-                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-red-50/50 rounded-lg border border-red-100">
-                             <div className="flex items-start gap-2">
-                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                                <span className="text-sm font-medium text-gray-800">Multiple students have fees overdue</span>
-                             </div>
-                             <button onClick={() => navigate('/account-admin')} className="shrink-0 bg-white border border-gray-200 text-gray-800 hover:text-primary hover:text-red-600 px-4 py-1.5 rounded text-sm font-bold shadow-sm transition-colors w-full md:w-auto">View Defaulters</button>
-                         </div>
-                      )}
                    </div>
                 </div>
              ) : (
@@ -498,35 +460,8 @@ export default function Home() {
          </div>
 
          {/* Section 3: Charts */}
-         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-             <div className="md:col-span-3 bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
-                <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-blue-600 pl-2">Fee Collection — {bsString}</h3>
-                <div className="flex-1 w-full min-h-0">
-                   <ResponsiveContainer width="100%" height={280}>
-                       <BarChart data={feeChartData} margin={{ top: 10, right: 10, left: 10, bottom: 5}}>
-                          <defs>
-                             <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={1}/>
-                             </linearGradient>
-                             <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#10b981" stopOpacity={1}/>
-                             </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280', fontWeight: 600 }} dy={10} />
-                          <YAxis yAxisId="left" orientation="left" stroke="#6B7280" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(val) => `NRs. ${val/1000}k`} />
-                          <RechartsTooltip cursor={{fill: '#f3f4f6', opacity: 0.4}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', padding: '12px'}} itemStyle={{fontWeight: 'bold'}} labelStyle={{color: '#374151', marginBottom: '8px', fontWeight: 'bold'}} />
-                          <Legend wrapperStyle={{fontSize: '12px', paddingTop: '20px', fontWeight: 600}} iconType="circle" />
-                          <Bar yAxisId="left" dataKey="expected" name="Expected" fill="url(#colorExpected)" radius={[6, 6, 0, 0]} barSize={16} />
-                          <Bar yAxisId="left" dataKey="collected" name="Collected" fill="url(#colorCollected)" radius={[6, 6, 0, 0]} barSize={16} />
-                       </BarChart>
-                   </ResponsiveContainer>
-                </div>
-             </div>
-
-             <div className="md:col-span-2 bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col h-[350px]">
                 <h3 className="text-[16px] font-bold text-[#333] mb-4 border-l-4 border-orange-500 pl-2">Admissions This Year</h3>
                 <div className="flex-1 w-full min-h-0 relative">
                    <ResponsiveContainer width="100%" height={256}>
@@ -607,43 +542,8 @@ export default function Home() {
                </div>
             </div>
 
-            {/* Today's Collections */}
-            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col overflow-hidden">
-               <div className="p-4 border-b border-gray-100">
-                  <h3 className="text-[15px] font-bold text-[#333] border-l-4 border-emerald-500 pl-2">💰 Today's Collections</h3>
-               </div>
-               <div className="flex-1 p-0 flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {todayCollections.length > 0 ? todayCollections.map((tx, i) => (
-                     <div key={tx.id || i} className="p-3 border-b border-gray-50 hover:text-primary flex items-center justify-between gap-2">
-                        <div className="overflow-hidden">
-                           <p className="text-sm font-bold text-gray-800 truncate">{tx.studentName}</p>
-                           <p className="text-[11px] text-gray-500 flex flex-wrap gap-1 items-center">
-                               <span className="bg-gray-100 text-gray-600 px-1 py-0.5 rounded text-[9px] font-bold uppercase border border-gray-200">{tx.method}</span>
-                               <span>{new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                           </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                           <p className="text-sm font-black text-emerald-600">NRs. {tx.amount.toLocaleString()}</p>
-                        </div>
-                     </div>
-                  )) : (
-                     <div className="p-6 text-center text-sm font-medium text-gray-500 flex flex-col items-center gap-3">
-                        No fee payments recorded today
-                        <button onClick={() => navigate('/account-admin')} className="bg-emerald-500 text-white px-4 py-1.5 rounded shadow text-xs font-bold hover:bg-emerald-600 transition-colors">+ Record Payment</button>
-                     </div>
-                  )}
-               </div>
-               <div className="p-3 border-t border-gray-100 text-primary flex justify-between items-center mt-auto">
-                  <span className="text-sm font-bold text-gray-700">Today Total:</span>
-                  <span className="text-base font-black text-emerald-600">NRs. {todayTotal.toLocaleString()}</span>
-               </div>
-               <div className="p-2 border-t border-gray-100 bg-gray-100 text-center">
-                  <Link to="/account-admin" className="text-xs font-bold text-gray-600 hover:text-gray-800 cursor-pointer w-full inline-block">View All Transactions →</Link>
-               </div>
-            </div>
-
             {/* Notice Board */}
-            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col overflow-hidden xl:col-span-1 md:col-span-2">
+            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col overflow-hidden">
                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-purple-50/30">
                   <h3 className="text-[15px] font-bold text-[#333] border-l-4 border-purple-500 pl-2">📢 Latest Notices</h3>
                   <button onClick={() => navigate('/notices')} className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold shadow-sm hover:bg-purple-700 transition-colors flex items-center gap-1"><PlusCircle className="w-3 h-3"/> Post</button>
@@ -679,14 +579,10 @@ export default function Home() {
 
          {/* Section 5: Quick Action Buttons */}
          {isAdmin && (
-           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-blue-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
                  <UserPlus className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform" />
                  <span className="text-xs font-bold text-gray-700 text-center">Add Student</span>
-              </button>
-              <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-emerald-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-                 <CreditCard className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" />
-                 <span className="text-xs font-bold text-gray-700 text-center">Record Fee</span>
               </button>
               <button onClick={() => navigate('/admin')} className="bg-white border text-left border-gray-200 hover:border-indigo-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
                  <Upload className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
@@ -699,10 +595,6 @@ export default function Home() {
               <button onClick={() => navigate('/user-approvals')} className="bg-white border text-left border-gray-200 hover:border-cyan-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
                  <ShieldCheck className="w-6 h-6 text-cyan-500 group-hover:scale-110 transition-transform" />
                  <span className="text-xs font-bold text-gray-700 text-center">Approve Users</span>
-              </button>
-              <button onClick={() => navigate('/account-admin')} className="bg-white border text-left border-gray-200 hover:border-orange-400 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group xl:min-h-[96px] min-h-[80px]">
-                 <Download className="w-6 h-6 text-orange-500 group-hover:scale-110 transition-transform" />
-                 <span className="text-xs font-bold text-gray-700 text-center">Download Reports</span>
               </button>
            </div>
          )}

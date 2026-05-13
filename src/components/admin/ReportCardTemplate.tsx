@@ -110,17 +110,23 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                      {Object.entries(student.subjects).map(([sub, rawMarks], i) => {
                          const marks: any = rawMarks;
                          const fm = marks.fullMarks;
-                         const displayOm = marks.obtained;
-                         const pm = marks.passMarks || Math.round(fm * 0.4);
+                         const pm = marks.thPass !== undefined ? (marks.thPass + (marks.prPass || 0)) : Math.round(fm * 0.4);
+                         
+                         const displayTh = marks.thMarks !== undefined ? marks.thMarks : marks.obtained;
+                         const displayPr = marks.prMarks !== undefined ? marks.prMarks : '-';
 
                          return (
                             <tr key={sub}>
                                <td className="border border-[#1a2b4c]/50 p-2 text-center">{i+1}.</td>
                                <td className="border border-[#1a2b4c]/50 p-2 font-bold">{sub}</td>
-                               <td className="border border-[#1a2b4c]/50 p-2 text-center">{fm}</td>
-                               <td className="border border-[#1a2b4c]/50 p-2 text-center">{pm}</td>
-                               <td className="border border-[#1a2b4c]/50 p-2 text-center font-bold">{displayOm}</td>
-                               <td className="border border-[#1a2b4c]/50 p-2 text-center"></td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center text-[10px]">
+                                   {fm}
+                               </td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center text-[10px]">
+                                   {pm}
+                               </td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center font-bold">{displayTh}</td>
+                               <td className="border border-[#1a2b4c]/50 p-2 text-center font-bold text-gray-600">{displayPr}</td>
                             </tr>
                          );
                      })}

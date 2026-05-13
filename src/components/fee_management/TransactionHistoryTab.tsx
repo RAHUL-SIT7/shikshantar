@@ -1,17 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { formatBSDate } from '../../lib/nepaliDate';
 import { Search, Printer, Edit2, CornerUpLeft, Download, Calendar, Filter, ChevronRight, ChevronDown, Receipt, FileDown, X } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import { db } from '../../firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, where, getDocs, deleteField } from 'firebase/firestore';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
 import 'nepali-datepicker-reactjs/dist/index.css';
 import NepaliDate from 'nepali-date-converter';
-import { exportToExcel } from '../../lib/excelExport';
+import { exportToPDF } from '../../lib/pdfExport';
+import { exportToExcel, exportMultiSheetExcel } from '../../lib/excelExport';
 
-export default function TransactionHistoryTab({ transactionsData, onRefresh, initialSearchTerm = '', onSearchTermChange }: { transactionsData: any[], onRefresh: () => void, initialSearchTerm?: string, onSearchTermChange?: (val: string) => void }) {
+export default function TransactionHistoryTab({ transactionsData, studentsData = [], onRefresh, initialSearchTerm = '', onSearchTermChange }: { transactionsData: any[], studentsData?: any[], onRefresh: () => void, initialSearchTerm?: string, onSearchTermChange?: (val: string) => void }) {
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
 
   useEffect(() => {
@@ -41,10 +43,19 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
   const downloadReceipt = async () => {
     if (!receiptRef.current || !receipt) return;
     try {
-      const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 2 });
-      const pdf = new jsPDF('p', 'mm', 'a5');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (receiptRef.current.offsetHeight * pdfWidth) / receiptRef.current.offsetWidth;
+      const el = receiptRef.current;
+      const w = el.offsetWidth;
+      const h = el.scrollHeight;
+      const dataUrl = await toPng(el, { 
+        cacheBust: true, 
+        pixelRatio: 2,
+        width: w,
+        height: h,
+        style: { width: `${w}px`, height: `${h}px`, transform: 'scale(1)', transformOrigin: 'top left' }
+      });
+      const pdfWidth = 210;
+      const pdfHeight = (h * pdfWidth) / w;
+      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Receipt_${receipt.receipt || receipt.receiptNo || receipt.id}.pdf`);
     } catch (err) {
@@ -52,36 +63,172 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
     }
   };
 
-  const handleBrowserPrint = async () => {
-     if (!receiptRef.current) return;
-     try {
-         const dataUrl = await toPng(receiptRef.current, { cacheBust: true, pixelRatio: 3 });
-         let printWindow = window.open('', '_blank');
-         if(printWindow) {
-             printWindow.document.write(`
-                 <html>
-                     <head><title>Print Receipt</title></head>
-                     <body style="margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 20px;">
-                         <img src="${dataUrl}" style="max-width: 100%; height: auto;" onload="window.print();window.close();" />
-                     </body>
-                 </html>
-             `);
-             printWindow.document.close();
+  const handleBrowserPrint = () => {
+     if (!receiptRef.current || !receipt) return;
+     const printWindow = window.open('', '_blank');
+     if (printWindow) {
+         const studentName = receipt.studentName || '';
+         const rollNo = receipt.rollNo || '-';
+         const className = receipt.class || '';
+         const section = receipt.section || 'A';
+         const receiptNo = receipt.receipt || receipt.receiptNo || receipt.id || '-';
+         const method = receipt.method || 'Cash';
+         const amount = receipt.amount || 0;
+         
+         const monthsText = receipt.months?.join(', ') || '';
+         
+         let breakdownRows = '';
+         
+         let totalTuition = 0;
+         let totalExam = 0;
+         let totalComputer = 0;
+         let totalExtra = 0;
+         let totalAdmission = 0;
+
+         if (receipt.receiptMonthsData?.length > 0) {
+             receipt.receiptMonthsData.forEach((md: any) => {
+                 if (md.breakdown) {
+                     totalTuition += Number(md.breakdown.tuition || 0);
+                     totalExam += Number(md.breakdown.exam || 0);
+                     totalComputer += Number(md.breakdown.computer || 0);
+                     totalExtra += Number(md.breakdown.other || 0) + Number(md.breakdown.transport || 0);
+                 } else {
+                     totalTuition += Number(md.totalFee || 0);
+                 }
+             });
+         } else if (receipt.months?.length > 0) {
+             totalTuition += receipt.amount;
+         } else {
+             // Fallback for single generic payment
+             totalExtra += receipt.amount;
          }
-     } catch(e) {
-         console.error(e);
+         
+         if (receipt.otherFees?.length > 0) {
+             receipt.otherFees.forEach((f: any) => {
+                 if (f.name.toLowerCase().includes('admission')) {
+                     totalAdmission += Number(f.amount);
+                 } else {
+                     totalExtra += Number(f.amount);
+                 }
+             });
+         }
+
+         let srNo = 1;
+         const addRow = (name: string, amt: number) => {
+             if (amt > 0 || name === 'Monthly Fee' || name === 'Admission Fee') {
+                 breakdownRows += `
+                   <tr>
+                      <td style="border: 1px solid #000; padding: 8px; text-align: center; border-left: none;">${srNo++}</td>
+                      <td style="border: 1px solid #000; padding: 8px;">${name}</td>
+                      <td style="border: 1px solid #000; padding: 8px; text-align: right; border-right: none;">${amt > 0 ? amt.toLocaleString() : ''}</td>
+                   </tr>
+                 `;
+             }
+         };
+
+         addRow('Admission Fee', totalAdmission);
+         addRow('Monthly Fee', totalTuition);
+         addRow('Exam Fee', totalExam);
+         addRow('Computer Fee', totalComputer);
+         addRow('Extra Fee', totalExtra);
+         
+         if (receipt.discount > 0) {
+             breakdownRows += `
+                 <tr>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; border-left: none;">${srNo++}</td>
+                    <td style="border: 1px solid #000; padding: 8px;">Adjustment/Discount</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: right; border-right: none;">- ${Number(receipt.discount).toLocaleString()}</td>
+                 </tr>
+             `;
+         }
+
+         printWindow.document.write(`
+             <html>
+                 <head>
+                     <title>Print Receipt</title>
+                     <style>
+                         @page { size: auto; margin: 0; }
+                         body { background-color: #fff; font-family: 'Times New Roman', serif; padding: 20px; }
+                         .receipt-container { max-width: 800px; margin: 0 auto; border: 2px solid #000; background-color: #ffffe0; padding: 0; }
+                         .text-center { text-align: center; }
+                         .header-text { margin: 5px 0; }
+                         .info-row { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 0 20px; }
+                         .line-input { border-bottom: 1px dashed #000; display: inline-block; min-width: 150px; font-style: normal; }
+                         table { width: 100%; border-collapse: collapse; margin-top: 10px; border-left: none; border-right: none; }
+                         th, td { border: 1px solid #000; padding: 10px; }
+                         th { background-color: #f0f0c9; }
+                         tr td:first-child, tr th:first-child { border-left: none; }
+                         tr td:last-child, tr th:last-child { border-right: none; }
+                     </style>
+                 </head>
+                 <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
+                     <div class="receipt-container">
+                         <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 15px; padding-top: 15px;">
+                             <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain; margin-right: 20px; filter: grayscale(100%);" />
+                             <div class="text-center">
+                                 <div style="font-size: 16px;">Receipt</div>
+                                 <h1 style="margin: 5px 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">SHIKSHANTAR ACADEMY</h1>
+                                 <p style="margin: 2px 0; font-size: 15px;">Bastipur-5, Siraha, Nepal</p>
+                                 <p style="margin: 2px 0; font-size: 15px;">Website: https://shikshantar.academy.nepalghum.xyz</p>
+                                 <p style="margin: 2px 0; font-size: 15px;">Contact: +977 9807790805 | Email: info@shikshantar.academy.nepalghum.xyz</p>
+                             </div>
+                         </div>
+                         
+                         <div style="padding: 20px 20px 10px 20px;">
+                             <span style="font-size: 18px;">Receipt No. <strong class="line-input">${receiptNo}</strong></span>
+                         </div>
+                         
+                         <div class="info-row">
+                             <div style="flex: 1; font-size: 16px;">Name of Student: <strong class="line-input" style="min-width: 300px;">${studentName}</strong></div>
+                             <div style="font-size: 16px;">Class: <strong class="line-input" style="min-width: 100px; text-align: center;">${className}</strong> 
+                                  Section: <strong class="line-input" style="min-width: 80px; text-align: center;">${section}</strong></div>
+                         </div>
+                         
+                         <div class="info-row">
+                             <div style="flex: 1; font-size: 16px;">Roll No: <strong class="line-input" style="min-width: 150px;">${rollNo}</strong></div>
+                             <div style="font-size: 16px;">Month: <strong class="line-input" style="min-width: 150px; text-align: center;">${monthsText}</strong></div>
+                         </div>
+                         
+                         <table>
+                             <thead>
+                                 <tr>
+                                     <th style="width: 80px; border-left: none;">Sr. No.</th>
+                                     <th>Particulars</th>
+                                     <th style="width: 150px; border-right: none;">Amount</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 ${breakdownRows}
+                                 <tr>
+                                     <td colspan="2" style="text-align: right; font-weight: bold; font-family: Arial, sans-serif; font-size: 18px; border-left: none;">Total</td>
+                                     <td style="text-align: right; font-weight: bold; font-family: Arial, sans-serif; font-size: 18px; border-right: none;">${amount.toLocaleString()}</td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                         
+                         <div style="margin-top: 40px; padding: 0 20px 20px 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                             <div>
+                                 <p style="margin-bottom: 20px; font-size: 16px;">Paid By: <strong style="border-bottom: 2px dashed #000; font-family: Arial, sans-serif;">${method}</strong></p>
+                                 <p style="font-size: 18px;">Signature of Centre Head</p>
+                             </div>
+                             <div style="text-align: right;">
+                               <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=Receipt%3A%20${receiptNo}%0AStudent%3A%20${encodeURIComponent(studentName)}%0AAmount%3A%20NRs.${amount}%0ADate%3A%20${receipt.date?.split('T')[0] || formatBSDate(new Date())}" style="width: 100px; height: 100px;" alt="QR Code" />
+                             </div>
+                         </div>
+                         
+                         <div style="border-top: 2px solid #000; padding: 10px; text-align: center; font-size: 14px; font-weight: bold;">
+                             Digital Receipt No: ${receiptNo} | All above mentioned Amount once paid are non refundable in any case whatsoever.
+                         </div>
+                     </div>
+                 </body>
+             </html>
+         `);
+         printWindow.document.close();
      }
   };
 
-  const generatePDFReport = () => {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      pdf.setFontSize(18);
-      pdf.text('Transaction History Report', 14, 22);
-      pdf.setFontSize(11);
-      pdf.setTextColor(100);
-      pdf.text(`Generated on: ${formatBSDate(new Date())}`, 14, 30);
-      
-      const head = [['Date (B.S.)', 'Receipt No', 'Student Name', 'Class', 'Amount', 'Method', 'Status']];
+  const generatePDFReport = async () => {
+      const columns = ['Date (B.S.)', 'Receipt No', 'Student Name', 'Class', 'Amount', 'Method', 'Status'];
       const body = filteredHistory.map(tx => [
           tx.date,
           tx.receipt || tx.id,
@@ -92,22 +239,29 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
           tx.status
       ]);
 
-      autoTable(pdf, {
-          startY: 40,
-          head: head,
-          body: body,
-          theme: 'striped',
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [30, 58, 138] }, // Blue-900 color
-      });
-
-      pdf.save(`Transaction_Report_${formatBSDate(new Date())}.pdf`);
+      await exportToPDF('Fee Payment Report', columns, body, `Transaction_Report_${formatBSDate(new Date())}`, false);
   };
 
-  const filteredHistory = transactionsData.filter(tx => {
-     const matchSearch = (tx.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          tx.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          tx.receipt?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const enrichedTransactions = transactionsData.map(tx => {
+     const student = studentsData?.find(s => s.id === tx.studentId);
+     return {
+         ...tx,
+         studentName: tx.studentName || student?.name || '',
+         class: tx.class || student?.class || ''
+     };
+  });
+
+  const filteredHistory = enrichedTransactions.filter(tx => {
+     const st = (searchTerm || '').toLowerCase();
+     const studentNameMatch = tx.studentName ? String(tx.studentName).toLowerCase().includes(st) : false;
+     const idMatch = tx.id ? String(tx.id).toLowerCase().includes(st) : false;
+     const studentIdMatch = tx.studentId ? String(tx.studentId).toLowerCase().includes(st) : false;
+     const actualDisplayIdMatch = tx.studentId ? String(tx.studentId).toLowerCase().includes(st) : false;
+     const receiptMatch = tx.receipt ? String(tx.receipt).toLowerCase().includes(st) : false;
+     const classMatchStr = tx.class ? String(tx.class).toLowerCase().includes(st) : false;
+
+     const matchSearch = studentNameMatch || idMatch || studentIdMatch || actualDisplayIdMatch || receiptMatch || classMatchStr;
+
      const matchClass = filterClass === 'All' || tx.class === filterClass;
      const matchMethod = filterMethod === 'All' || tx.method === filterMethod;
      const matchCollectedBy = filterCollectedBy === 'All' || tx.collectedBy === filterCollectedBy;
@@ -135,7 +289,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
       return acc;
   }, {});
 
-  const exportCSV = async () => {
+  const exportExcel = async () => {
     const columns = [
        { header: 'Date (B.S.)', key: 'dateBs', width: 15 },
        { header: 'Date (A.D.)', key: 'dateAd', width: 25 },
@@ -148,7 +302,7 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
        { header: 'Status', key: 'status', width: 15 }
     ];
 
-    const exportData = filteredHistory.map(tx => {
+    const formatTx = (tx: any) => {
        let adDate = '';
        if (tx.timestamp) {
            adDate = new Date(tx.timestamp.seconds ? tx.timestamp.seconds * 1000 : tx.timestamp).toLocaleString();
@@ -164,9 +318,33 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
            collectedBy: tx.collectedBy || '',
            status: tx.status || ''
        };
+    };
+
+    const sheetsConfigs: any[] = [];
+
+    // Sheet 1: Whole transactions
+    sheetsConfigs.push({
+      sheetName: 'All Transactions',
+      title: 'Transaction History Report',
+      columns: columns,
+      data: filteredHistory.map(formatTx)
     });
 
-    await exportToExcel('Transaction_History', 'Transaction History Report', columns, exportData);
+    // Sub-sheets: Grouped by classes
+    // Get unique classes
+    const uniqueClasses = Array.from(new Set(filteredHistory.map(tx => tx.class || 'Unknown_Class'))).sort();
+    
+    uniqueClasses.forEach(cls => {
+      const classTx = filteredHistory.filter(tx => (tx.class || 'Unknown_Class') === cls);
+      sheetsConfigs.push({
+        sheetName: `Class ${cls}`,
+        title: `Transaction History Report - Class ${cls}`,
+        columns: columns,
+        data: classTx.map(formatTx)
+      });
+    });
+
+    await exportMultiSheetExcel('Transaction_History', sheetsConfigs);
   };
 
   const handleEditSubmit = async () => {
@@ -198,13 +376,36 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
          const txRef = doc(db, 'transactions', refundModalTx.id);
          batch.update(txRef, { status: 'REFUNDED' });
 
-         if (refundModalTx.months && Array.isArray(refundModalTx.months)) {
+         // Better query fallback for refunds
+         const feeQuery = query(collection(db, 'studentFees'), where('transactionId', '==', refundModalTx.id));
+         const feeSnap = await getDocs(feeQuery);
+         
+         if (!feeSnap.empty) {
+             feeSnap.forEach(d => {
+                 batch.update(d.ref, {
+                     status: 'due',
+                     paidAmount: 0,
+                     paidAt: deleteField(),
+                     receiptNo: deleteField(),
+                     transactionId: deleteField(),
+                     paymentMethod: deleteField(),
+                     collectorId: deleteField(),
+                     collectorName: deleteField()
+                 });
+             });
+         } else if (refundModalTx.months && Array.isArray(refundModalTx.months)) {
+             // Fallback to explicit list if transaction missing field ID binding in older docs
              refundModalTx.months.forEach((m: string) => {
                  const feeRef = doc(db, 'studentFees', `${refundModalTx.studentId}_${m}`);
                  batch.update(feeRef, {
                      status: 'due',
                      paidAmount: 0,
-                     transactions: [] 
+                     paidAt: deleteField(),
+                     receiptNo: deleteField(),
+                     transactionId: deleteField(),
+                     paymentMethod: deleteField(),
+                     collectorId: deleteField(),
+                     collectorName: deleteField()
                  });
              });
          }
@@ -287,9 +488,6 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
             >
               <option value="All">All Methods</option>
               <option value="Cash">Cash</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-              <option value="eSewa">eSewa</option>
-              <option value="Khalti">Khalti</option>
             </select>
 
              <select 
@@ -303,12 +501,10 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
               <option value="Custom">Custom</option>
             </select>
 
-            <button onClick={exportCSV} className="bg-orange-50 border border-orange-100 text-orange-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-orange-100 transition-colors shrink-0 flex gap-2 items-center">
-               <Download className="w-4 h-4"/> EXCEL
-            </button>
-            <button onClick={generatePDFReport} className="bg-blue-50 border border-blue-100 text-blue-600 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:bg-blue-100 transition-colors shrink-0 flex gap-2 items-center">
-               <Printer className="w-4 h-4"/> PDF
-            </button>
+            <div className="flex bg-blue-50/50 rounded-xl p-1 shrink-0 border border-blue-100 min-h-[48px]">
+               <button onClick={exportExcel} className="border-r border-blue-200 text-blue-700 font-bold px-3 text-sm hover:text-blue-900 flex gap-2 items-center uppercase tracking-widest"><Download className="w-4 h-4"/> Excel</button>
+               <button onClick={generatePDFReport} className="text-blue-700 font-bold px-3 text-sm hover:text-blue-900 flex gap-2 items-center uppercase tracking-widest"><Printer className="w-4 h-4"/> PDF</button>
+            </div>
          </div>
        </div>
 
@@ -402,96 +598,156 @@ export default function TransactionHistoryTab({ transactionsData, onRefresh, ini
        {/* Receipt Modal */}
        {receipt && (
          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-           <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-              <div ref={receiptRef} className="p-6 sm:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
-                
-                <div className="text-center mb-6 border-b border-gray-200 pb-6">
-                  <div className="mx-auto mb-3 flex items-center justify-center">
-                    <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
-                  </div>
-                  <h2 className="font-black text-xl text-primary uppercase tracking-widest">Shikshantar Academy</h2>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>
-                  <div className="mt-4 inline-block bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-200">
-                     Payment Receipt
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm text-primary p-4 rounded-xl">
-                    <div>
-                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Receipt No</span>
-                      <span className="text-gray-800 font-mono font-black">{receipt.receipt || receipt.id}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Date</span>
-                      <span className="text-gray-800 font-bold block">{receipt.date} <span className="text-[10px] text-gray-400 font-normal ml-1 border pl-1 border-y-0 border-r-0 border-gray-300">B.S.</span></span>
-                      {receipt.timestamp && (
-                        <span className="block text-[10px] text-gray-500 mt-1 font-mono">
-                           {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleDateString()} {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+           <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
+              <div className="flex-1 overflow-auto bg-gray-100 p-4 sm:p-8 custom-scrollbar">
+                 <div ref={receiptRef} className="bg-white mx-auto shadow-md relative overflow-hidden" style={{ width: '600px', minHeight: '848px' }}>
+                    <div className="p-8 sm:p-10 text-gray-800">
 
-                  <div className="p-4 border border-gray-100 rounded-xl">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-500 font-bold">Student Name</span>
-                      <span className="text-gray-800 font-black">{receipt.studentName}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-500 font-bold">Class | ID</span>
-                      <span className="text-gray-800 font-bold text-right">{receipt.class}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                     {receipt.months?.length > 0 && receipt.months.map((m: string) => (
-                       <div key={m} className="flex justify-between text-sm mb-2 pb-2 border-b border-blue-100 last:border-0 last:mb-0 last:pb-0">
-                         <span className="text-blue-800 font-bold">{m} Tuition</span>
-                         <span className="text-blue-900 font-black">NRs. {receipt.amount / receipt.months.length}</span>
+                       
+                       {/* Header */}
+                       <div className="flex justify-between items-start text-[10px] text-gray-500 font-mono mb-8">
+                           <span>{receipt.timestamp ? new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                           <span>Print Receipt</span>
                        </div>
-                     ))}
-                     {!receipt.months?.length && (
-                        <div className="flex justify-between text-sm">
-                         <span className="text-blue-800 font-bold">Tuition Payment</span>
-                         <span className="text-blue-900 font-black">NRs. {receipt.amount}</span>
-                       </div>
-                     )}
-                  </div>
 
-                  <div className="mt-6 border-t border-b border-gray-200 py-4 divide-y divide-gray-100">
-                    <div className="flex justify-between items-center pb-3">
-                      <span className="font-black text-gray-400 uppercase tracking-widest text-xs">Total Paid</span>
-                      <span className="text-2xl font-black text-gray-800">NRs. {(receipt.amount || 0).toLocaleString()}</span>
+                       <div className="text-center mb-10">
+                         <div className="mx-auto flex justify-center mb-4">
+                           <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="h-20 w-auto" />
+                         </div>
+                         <h1 className="text-2xl sm:text-3xl font-black uppercase text-primary tracking-widest mb-1.5" style={{ letterSpacing: '0.15em' }}>Shikshantar Academy</h1>
+                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Siraha, Nepal</p>
+                         
+                         <div className="mt-6 inline-block border text-emerald-700 border-emerald-300 bg-emerald-50 px-6 py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-widest">
+                            Payment Receipt
+                         </div>
+                       </div>
+                       
+                       <hr className="mb-8 border-gray-200" />
+
+                       {/* Receipt Details Grid */}
+                       <div className="grid grid-cols-2 gap-4 mb-8">
+                           <div>
+                               <span className="block text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Receipt No</span>
+                               <span className="text-lg sm:text-xl font-mono border-b-2 border-gray-100 pb-1 inline-block font-black text-gray-900">{(receipt.receipt || receipt.receiptNo || receipt.id).toUpperCase()}</span>
+                           </div>
+                           <div className="text-right">
+                               <span className="block text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Date</span>
+                               <span className="text-lg sm:text-xl font-black text-gray-900">{receipt.date} <span className="text-xs font-normal text-gray-400 border-l pl-2 ml-1">B.S.</span></span>
+                               {receipt.timestamp && (
+                                   <div className="text-xs font-mono text-gray-500 mt-1">
+                                      {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleDateString()} {new Date(receipt.timestamp.seconds ? receipt.timestamp.seconds * 1000 : receipt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                   </div>
+                               )}
+                           </div>
+                       </div>
+
+                       {/* Student Bubble */}
+                       <div className="border border-gray-200 rounded-2xl p-6 sm:p-8 mb-8 flex justify-between items-center bg-gray-50/50">
+                           <span className="text-sm font-bold text-gray-500 p-0">Student Name</span>
+                           <span className="text-xl sm:text-2xl font-black text-gray-900 text-right">{receipt.studentName}</span>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-4 mb-8 p-4 bg-gray-50/50 border border-gray-200 rounded-xl">
+                          <div>
+                            <span className="block text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Class</span>
+                            <span className="font-bold text-gray-900 text-lg">{receipt.class || '-'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Method</span>
+                            <span className="font-bold text-gray-900 text-lg">{receipt.method}</span>
+                          </div>
+                       </div>
+
+                       {/* Items */}
+                       <div className="mb-10">
+                           <table className="w-full text-base">
+                               <tbody>
+                                  {(() => {
+                                      let totalTuition = 0;
+                                      let totalExam = 0;
+                                      let totalComputer = 0;
+                                      let totalExtra = 0;
+                                      let totalAdmission = 0;
+
+                                      if (receipt.receiptMonthsData?.length > 0) {
+                                          receipt.receiptMonthsData.forEach((md: any) => {
+                                              if (md.breakdown) {
+                                                  totalTuition += Number(md.breakdown.tuition || 0);
+                                                  totalExam += Number(md.breakdown.exam || 0);
+                                                  totalComputer += Number(md.breakdown.computer || 0);
+                                                  totalExtra += Number(md.breakdown.other || 0) + Number(md.breakdown.transport || 0);
+                                              } else {
+                                                  totalTuition += Number(md.totalFee || 0);
+                                              }
+                                          });
+                                      } else if (receipt.months?.length > 0) {
+                                          totalTuition += receipt.amount; 
+                                      } else {
+                                          totalExtra += receipt.amount;
+                                      }
+                                      
+                                      if (receipt.otherFees?.length > 0) {
+                                          receipt.otherFees.forEach((f: any) => {
+                                              if (f.name.toLowerCase().includes('admission')) {
+                                                  totalAdmission += Number(f.amount);
+                                              } else {
+                                                  totalExtra += Number(f.amount);
+                                              }
+                                          });
+                                      }
+
+                                      return (
+                                        <>
+                                            {totalAdmission > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-gray-600 font-medium">Admission Fee</td><td className="py-2 font-black text-gray-900 text-right text-lg">NRs. {totalAdmission.toLocaleString()}</td></tr>}
+                                            {totalTuition > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-gray-600 font-medium">Monthly Fee</td><td className="py-2 font-black text-gray-900 text-right text-lg">NRs. {totalTuition.toLocaleString()}</td></tr>}
+                                            {totalExam > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-gray-600 font-medium">Exam Fee</td><td className="py-2 font-black text-gray-900 text-right text-lg">NRs. {totalExam.toLocaleString()}</td></tr>}
+                                            {totalComputer > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-gray-600 font-medium">Computer Fee</td><td className="py-2 font-black text-gray-900 text-right text-lg">NRs. {totalComputer.toLocaleString()}</td></tr>}
+                                            {totalExtra > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-gray-600 font-medium">Extra Fee</td><td className="py-2 font-black text-gray-900 text-right text-lg">NRs. {totalExtra.toLocaleString()}</td></tr>}
+                                            {receipt.discount > 0 && <tr className="border-b border-gray-100 last:border-0"><td className="py-2 text-red-600 font-medium">Adjustment/Discount</td><td className="py-2 font-black text-red-600 text-right text-lg">- NRs. {Number(receipt.discount).toLocaleString()}</td></tr>}
+                                        </>
+                                      );
+                                  })()}
+                               </tbody>
+                           </table>
+                           
+                           <div className="mt-8 flex justify-between items-center border-t-2 border-gray-900 pt-6">
+                              <span className="font-black text-sm uppercase tracking-widest text-gray-500">Total Paid Amount</span>
+                              <span className="text-3xl font-black text-emerald-600">NRs. {(receipt.amount || 0).toLocaleString()}</span>
+                           </div>
+                       </div>
+
+                       {/* Signatures */}
+                       <div className="mt-16 flex justify-between items-end border-t border-gray-200 pt-8 pb-10">
+                           <div className="bg-white p-2 border border-gray-200 shadow-sm rounded-xl">
+                                <QRCode value={`Receipt: ${receipt.receipt || receipt.receiptNo || receipt.id}\nStudent: ${receipt.studentName}\nAmount: NRs.${receipt.amount}\nDate: ${receipt.date?.split('T')[0]}`} size={80} />
+                           </div>
+                           <div className="text-center">
+                              <p className="font-bold text-xs uppercase tracking-widest text-gray-500 mb-2">Collected By</p>
+                              <p className="font-black text-gray-900">{receipt.collectedBy}</p>
+                           </div>
+                           <div className="text-center opacity-20 relative px-4 text-gray-300 font-bold border-t border-gray-300 pt-2 min-w-[120px]">
+                              Signature
+                           </div>
+                       </div>
+                       
+                       <div className="absolute top-1/4 right-0 h-1/2 w-2.5 bg-gray-400/80 rounded-l-full shadow-inner"></div>
                     </div>
-                    <div className="flex justify-between items-center pt-3 mt-1 text-sm">
-                      <span className="font-bold text-gray-500">Method: <span className="text-gray-800">{receipt.method}</span></span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-8 flex justify-between items-end text-xs pt-8 border-t border-gray-100">
-                    <div>
-                      <span className="text-gray-400 font-bold block mb-1">Collected by: </span>
-                      <span className="text-gray-800 font-black">{receipt.collectedBy}</span>
-                    </div>
-                    <div className="border-t-2 border-gray-800 w-32 text-center pt-2 font-bold text-gray-800">
-                      Signature
-                    </div>
-                  </div>
-                </div>
+                 </div>
               </div>
 
-              <div className="p-4 bg-white border-t border-gray-200 space-y-3">
+              <div className="p-4 bg-white border-t border-gray-200 space-y-3 shrink-0">
                 <div className="flex gap-3">
-                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-primary text-primary border border-gray-200 rounded-xl font-black text-gray-600 uppercase tracking-widest text-[10px] sm:text-xs transition-colors hover:bg-gray-100">✕ Close</button>
-                   <button onClick={downloadReceipt} className="flex-1 py-3 border-blue-600 text-blue-600 border rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-blue-50 transition-colors"><FileDown className="w-4 h-4 inline mr-1"/> PDF</button>
+                   <button onClick={() => setReceipt(null)} className="flex-1 py-3 border-transparent text-gray-500 hover:text-gray-900 bg-gray-100 rounded-xl font-black text-[12px] sm:text-xs transition-colors hover:bg-gray-200">Close</button>
+                   <button onClick={downloadReceipt} className="flex-1 py-3 border-blue-600 text-blue-600 border rounded-xl font-black text-[12px] sm:text-xs hover:bg-blue-50 transition-colors flex items-center justify-center gap-1"><FileDown className="w-4 h-4"/> PDF</button>
                 </div>
-                <button onClick={handleBrowserPrint} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest shadow-lg flex justify-center items-center gap-2 hover:bg-blue-800 transition-colors text-[14px]">
-                   🖨️ Print Receipt
-                </button>
-                <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Namaste, we have received a payment of NRs. ${receipt.amount} for ${receipt.studentName}. Receipt No: ${receipt.receipt || receipt.id}. Thank you.`)}`, '_blank')} className="w-full py-3 bg-[#25D366] text-white rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-md flex justify-center items-center gap-2 hover:bg-[#128C7E] transition-colors">
-                   📱 Send WhatsApp Confirmation
-                </button>
+                <div className="flex gap-3">
+                    <button onClick={handleBrowserPrint} className="w-full py-4 bg-primary text-white rounded-xl font-black shadow-lg flex justify-center items-center gap-2 hover:bg-blue-800 transition-colors text-[14px]">
+                       <Printer className="w-5 h-5"/> Print Receipt
+                    </button>
+                    <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Namaste, we have received a payment of NRs. ${receipt.amount} for ${receipt.studentName}. Receipt No: ${receipt.receipt || receipt.id}. Thank you.`)}`, '_blank')} className="w-auto px-4 sm:px-6 py-4 bg-[#25D366] text-white rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-md flex justify-center items-center gap-2 hover:bg-[#128C7E] transition-colors" title="Send WhatsApp">
+                       📱 
+                    </button>
+                </div>
               </div>
            </div>
          </div>

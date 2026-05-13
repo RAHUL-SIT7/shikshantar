@@ -1,129 +1,138 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // 0. Global Safety Net
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // Helper Functions
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'rahulsah4534@gmail.com' ||
+        request.auth.token.get('email', '') == 'rahulsah4534@gmail.com' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
       );
     }
 
     function isTeacher() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'teacher'
       );
     }
-    
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    
-    // 1. Users Security
+
+    function isOwner(studentId) {
+      return isSignedIn() && request.auth.uid == studentId;
+    }
+
+    // Users
     match /users/{userId} {
-        // Only admins, teachers, or the user themselves can read their profile
-        allow read: if isAdmin() || isTeacher() || (isSignedIn() && request.auth.uid == userId);
-        
-        // Users can update their own profile but cannot change their role
-        allow update: if isAdmin() || (
-            isSignedIn() && request.auth.uid == userId && 
-            (!incoming().diff(existing()).affectedKeys().hasAny(['role', 'isVerified', 'status']))
-        );
-                     
-        // Users can only create their own document and must start as 'student', or Admin can create
-        allow create: if isAdmin() || (
-            isSignedIn() && request.auth.uid == userId && 
-            incoming().role == "student"
-        );
-        
-        allow delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow update: if isAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
-    // 2. Settings / Site content (Only Admin can edit)
+    // Settings
     match /settings/{document=**} {
-        allow read: if true;
-        allow write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // 3. Gallery & Images
+    // School Data
     match /school_data/{document=**} {
-        allow read: if true;
-        allow write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
-    
-    // 4. Academic Results
+
+    // Results
     match /results/{document=**} {
-        // Any logged-in user can read general results 
-        allow read: if isSignedIn(); 
-        allow write: if isAdmin() || isTeacher();
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
     }
-    
+
+    match /years/{year}/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /examConfigs/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+
     match /results_secure/{studentId} {
-        allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin() || isTeacher());
-        allow write: if isAdmin() || isTeacher();
+      allow read: if isOwner(studentId) || isAdmin() || isTeacher();
+      allow write: if isAdmin() || isTeacher();
     }
 
     match /resultSummary/{document=**} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin() || isTeacher();
+      allow read: if true;
+      allow write: if isAdmin() || isTeacher();
     }
 
     match /exams/{document=**} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin() || isTeacher();
+      allow read: if true;
+      allow write: if isAdmin() || isTeacher();
     }
 
-    // 5. Secure Public Admission Forms
+    // Admissions
     match /admissions/{document=**} {
-        allow create: if true; 
-        allow read, update, delete: if isAdmin() || isTeacher();
-    }
-    
-    // Notices / Notice Board
-    match /notices/{document=**} {
-        allow read: if true;
-        allow create, delete: if isAdmin() || isTeacher();
-        allow update: if isAdmin() || isTeacher() || (
-            isSignedIn() && 
-            incoming().diff(existing()).affectedKeys().hasOnly(['readBy', 'views'])
-        );
-    }
-    
-    // Financial Data (Fee Management)
-    match /feeStructure/{document=**} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin() || isTeacher();
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
     }
 
-    match /studentFees/{document=**} {
-        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin() || isTeacher();
+    // Notices
+    match /notices/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    // Fee Management
+    match /feeStructure/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /studentFees/{feeDocId} {
+      allow read: if isAdmin() ||
+                  (isSignedIn() && resource.data.get('studentId', '') == request.auth.uid) ||
+                  (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+      allow write: if isAdmin();
     }
 
     match /financial_students/{studentId} {
-        allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin() || isTeacher());
-        allow write: if isAdmin() || isTeacher();
+      allow read: if isOwner(studentId) || isAdmin();
+      allow write: if isAdmin();
     }
 
     match /financial_transactions/{transactionId} {
-        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin() || isTeacher();
+      allow read: if isAdmin() ||
+                  (isSignedIn() && resource.data.get('studentId', '') == request.auth.uid) ||
+                  (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+      allow write: if isAdmin();
     }
 
+    // Transactions (alternate collection name)
     match /transactions/{transactionId} {
-        allow read: if isAdmin() || isTeacher() || (isSignedIn() && existing().studentId == request.auth.uid);
-        allow write: if isAdmin() || isTeacher();
+      allow read: if isAdmin() ||
+                  (isSignedIn() && resource.data.get('studentId', '') == request.auth.uid) ||
+                  (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /salary_structures/{teacherId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
+      allow write: if isAdmin();
+    }
+
+    match /salary_records/{recordId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.teacherId == request.auth.uid);
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /trash/{document=**} {
+      allow read, write: if isAdmin() || isTeacher();
     }
   }
 }

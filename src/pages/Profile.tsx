@@ -47,6 +47,7 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
+  const [passwordLastChanged, setPasswordLastChanged] = useState('30 days ago');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -73,6 +74,13 @@ export default function Profile() {
             setRollNo(data.rollNo || '05');
             setGuardianName(data.guardianName || 'Ram Sharma');
             setGuardianPhone(data.guardianPhone || '9841000001');
+            if (data.passwordUpdatedAt) {
+              const d = new Date(data.passwordUpdatedAt);
+              const diff = Math.floor((new Date().getTime() - d.getTime()) / (1000 * 3600 * 24));
+              setPasswordLastChanged(diff === 0 ? 'Today' : `${diff} days ago`);
+            } else {
+              setPasswordLastChanged('Unknown');
+            }
           }
         } catch (e) {
           console.error("Error fetching student profile", e);
@@ -103,6 +111,19 @@ export default function Profile() {
     } catch (err: any) {
       console.error("Error uploading photo", err);
       showToast('Error uploading photo');
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, { avatarUrl: null });
+      setAvatarUrl('');
+      showToast('Profile photo removed successfully');
+    } catch (err: any) {
+      console.error("Error removing photo", err);
+      showToast('Error removing photo');
     }
   };
 
@@ -156,6 +177,10 @@ export default function Profile() {
 
       await updatePassword(user, newPassword);
       
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { passwordUpdatedAt: new Date().toISOString() });
+      setPasswordLastChanged('Today');
+      
       showToast('✓ Password changed successfully!');
       setShowPasswordSection(false);
       setCurrentPassword('');
@@ -182,7 +207,7 @@ export default function Profile() {
     if (pwd.length >= 8) score++;
     if (/[0-9]/.test(pwd)) score++;
     if (/[A-Z]/.test(pwd)) score++;
-    if (/[!@#$]/.test(pwd)) score--;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) score++;
     
     if (score <= 1) return { label: 'Weak', color: 'text-orange-500' };
     if (score === 2) return { label: 'Fair', color: 'text-blue-500' };
@@ -220,6 +245,18 @@ export default function Profile() {
               ) : (
                 <span className="text-3xl font-black text-white">{getInitials(fullName)}</span>
               )}
+           </div>
+           <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.png,.webp" onChange={handlePhotoUpload} />
+           <div className="flex gap-2 items-center justify-center">
+               <button onClick={() => fileInputRef.current?.click()} className="bg-white text-indigo-600 text-xs font-bold px-3 py-1.5 rounded-full shadow-md border border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5" />
+                  {avatarUrl ? 'Change' : 'Upload Photo'}
+               </button>
+               {avatarUrl && (
+                  <button onClick={handlePhotoDelete} className="bg-white text-red-500 text-xs font-bold w-7 h-7 flex justify-center items-center rounded-full shadow-md border border-gray-100 hover:bg-red-50 transition-colors" title="Remove Photo">
+                      <X className="w-3 h-3" />
+                  </button>
+               )}
            </div>
          </div>
 
@@ -425,7 +462,7 @@ export default function Profile() {
                   <h3 className="text-sm font-bold text-gray-900 mb-1">Account Password</h3>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <p className="text-xs font-bold text-gray-500">Last changed: 30 days ago</p>
+                    <p className="text-xs font-bold text-gray-500">Last changed: {passwordLastChanged}</p>
                   </div>
                </div>
                <button 
@@ -477,7 +514,7 @@ export default function Profile() {
                        <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${newPassword.length >= 8 ? 'text-emerald-500' : 'text-gray-300'}`}/> At least 8 characters</li>
                        <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[A-Z]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains uppercase letter</li>
                        <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[0-9]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains number</li>
-                       <li className="flex gap-1.5"><X className={`w-3.5 h-3.5 ${/[!@#$]/.test(newPassword) ? 'text-red-500' : 'text-gray-300'}`} /> Cannot contain special character (!@#$)</li>
+                       <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`} /> Contains special character</li>
                      </ul>
                    </div>
                 </div>
@@ -492,7 +529,7 @@ export default function Profile() {
                 </div>
                 
                 <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                   <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[A-Z]/.test(newPassword) || /[!@#$]/.test(newPassword)} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full sm:w-auto disabled:opacity-50">
+                   <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)} className="bg-indigo-600 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full sm:w-auto disabled:opacity-50">
                       {pwdLoading ? 'Updating...' : 'Update Password'}
                    </button>
                    <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:text-primary transition-colors w-full sm:w-auto text-center">

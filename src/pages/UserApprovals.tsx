@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
+import { Shield, Search, CheckCircle2, AlertCircle, User, Mail, Smartphone, BadgeCheck, MoreHorizontal, Trash2, Edit3, X, Filter, UserPlus, Users, UserCheck, ShieldCheck, Lock, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { doc, onSnapshot, collection, updateDoc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { initializeAuth, createUserWithEmailAndPassword, inMemoryPersistence } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize a secondary Firebase app to create users without signing out the admin
 const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-const secondaryAuth = getAuth(secondaryApp);
+const secondaryAuth = initializeAuth(secondaryApp, {
+  persistence: inMemoryPersistence
+});
 
 interface UserProfile {
   id: string;
@@ -32,6 +34,8 @@ export default function UserApprovals() {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [bulkActionOpen, setBulkActionOpen] = useState(false);
 
   useEffect(() => {
     let unsubUsers = () => {};
@@ -122,6 +126,69 @@ export default function UserApprovals() {
     });
   };
 
+  const toggleSelectAll = () => {
+    const filteredIds = getFilteredUsers().map(u => u.id);
+    if (selectedUsers.length === filteredIds.length && filteredIds.length > 0) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(filteredIds);
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
+    );
+  };
+  
+  const handleBulkApprove = async () => {
+    if (!selectedUsers.length) return;
+    try {
+      const filteredSelected = usersList.filter(u => selectedUsers.includes(u.id));
+      await Promise.all(filteredSelected.map(async (u) => {
+        if (u.status === 'pending') {
+          await updateDoc(doc(db, 'users', u.id), { status: 'active' });
+          if(u.role === 'student' && u.class) {
+            await generateInitialFee(u.id, u.class, u.scholarshipStatus || 'Not Provided', Number(u.scholarshipAmount) || 0);
+          }
+        }
+      }));
+      setStatus({ type: 'success', message: 'Selected users approved.' });
+      setSelectedUsers([]);
+      setBulkActionOpen(false);
+    } catch(err) {
+      setStatus({ type: 'error', message: 'Failed to approve selected users.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedUsers.length) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
+    try {
+      await Promise.all(selectedUsers.map(id => deleteDoc(doc(db, 'users', id))));
+      setStatus({ type: 'success', message: 'Selected users deleted.' });
+      setSelectedUsers([]);
+      setBulkActionOpen(false);
+    } catch(err) {
+      setStatus({ type: 'error', message: 'Failed to delete selected users.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
+  const handleBulkSetRole = async (role: 'admin' | 'teacher' | 'student') => {
+    if (!selectedUsers.length) return;
+    try {
+      await Promise.all(selectedUsers.map(id => updateDoc(doc(db, 'users', id), { role })));
+      setStatus({ type: 'success', message: `Selected users role changed to ${role}.` });
+      setSelectedUsers([]);
+      setBulkActionOpen(false);
+    } catch(err) {
+      setStatus({ type: 'error', message: 'Failed to update roles.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
   const stats = {
     total: usersList.filter(u => u.status !== 'pending').length,
     teachers: usersList.filter(u => u.role === 'teacher' && u.status !== 'pending').length,
@@ -144,7 +211,8 @@ export default function UserApprovals() {
     address: '',
     section: '',
     scholarshipStatus: 'Not Provided',
-    scholarshipAmount: 0
+    scholarshipAmount: 0,
+    assignedClasses: [] as string[]
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -267,12 +335,33 @@ export default function UserApprovals() {
       if (newUser.section) userProfilePayload.section = newUser.section;
 
       if (newUser.role === 'student') {
+        let extractedRoll = '';
+        const match = newUser.studentId.match(/^SA\d+([A-Z]*\d*)*$/i);
+        if (match) {
+            const numPart = newUser.studentId.replace(/^SA/i, '');
+            // Simple heuristic to strip out class if it starts with it
+            let clsStr = newUser.class || '';
+            if (numPart.startsWith(clsStr)) {
+                extractedRoll = numPart.substring(clsStr.length);
+            } else if (numPart.startsWith('0' + clsStr)) {
+                extractedRoll = numPart.substring(clsStr.length + 1);
+            } else {
+                extractedRoll = numPart;
+            }
+        } else {
+            extractedRoll = newUser.studentId;
+        }
+        
+        userProfilePayload.rollNumber = extractedRoll;
+        userProfilePayload.rollNo = extractedRoll; // For compatibility
         userProfilePayload.scholarshipStatus = newUser.scholarshipStatus;
         if (newUser.scholarshipStatus === 'Provided') {
           userProfilePayload.scholarshipAmount = Number(newUser.scholarshipAmount) || 0;
         } else {
           userProfilePayload.scholarshipAmount = 0;
         }
+      } else if (newUser.role === 'teacher') {
+        userProfilePayload.class = newUser.class;
       }
 
       await setDoc(doc(db, 'users', docId), userProfilePayload);
@@ -286,12 +375,15 @@ export default function UserApprovals() {
 
       setStatus({ type: 'success', message: `${newUser.role.toUpperCase()} account created successfully. They can now log in.` });
       setIsCreatingUser(false);
-      setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '', guardianName: '', address: '', section: '' });
+      setNewUser({ email: '', password: '', fullName: '', role: 'teacher', phone: '', class: '', studentId: '', guardianName: '', address: '', section: '', scholarshipStatus: 'Not Provided', scholarshipAmount: 0, assignedClasses: [] });
     } catch (error: any) {
-      console.error(error);
       let errMsg = error.message || 'Failed to create user account.';
       if (error.code === 'auth/email-already-in-use' || String(error.message).includes('auth/email-already-in-use')) {
          errMsg = 'An account with this email address already exists. Please use a different email.';
+         // Log gracefully instead of throwing a stack trace in console
+         console.warn("Attempted to register an email that is already taken:", newUser.email);
+      } else {
+         console.error("User creation error:", error);
       }
       setStatus({ type: 'error', message: errMsg });
     } finally {
@@ -311,22 +403,34 @@ export default function UserApprovals() {
           </h1>
           <p className="text-gray-500 font-medium">Control system access, roles, and administrative privileges.</p>
         </div>
-        <div className="flex gap-2">
-          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Total</p>
-            <p className="text-xl font-black text-gray-800">{stats.total}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
+          <div className="bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex flex-col items-center justify-center min-w-[110px] hover:shadow-md transition-shadow">
+            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center mb-1">
+              <Users className="w-4 h-4 text-gray-400" />
+            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+            <p className="text-2xl font-black text-gray-800 leading-none mt-1">{stats.total}</p>
           </div>
-          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px] cursor-pointer" onClick={() => setRoleFilter('pending')}>
-            <p className="text-[10px] font-bold text-red-500 uppercase">Pending</p>
-            <p className="text-xl font-black text-gray-800">{stats.pending}</p>
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 px-4 py-3 rounded-2xl border border-red-100/50 shadow-sm flex flex-col items-center justify-center min-w-[110px] cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" onClick={() => setRoleFilter('pending')}>
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mb-1">
+              <UserCheck className="w-4 h-4 text-red-500" />
+            </div>
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Pending</p>
+            <p className="text-2xl font-black text-red-600 leading-none mt-1">{stats.pending}</p>
           </div>
-          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
-            <p className="text-[10px] font-bold text-blue-500 uppercase">Teachers</p>
-            <p className="text-xl font-black text-gray-800">{stats.teachers}</p>
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-3 rounded-2xl border border-blue-100/50 shadow-sm flex flex-col items-center justify-center min-w-[110px]">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-1">
+              <User className="w-4 h-4 text-blue-500" />
+            </div>
+            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Teachers</p>
+            <p className="text-2xl font-black text-blue-600 leading-none mt-1">{stats.teachers}</p>
           </div>
-          <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-center min-w-[100px]">
-            <p className="text-[10px] font-bold text-orange-500 uppercase">Admins</p>
-            <p className="text-xl font-black text-gray-800">{stats.admins}</p>
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 px-4 py-3 rounded-2xl border border-orange-100/50 shadow-sm flex flex-col items-center justify-center min-w-[110px]">
+            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mb-1">
+              <ShieldCheck className="w-4 h-4 text-orange-500" />
+            </div>
+            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Admins</p>
+            <p className="text-2xl font-black text-orange-600 leading-none mt-1">{stats.admins}</p>
           </div>
         </div>
       </div>
@@ -342,33 +446,59 @@ export default function UserApprovals() {
       )}
 
       {/* Main Container */}
-      <section className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <section className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden">
         {/* Filters Bar */}
-        <div className="p-4 text-primary border-b border-gray-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="p-5 text-primary border-b border-gray-50 flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-50/50">
           <div className="relative w-full md:w-96">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
               placeholder="Search by name, email, ID or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full pl-11 pr-4 py-3 bg-white border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm text-gray-700 font-medium placeholder:text-gray-400"
             />
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex gap-2 w-full md:w-auto relative z-10">
+            {selectedUsers.length > 0 && (
+              <div className="relative">
+                <button 
+                  onClick={() => setBulkActionOpen(!bulkActionOpen)}
+                  className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all shadow-sm h-full"
+                >
+                  <span>Bulk Actions ({selectedUsers.length})</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {bulkActionOpen && (
+                  <div className="absolute right-0 left-auto md:left-0 md:right-auto mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden">
+                    <button onClick={handleBulkApprove} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                       <CheckCircle2 className="w-4 h-4 text-green-500"/> Approve Selected
+                    </button>
+                    <div className="bg-gray-50 px-4 text-[10px] font-black uppercase text-gray-400 py-2 border-y border-gray-100">Change Role To</div>
+                    <button onClick={() => handleBulkSetRole('admin')} className="w-full text-left px-4 py-2 text-sm font-bold text-orange-600 hover:bg-orange-50 border-b border-gray-50">Admin</button>
+                    <button onClick={() => handleBulkSetRole('teacher')} className="w-full text-left px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 border-b border-gray-50">Teacher</button>
+                    <button onClick={() => handleBulkSetRole('student')} className="w-full text-left px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-50">Student</button>
+                    <div className="w-full h-px bg-gray-100"></div>
+                    <button onClick={handleBulkDelete} className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
+                       <Trash2 className="w-4 h-4" /> Delete Selected
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <button 
               onClick={() => setIsCreatingUser(true)}
-              className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-md active:scale-95"
+              className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
             >
               <UserPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Add New User</span>
             </button>
-            <div className="flex items-center gap-2 bg-white px-3 py-2 border border-gray-200 rounded-xl">
+            <div className="flex items-center gap-2 bg-white px-4 py-3 border-none shadow-sm rounded-2xl focus-within:ring-2 focus-within:ring-blue-500/20">
               <Filter className="w-4 h-4 text-gray-400" />
               <select 
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="text-sm font-bold text-gray-700 focus:outline-none bg-transparent"
+                className="text-sm font-bold text-gray-700 focus:outline-none bg-transparent appearance-none pr-4 cursor-pointer"
               >
                 <option value="all">All Roles</option>
                 <option value="pending">Pending Approvals</option>
@@ -410,6 +540,14 @@ export default function UserApprovals() {
               <table className="w-full text-left whitespace-nowrap min-w-[600px]">
                 <thead>
                 <tr className="text-primary text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                  <th className="p-4 px-6 w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                      checked={selectedUsers.length > 0 && selectedUsers.length === getFilteredUsers().length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="p-4 px-6 uppercase tracking-wider">User Information</th>
                   <th className="p-4 px-6 uppercase tracking-wider">Contact & ID</th>
                   <th className="p-4 px-6 uppercase tracking-wider">System Role</th>
@@ -419,13 +557,21 @@ export default function UserApprovals() {
               <tbody className="divide-y divide-gray-50">
                 {getFilteredUsers().length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-20 text-center text-gray-400">
+                    <td colSpan={5} className="p-20 text-center text-gray-400">
                        <Users className="w-12 h-12 mx-auto mb-4 opacity-10" />
                        <p className="font-bold">No users found matching your filters</p>
                     </td>
                   </tr>
                 ) : getFilteredUsers().map(user => (
-                  <tr key={user.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={user.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedUsers.includes(user.id) ? 'bg-indigo-50/20' : ''}`}>
+                    <td className="p-4 px-6 w-12 text-center">
+                       <input 
+                         type="checkbox" 
+                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                         checked={selectedUsers.includes(user.id)}
+                         onChange={() => toggleSelectUser(user.id)}
+                       />
+                    </td>
                     <td className="p-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${ user.role === 'admin' ? 'bg-orange-500' : user.role === 'teacher' ? 'bg-blue-500' : 'bg-emerald-500' }`}>
@@ -451,7 +597,7 @@ export default function UserApprovals() {
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider w-fit border ${ user.status === 'pending' ? 'bg-red-50 text-red-700 border-red-200' : user.role === 'admin' ? 'bg-orange-50 text-orange-700 border-orange-200' : user.role === 'teacher' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200' }`}>
                           {user.status === 'pending' ? 'PENDING APPROVAL' : user.role}
                         </span>
-                        {user.class && <span className="text-[10px] text-gray-400 font-bold ml-1">Class {user.class}</span>}
+                        {user.class && <span className="text-[10px] text-gray-400 font-bold ml-1">{user.role === 'teacher' ? `Class ${user.class} (Class Teacher)` : `Class ${user.class}`}</span>}
                       </div>
                     </td>
                     <td className="p-4 px-6 text-right">
@@ -516,7 +662,7 @@ export default function UserApprovals() {
                           {user.role !== 'admin' && (
                             <button 
                               onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '' })}
-                              className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2"
+                              className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2 shadow-sm"
                               title="Delete Account"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -562,7 +708,7 @@ export default function UserApprovals() {
                       {viewingUser.role}
                     </span>
                     {viewingUser.class && (
-                      <span className="text-[10px] bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full font-bold">Class {viewingUser.class}</span>
+                      <span className="text-[10px] bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full font-bold">{viewingUser.role === 'teacher' ? `Class ${viewingUser.class} (Class Teacher)` : `Class ${viewingUser.class}`}</span>
                     )}
                   </div>
                 </div>
@@ -870,6 +1016,36 @@ export default function UserApprovals() {
                 </div>
               </div>
 
+              {newUser.role === 'teacher' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Class Teacher Of</label>
+                  <p className="text-xs text-gray-500 mb-2 pl-1">
+                    The class teacher is the one who prepares the school-level results for their assigned class.
+                  </p>
+                  <select
+                    value={newUser.class || ''}
+                    onChange={e => setNewUser({ ...newUser, class: e.target.value })}
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none appearance-none"
+                  >
+                    <option value="">-- Please Select Class --</option>
+                    <option value="Playgroup">Playgroup</option>
+                    <option value="Nursery">Nursery</option>
+                    <option value="LKG">LKG</option>
+                    <option value="UKG">UKG</option>
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                    <option value="5">Class 5</option>
+                    <option value="6">Class 6</option>
+                    <option value="7">Class 7</option>
+                    <option value="8">Class 8</option>
+                    <option value="9">Class 9</option>
+                    <option value="10">Class 10</option>
+                  </select>
+                </div>
+              )}
+
               {newUser.role === 'student' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -933,7 +1109,7 @@ export default function UserApprovals() {
               </p>
             </div>
             <div className="p-6 bg-red-50/30 text-xs font-bold text-red-800 text-center border-b border-red-100">
-              Note: This removes their profile from the database, but their login credentials must be manually deleted from your Firebase Auth Console if you want to completely block sign-ins.
+              Note: Deleting this profile immediately revokes their access. They will be automatically blocked if they try to log in again.
             </div>
             <div className="p-6 flex flex-col sm:flex-row gap-3">
               <button 

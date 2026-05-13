@@ -3,21 +3,21 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --primary:       #1a2744;
-  --primary-dark:  #111d33;
-  --primary-light: #2a3754;
+  --primary:       #0f172a;
+  --primary-dark:  #020617;
+  --primary-light: #1e293b;
   --accent:        #ea580c;
   --accent-hover:  #c2410c;
-  --bg-page:       #f0f4f8;
+  --bg-page:       #f8fafc;
   --bg-card:       #ffffff;
-  --text-dark:     #1a202c;
+  --text-dark:     #0f172a;
   --text-grey:     #64748b;
   --border:        #e2e8f0;
   --success:       #16a34a;
   --warning:       #d97706;
   --danger:        #dc2626;
   --sidebar-text:  #ffffff;
-  --font-family:   "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+  --font-family:   "'Inter', system-ui, -apple-system, sans-serif";
 }
 
 @theme {

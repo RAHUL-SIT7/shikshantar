@@ -259,12 +259,63 @@ export default function Result() {
          
          excelData.sort((a, b) => (a.Rank || 999) - (b.Rank || 999));
 
-         const ws = XLSX.utils.json_to_sheet(excelData);
-         const wb = XLSX.utils.book_new();
-         XLSX.utils.book_append_sheet(wb, ws, "Class Result");
-         XLSX.writeFile(wb, `${currentResult.class}_${currentResult.examType}_Results.xlsx`);
+         // Prepare columns for exportToExcel
+         const columns = [
+            { header: 'Student ID', key: 'Student ID', width: 15 },
+            { header: 'Student Name', key: 'Student Name', width: 25 },
+            { header: 'Class', key: 'Class', width: 15 },
+            { header: 'Total Marks', key: 'Total Marks', width: 15 },
+            { header: 'Percentage', key: 'Percentage', width: 15 },
+            { header: 'GPA', key: 'GPA', width: 15 },
+            { header: 'Grade', key: 'Grade', width: 15 },
+            { header: 'Rank', key: 'Rank', width: 15 },
+         ];
+
+         // Add dynamic subject columns
+         if (excelData.length > 0) {
+            const firstStudent = excelData[0];
+            const baseKeys = ['Student ID', 'Student Name', 'Class', 'Total Marks', 'Percentage', 'GPA', 'Grade', 'Rank'];
+             Object.keys(firstStudent).forEach(key => {
+                 if (!baseKeys.includes(key)) {
+                     columns.push({ header: key, key: key, width: 20 });
+                 }
+             });
+         }
+
+         const { exportToExcel } = await import('../lib/excelExport');
+         await exportToExcel(`Class_${currentResult.class}_${currentResult.examType}_Results`, `Class ${currentResult.class} | ${currentResult.examType} Results`, columns, excelData);
       } catch (err: any) {
          console.error("Error downloading excel", err);
+         if (err.message.includes("permission")) {
+             alert("Permission Denied: You must be an admin to download class results.");
+         }
+      }
+   };
+
+   const downloadClassResultPDF = async () => {
+      if (!currentResult) return;
+      try {
+         const summariesSnap = await getDocs(query(collection(db, 'resultSummary'), where('examId', '==', currentResult.examId)));
+         
+         const pdfData = summariesSnap.docs.map(doc => doc.data());
+         pdfData.sort((a, b) => (a.rank || 999) - (b.rank || 999));
+
+         const columns = ['Rank', 'Student ID', 'Name', 'Class', 'Total', 'Pct', 'GPA', 'Grade'];
+         const body = pdfData.map(s => [
+             s.rank || '-',
+             s.studentId || '-',
+             s.studentName || '-',
+             s.class || '-',
+             `${s.total}/${s.fullTotal}`,
+             `${s.percentage?.toFixed(1)}%`,
+             s.gpa || '-',
+             s.grade || '-'
+         ]);
+
+         const { exportToPDF } = await import('../lib/pdfExport');
+         await exportToPDF(`Class ${currentResult.class} | ${currentResult.examType} Results`, columns, body, `Class_${currentResult.class}_${currentResult.examType}_Results`, true);
+      } catch (err: any) {
+         console.error("Error downloading class PDF", err);
          if (err.message.includes("permission")) {
              alert("Permission Denied: You must be an admin to download class results.");
          }
@@ -459,10 +510,16 @@ export default function Result() {
 
             <div className="flex flex-col sm:flex-row justify-end mt-2 gap-3">
                {localStorage.getItem('userRole') !== 'student' && (
-                 <button onClick={downloadClassResultExcel} className="text-gray-700 bg-white border border-gray-200 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 hover:text-primary">
-                   <Download className="w-5 h-5 text-green-600" />
-                   Download Class Result (Excel)
-                 </button>
+                 <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                   <button onClick={downloadClassResultExcel} className="text-gray-700 bg-white px-4 py-3 font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50 border-r border-gray-200">
+                     <Download className="w-4 h-4 text-green-600" />
+                     Class Result (Excel)
+                   </button>
+                   <button onClick={downloadClassResultPDF} className="text-gray-700 bg-white px-4 py-3 font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50">
+                     <Download className="w-4 h-4 text-red-600" />
+                     Class Result (PDF)
+                   </button>
+                 </div>
                )}
                <button onClick={downloadPDFReport} disabled={generatingPdf} className={`text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 ${generatingPdf ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
                  {generatingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}

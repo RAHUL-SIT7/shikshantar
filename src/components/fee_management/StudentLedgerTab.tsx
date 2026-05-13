@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { formatBSDate } from '../../lib/nepaliDate';
+import { formatBSDate, getBSYearMonthDate } from '../../lib/nepaliDate';
 import { Search, Download, ChevronDown, ChevronRight, Bell, FileText, Banknote, Users, Edit2, X, Save, Check } from 'lucide-react';
 import { db } from '../../firebase';
-import { doc, updateDoc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, deleteDoc, onSnapshot, deleteField, writeBatch, query, collection, where, getDocs } from 'firebase/firestore';
 import { exportToExcel } from '../../lib/excelExport';
+import { exportToPDF } from '../../lib/pdfExport';
 
 const MONTHS = ['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
 
@@ -42,43 +43,48 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
           alert('Please select a month for bulk generation.');
           return;
       }
-      if (!window.confirm(`Are you sure you want to generate dues for ${bulkMonth} for all ${filteredStudents.length} currently filtered students?`)) return;
+      if (!window.confirm(`Are you sure you want to generate dues for ${bulkMonth} (and any missing prior months) for all ${filteredStudents.length} currently filtered students?`)) return;
       
       setGeneratingBulk(true);
       try {
           const batchPromises = filteredStudents.map(async (student) => {
-              const status = getMonthStatus(student, bulkMonth);
-              if (status !== 'grey') return; // Only process if not already due or paid
+              const targetIdx = MONTHS.indexOf(bulkMonth);
+              
+              for (let i = 0; i <= targetIdx; i++) {
+                  const currentM = MONTHS[i];
+                  const status = getMonthStatus(student, currentM);
+                  if (status !== 'grey') continue; // Only process if not already due or paid
 
-              const feeRef = doc(db, 'studentFees', `${student.id}_${bulkMonth}`);
-              let tuition = Number(student.monthlyFee || student.originalTuition || 0);
-              let exam = Number(student.examFee || 0);
-              let computer = Number(student.computerFee || 0);
-              let transport = Number(student.transportFee || 0);
-              let other = Number(student.otherFee || 0);
-              let scholarship = Number(student.scholarshipAmount || 0);
-              
-              if (student.scholarshipStatus !== 'Provided') {
-                  scholarship = 0;
+                  const feeRef = doc(db, 'studentFees', `${student.id}_${currentM}`);
+                  let tuition = Number(student.originalTuition !== undefined ? student.originalTuition : 0);
+                  let exam = Number(student.examFee || 0);
+                  let computer = Number(student.computerFee || 0);
+                  let transport = Number(student.transportFee || 0);
+                  let other = Number(student.otherFee || 0);
+                  let scholarship = Number(student.scholarshipAmount || 0);
+                  
+                  if (student.scholarshipStatus !== 'Provided') {
+                      scholarship = 0;
+                  }
+                  
+                  let total = Math.max(0, tuition + exam + computer + transport + other - scholarship);
+                  
+                  await setDoc(feeRef, {
+                      studentId: student.id,
+                      month: currentM,
+                      totalFee: total,
+                      paidAmount: 0,
+                      dueAmount: total,
+                      status: 'due',
+                      breakdown: { tuition, exam, computer, transport, other, scholarship },
+                      createdAt: new Date().toISOString()
+                  });
               }
-              
-              let total = Math.max(0, tuition + exam + computer + transport + other - scholarship);
-              
-              await setDoc(feeRef, {
-                  studentId: student.id,
-                  month: bulkMonth,
-                  totalFee: total,
-                  paidAmount: 0,
-                  dueAmount: total,
-                  status: 'due',
-                  breakdown: { tuition, exam, computer, transport, other, scholarship },
-                  createdAt: new Date().toISOString()
-              });
           });
           
           await Promise.all(batchPromises);
           if (onRefresh) onRefresh();
-          alert(`Success! Generated dues for ${bulkMonth}.`);
+          alert(`Success! Generated dues through ${bulkMonth}.`);
       } catch (err) {
           console.error(err);
           alert('Failed to generate bulk dues.');
@@ -99,13 +105,39 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
     if (!editingFee) return;
     setSavingFee(true);
     try {
-        await updateDoc(doc(db, 'users', editingFee.id), {
+        const batch = writeBatch(db);
+        const userRef = doc(db, 'users', editingFee.id);
+        
+        batch.update(userRef, {
            monthlyFee: Number(editingFee.monthlyFee),
            examFee: Number(editingFee.examFee || 0),
            computerFee: Number(editingFee.computerFee || 0),
            transportFee: Number(editingFee.transportFee || 0),
            otherFee: Number(editingFee.otherFee || 0)
         });
+
+        // Find existing 'due' studentFees for this student to update their totals to match new fee config
+        const q = query(collection(db, 'studentFees'), where('studentId', '==', editingFee.id), where('status', '==', 'due'));
+        const snap = await getDocs(q);
+        
+        snap.docs.forEach(d => {
+            const tuition = Number(editingFee.monthlyFee);
+            const exam = Number(editingFee.examFee || 0);
+            const computer = Number(editingFee.computerFee || 0);
+            const transport = Number(editingFee.transportFee || 0);
+            const other = Number(editingFee.otherFee || 0);
+            const scholarship = Number(editingFee.scholarshipAmount || 0);
+            
+            const total = Math.max(0, tuition + exam + computer + transport + other - scholarship);
+            
+            batch.update(doc(db, 'studentFees', d.id), {
+                totalFee: total,
+                dueAmount: total,
+                breakdown: { tuition, exam, computer, transport, other, scholarship }
+            });
+        });
+
+        await batch.commit();
         setEditingFee(null);
         if (onRefresh) onRefresh();
     } catch(err) {
@@ -116,7 +148,7 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
 
   const getStudentTotalDueYear = (s: any) => {
       let annual = 0;
-      let monthlyTuition = Number(s.monthlyFee || 0);
+      let monthlyTuition = Number(s.originalTuition !== undefined ? s.originalTuition : (s.monthlyFee !== undefined ? s.monthlyFee : 0));
 
       if (feeStructure?.academic) {
          const rawClass = s.class || s.studentClass || '';
@@ -124,9 +156,6 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
          const matchingStruct = feeStructure.academic.find((a: any) => a.className === formattedClass || a.className === rawClass);
          if (matchingStruct) {
             annual = Number(matchingStruct.annual?.replace(/[^0-9.]/g, '') || 0);
-            if(monthlyTuition === 0) {
-               monthlyTuition = Number(matchingStruct.tuition?.replace(/[^0-9.]/g, '') || 0);
-            }
          }
       }
 
@@ -135,42 +164,68 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
           scholarship = Number(s.scholarshipAmount || 0);
       }
       
-      const totalYear = (monthlyTuition * 12) + annual - scholarship;
-      return Math.max(0, totalYear);
+      let exam = Number(s.examFee || 0);
+      let computer = Number(s.computerFee || 0);
+      let transport = Number(s.transportFee || 0);
+      let other = Number(s.otherFee || 0);
+      
+      const monthlyTotalBeforeScholarship = monthlyTuition + exam + computer + transport + other;
+      const monthlyTotalAfterScholarship = Math.max(0, monthlyTotalBeforeScholarship - scholarship);
+      
+      const totalYear = (monthlyTotalAfterScholarship * 12) + annual;
+      return totalYear;
   };
 
   const getStudentDueTokens = (s: any) => {
       let totalDue = 0;
       s.fees?.forEach((f: any) => {
           if (f.status === 'due') {
-              totalDue += Number(f.dueAmount || 0);
+              const due = f.dueAmount !== undefined ? Number(f.dueAmount) : Number(f.totalFee || 0);
+              totalDue += due;
           }
       });
       return totalDue;
   };
 
   const getStudentStatus = (s: any) => {
-      const dueCount = s.fees?.filter((f: any) => f.status === 'due').length || 0;
-      if (dueCount === 0) return 'PAID';
+      const activeDues = s.fees?.filter((f: any) => {
+          if (f.status !== 'due') return false;
+          const due = f.dueAmount !== undefined ? Number(f.dueAmount) : Number(f.totalFee || 0);
+          return due > 0;
+      }) || [];
+      if (activeDues.length === 0) return 'PAID';
       
-      // Simple default logic: if they have any due older than Poush (index 5)
-      const oldDues = s.fees?.filter((f: any) => {
-          if (f.status === 'due') {
-             const mIdx = MONTHS.indexOf(f.month);
-             return mIdx !== -1 && mIdx <= 5;
-          }
-          return false;
+      const { month: currentMonthIdx } = getBSYearMonthDate();
+      
+      const oldDues = activeDues.filter((f: any) => {
+          let m = f.month;
+          if (m === 'Baishak') m = 'Baisakh';
+          else if (m === 'Ashad') m = 'Asar';
+          else if (m === 'Ashoj') m = 'Ashwin';
+          const mIdx = MONTHS.indexOf(m);
+          return mIdx !== -1 && mIdx < currentMonthIdx;
       });
 
-      if (oldDues && oldDues.length > 0) return 'DEFAULTER';
+      if (oldDues.length > 0) return 'DEFAULTER';
       return 'DUE';
   };
 
   const getMonthStatus = (s: any, month: string) => {
-      const feeMonth = s.fees?.find((f: any) => f.month === month);
-      if (!feeMonth) return 'grey';
-      if (feeMonth.status === 'paid') return 'green';
-      if (feeMonth.status === 'due') return 'red';
+      const matchingFees = s.fees?.filter((f: any) => {
+          let m = f.month;
+          if (m === 'Baishak') m = 'Baisakh';
+          else if (m === 'Ashad') m = 'Asar';
+          else if (m === 'Ashoj') m = 'Ashwin';
+          return m === month;
+      });
+      if (!matchingFees || matchingFees.length === 0) return 'grey';
+      
+      const isAnyPaid = matchingFees.some((f: any) => f.status === 'paid');
+      if (isAnyPaid) return 'green';
+      
+      const isAnyDue = matchingFees.some((f: any) => f.status === 'due');
+      if (isAnyDue) return 'red';
+      
       return 'grey';
   };
 
@@ -178,16 +233,44 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
       const status = getMonthStatus(student, month);
       
       if (status === 'green') {
-          alert('This month is already paid. Go to Transaction History to revert or modify.');
+          alert('This month is already paid. go to Transaction History to revert or modify.');
           return;
       }
       
-      const feeRef = doc(db, 'studentFees', `${student.id}_${month}`);
+      let mIdx = MONTHS.indexOf(month);
+      
+      if (status === 'grey') {
+          for (let i = 0; i < mIdx; i++) {
+              if (getMonthStatus(student, MONTHS[i]) === 'grey') {
+                  alert(`Please mark earlier months (like ${MONTHS[i]}) as due before marking ${month}.`);
+                  return;
+              }
+          }
+      }
+      
+      if (status === 'red') {
+          for (let i = mIdx + 1; i < MONTHS.length; i++) {
+              if (getMonthStatus(student, MONTHS[i]) !== 'grey') {
+                  alert(`Please undo later marked months (like ${MONTHS[i]}) before undoing ${month}.`);
+                  return;
+              }
+          }
+      }
+
+      const matchingFees = student.fees?.filter((f: any) => {
+          let m = f.month;
+          if (m === 'Baishak') m = 'Baisakh';
+          else if (m === 'Ashad') m = 'Asar';
+          else if (m === 'Ashoj') m = 'Ashwin';
+          return m === month;
+      });
+      const feeMonth = matchingFees && matchingFees.length > 0 ? (matchingFees.find((f:any) => f.status === 'paid') || matchingFees[0]) : undefined;
+      const feeRef = doc(db, 'studentFees', feeMonth?.id || `${student.id}_${month}`);
       
       if (status === 'red') {
          await deleteDoc(feeRef);
       } else {
-         let tuition = Number(student.monthlyFee || student.originalTuition || 0);
+         let tuition = Number(student.originalTuition !== undefined ? student.originalTuition : 0);
          let exam = Number(student.examFee || 0);
          let computer = Number(student.computerFee || 0);
          let transport = Number(student.transportFee || 0);
@@ -214,8 +297,11 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
   };
 
   const filteredStudents = studentsData.filter(s => {
+    const cleanId = String(s.studentId || s.id || '').toLowerCase();
+    const cleanRoll = String(s.rollNumber || '').toLowerCase();
     const matchSearch = String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        String(s.id || '').toLowerCase().includes(searchTerm.toLowerCase());
+                        cleanId.includes(searchTerm.toLowerCase()) ||
+                        cleanRoll.includes(searchTerm.toLowerCase());
     const matchClass = filterClass === 'All' || s.class === filterClass;
     
     let matchStatus = true;
@@ -230,13 +316,12 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
     return matchSearch && matchClass && matchStatus;
   });
 
-  const exportCSV = async () => {
+  const exportExcel = async () => {
      const columns = [
         { header: 'Student ID', key: 'studentId', width: 15 },
         { header: 'Name', key: 'name', width: 25 },
         { header: 'Class', key: 'class', width: 10 },
         { header: 'Monthly Fee', key: 'monthlyFee', width: 15 },
-        { header: 'Expected (Year)', key: 'expected', width: 15 },
         { header: 'Collected Amount', key: 'collected', width: 15 },
         { header: 'Outstanding Due', key: 'due', width: 15 },
         { header: 'Status', key: 'status', width: 15 }
@@ -252,7 +337,6 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
            name: s.name || '',
            class: s.class,
            monthlyFee: s.monthlyFee || 0,
-           expected: getStudentTotalDueYear(s),
            collected: collected,
            due: getStudentDueTokens(s),
            status: getStudentStatus(s)
@@ -262,6 +346,28 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
      await exportToExcel('Student_Ledger', 'Student Ledger Report', columns, exportData);
   };
 
+  const exportPDF = async () => {
+     const columns = ['Student ID', 'Name', 'Class', 'Monthly Fee', 'Collected', 'Due', 'Status'];
+     
+     const exportData = filteredStudents.map(s => {
+        let collected = 0;
+        s.fees?.forEach((f: any) => {
+           if (f.status === 'paid') collected += Number(f.paidAmount || 0);
+        });
+        return [
+           s.studentId || s.id || '-',
+           s.name || '-',
+           s.class || '-',
+           `NRs. ${s.monthlyFee || 0}`,
+           `NRs. ${collected}`,
+           `NRs. ${getStudentDueTokens(s)}`,
+           getStudentStatus(s)
+        ];
+     });
+     
+     await exportToPDF('Student Ledger Report', columns, exportData, 'Student_Ledger', false);
+  };
+
   const getStatusBadge = (s: any) => {
     const status = getStudentStatus(s);
     
@@ -269,10 +375,6 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
     if (status === 'DUE') return <span className="px-2 py-1 bg-orange-50 text-orange-600 rounded-full text-[10px] font-black uppercase">DUE</span>;
     return <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase">PAID</span>;
   };
-
-
-  const currentMonthIndex = 10; // Jestha
-  const activeMonths = MONTHS.slice(0, currentMonthIndex + 2); // Up to Ashad
 
 
   const sortedStudents = [...filteredStudents].sort((a, b) => {
@@ -308,7 +410,7 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
             <div className="flex bg-blue-50/50 rounded-xl p-1 shrink-0 border border-blue-100">
                 <select value={bulkMonth} onChange={e => setBulkMonth(e.target.value)} className="bg-transparent text-sm font-bold text-primary focus:outline-none px-2 border-r border-blue-200">
                    <option value="">Bulk Month</option>
-                   {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                   {MONTHS.filter((m, i) => i <= getBSYearMonthDate().month).map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
                 <button onClick={handleBulkGenerateDue} disabled={generatingBulk || !bulkMonth} className="px-3 text-sm font-bold text-blue-700 hover:text-blue-900 disabled:opacity-50">
                     {generatingBulk ? 'Generating...' : '+ Generate'}
@@ -336,9 +438,10 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
               <option value="Defaulter">Status: Defaulter</option>
             </select>
             
-            <button onClick={exportCSV} className="border-primary text-primary border border-primary text-primary border-primary text-primary rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-widest hover:text-primary transition-colors shrink-0 flex gap-2 items-center min-h-[48px]">
-               <Download className="w-4 h-4"/> Export
-            </button>
+            <div className="flex bg-blue-50/50 rounded-xl p-1 shrink-0 border border-blue-100 min-h-[48px]">
+               <button onClick={exportExcel} className="border-r border-blue-200 text-blue-700 font-bold px-3 text-sm hover:text-blue-900 flex gap-2 items-center"><Download className="w-4 h-4"/> Excel</button>
+               <button onClick={exportPDF} className="text-blue-700 font-bold px-3 text-sm hover:text-blue-900 flex gap-2 items-center"><Download className="w-4 h-4"/> PDF</button>
+            </div>
          </div>
        </div>
 
@@ -352,7 +455,6 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                   <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'name', direction: sortConfig?.key === 'name' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Name {sortConfig?.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 cursor-pointer hover:bg-[#2546a3] transition-colors" onClick={() => setSortConfig({key: 'class', direction: sortConfig?.key === 'class' && sortConfig.direction === 'asc' ? 'desc' : 'asc'})}>Class {sortConfig?.key === 'class' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 text-right">Monthly Fee</th>
-                  <th className="p-4 text-right">Expected (Year)</th>
                   <th className="p-4 text-right">Current Dues</th>
                   <th className="p-4 text-center">Status</th>
                   <th className="p-4 text-center">Actions</th>
@@ -388,7 +490,7 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                        </td>
                        <td className="p-4 text-right">
                           <div className="flex flex-col items-end relative">
-                            {Number(s.scholarshipAmount) > 0 && <span className="text-[10px] text-emerald-600 font-bold tracking-widest line-through">NRs. {Number(s.monthlyFee) + Number(s.scholarshipAmount)}</span>}
+                            {Number(s.scholarshipAmount) > 0 && <span className="text-[10px] text-emerald-600 font-bold tracking-widest line-through">NRs. {s.originalTuition !== undefined ? s.originalTuition : (Number(s.monthlyFee) + Number(s.scholarshipAmount))}</span>}
                             {editingFee?.id === s.id ? (
                                 <div className="flex flex-col bg-white border border-gray-200 shadow-xl p-3 rounded-xl absolute top-8 z-50 right-0 w-64 gap-2" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex justify-between items-center mb-1">
@@ -418,14 +520,13 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                             ) : (
                                 <div className="flex items-center gap-2">
                                      <span className="text-sm text-gray-800 font-black">NRs. {s.monthlyFee || 0}</span>
-                                     <button onClick={(e) => { e.stopPropagation(); setEditingFee({ id: s.id, monthlyFee: s.monthlyFee || s.originalTuition || 0, examFee: s.examFee || 0, computerFee: s.computerFee || 0, otherFee: (s.otherFee || 0) + (s.transportFee || 0) }); }} className="text-gray-300 hover:text-blue-600 transition-colors" title="Edit custom fee via DB">
+                                     <button onClick={(e) => { e.stopPropagation(); setEditingFee({ id: s.id, monthlyFee: s.originalTuition !== undefined ? s.originalTuition : (s.monthlyFee || 0), examFee: s.examFee || 0, computerFee: s.computerFee || 0, otherFee: (s.otherFee || 0) + (s.transportFee || 0) }); }} className="text-gray-300 hover:text-blue-600 transition-colors" title="Edit custom fee via DB">
                                         <Edit2 className="w-3 h-3" />
                                      </button>
                                 </div>
                             )}
                           </div>
                        </td>
-                       <td className="p-4 text-right font-black text-primary text-sm">NRs. {getStudentTotalDueYear(s).toLocaleString()}</td>
                       <td className="p-4 text-right font-black text-red-500 text-sm">{getStudentDueTokens(s) > 0 ? `NRs. ${getStudentDueTokens(s).toLocaleString()}` : '-'}</td>
                        <td className="p-4 text-center">
                           {getStatusBadge(s)}
@@ -455,11 +556,20 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                             <span className="text-[10px] text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">Click a month to view details or add due</span>
                           </div>
                           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 max-w-3xl">
-                             {MONTHS.map(m => {
+                             {MONTHS.filter((m, i) => i <= getBSYearMonthDate().month || getMonthStatus(s, m) !== 'grey').map(m => {
                                const status = getMonthStatus(s, m);
                                let bg = 'bg-gray-100 text-gray-400 hover:bg-gray-200 cursor-pointer';
                                if (status === 'green') bg = 'bg-emerald-100 text-emerald-700 cursor-pointer border border-emerald-200 shadow-sm hover:bg-emerald-200';
                                if (status === 'red') bg = 'bg-red-50 text-red-600 font-bold border border-red-200 cursor-pointer hover:bg-red-100 shadow-sm';
+                               
+                               const matchingFees = s.fees?.filter((f: any) => {
+                                   let fm = f.month;
+                                   if (fm === 'Baishak') fm = 'Baisakh';
+                                   else if (fm === 'Ashad') fm = 'Asar';
+                                   else if (fm === 'Ashoj') fm = 'Ashwin';
+                                   return fm === m;
+                               });
+                               const feeDoc = matchingFees && matchingFees.length > 0 ? (matchingFees.find((f:any) => f.status === 'paid') || matchingFees[0]) : undefined;
                                
                                return (
                                  <div key={m} onClick={() => {
@@ -468,10 +578,10 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                                     } else {
                                        toggleMonthDue(s, m);
                                     }
-                                 }} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-center ${bg} transition-colors group relative`} title={status === 'grey' ? 'Mark as Due' : status === 'red' ? 'Unpaid' : 'Paid'}>
+                                 }} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-center ${bg} transition-colors group relative`} title={status === 'grey' ? 'Mark as Due' : status === 'red' ? 'Unpaid (Click to View or Undo)' : 'Paid (Click to view)'}>
                                    <span className="text-[9px] font-bold uppercase tracking-wider mb-0.5">{m}</span>
                                    {status === 'green' && <span className="text-xs font-black">✓</span>}
-                                   {status === 'red' && <span className="text-[10px]">NRs. {s.monthlyFee}</span>}
+                                   {status === 'red' && <span className="text-[10px]">NRs. {feeDoc?.totalFee ?? s.monthlyFee}</span>}
                                    {status === 'grey' && <span className="text-xs group-hover:hidden">—</span>}
                                    {status === 'grey' && <span className="text-[10px] hidden group-hover:block text-gray-500 font-medium">+ Due</span>}
                                  </div>
@@ -480,7 +590,116 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                           </div>
                           <div className="border border-gray-200 rounded-xl bg-white overflow-hidden max-w-5xl mt-6">
                               <div className="bg-gray-100 border-b border-gray-200 px-4 py-2 flex justify-between items-center">
-                                 <span className="text-xs font-bold text-gray-700 uppercase tracking-widest">Full Payment Statement</span>
+                                 <span className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-3">
+                                     Full Payment Statement
+                                     <button onClick={(e) => {
+                                        e.stopPropagation();
+                                        const printWindow = window.open('', '_blank');
+                                        if (printWindow) {
+                                            const paidRows = (s.fees || []).filter((f: any) => f.status === 'paid' || f.status === 'due')
+                                                .sort((a:any, b:any) => {
+                                                    const yearA = Number(a.year || a.academicYear?.split('-')[0] || 0) || getBSYearMonthDate().year;
+                                                    const yearB = Number(b.year || b.academicYear?.split('-')[0] || 0) || getBSYearMonthDate().year;
+                                                    if (yearA !== yearB) return yearA - yearB;
+                                                    return MONTHS.indexOf(a.month === 'Baishak' ? 'Baisakh' : (a.month === 'Ashad' ? 'Asar' : (a.month === 'Ashoj' ? 'Ashwin' : a.month))) - MONTHS.indexOf(b.month === 'Baishak' ? 'Baisakh' : (b.month === 'Ashad' ? 'Asar' : (b.month === 'Ashoj' ? 'Ashwin' : b.month)));
+                                                });
+                                            
+                                            let tableRows = '';
+                                            let totalPaid = 0;
+                                            let totalDue = 0;
+                                            paidRows.forEach((f: any, idx: number) => {
+                                                const paidAmt = Number(f.paidAmount || (f.status === 'paid' ? f.totalFee : 0) || 0);
+                                                const dueAmt = Number(f.dueAmount !== undefined ? f.dueAmount : (f.status === 'due' ? f.totalFee : 0));
+                                                totalPaid += paidAmt;
+                                                totalDue += dueAmt;
+                                                const mName = f.month === 'Baishak' ? 'Baisakh' : (f.month === 'Ashad' ? 'Asar' : (f.month === 'Ashoj' ? 'Ashwin' : f.month));
+                                                
+                                                const recordYear = f.year || f.academicYear?.split('-')[0] || getBSYearMonthDate().year;
+                                                const paidDate = f.paidAt ? formatBSDate(f.paidAt) : '-';
+                                                const breakdown = f.breakdown ? 
+                                                    `Tuition: ${f.breakdown.tuition||0}, Exam: ${f.breakdown.exam||0}, Comp: ${f.breakdown.computer||0}, Trans: ${f.breakdown.transport||0}, Other: ${f.breakdown.other||0}` 
+                                                    : 'N/A';
+
+                                                tableRows += `
+                                                  <tr>
+                                                    <td style="border: 1px solid #000; padding: 4px; text-align: center;">${idx + 1}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px;">${mName} ${recordYear}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px; text-align: right;">${paidAmt.toLocaleString()}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px; text-align: right;">${dueAmt.toLocaleString()}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px; text-align: center; text-transform: uppercase;">${f.status}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${paidDate}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">${breakdown}</td>
+                                                    <td style="border: 1px solid #000; padding: 4px;">${f.receiptNo || '-'}</td>
+                                                  </tr>
+                                                `;
+                                            });
+
+                                            printWindow.document.write(`
+                                                <html>
+                                                    <head>
+                                                        <title>Student Statement - ${s.name}</title>
+                                                        <style>
+                                                            @page { size: auto; margin: 0; }
+                                                            body { font-family: 'Times New Roman', serif; padding: 20px; }
+                                                            .receipt-container { max-width: 800px; margin: 0 auto; border: 2px solid #000; padding: 20px; }
+                                                            .text-center { text-align: center; }
+                                                            .text-right { text-align: right; }
+                                                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                                            th, td { border: 1px solid #000; padding: 4px; }
+                                                            th { background-color: #f0f0c0; }
+                                                        </style>
+                                                    </head>
+                                                    <body onload="window.print(); window.close();">
+                                                        <div class="receipt-container">
+                                                            <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                                                                <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain; margin-right: 20px; filter: grayscale(100%);" />
+                                                                <div class="text-center">
+                                                                    <h1 style="margin: 5px 0;">SHIKSHANTAR ACADEMY</h1>
+                                                                    <p style="margin: 2px 0;">Bastipur-5, Siraha, Nepal</p>
+                                                                    <h2 style="margin-top: 15px;">Student Payment Statement</h2>
+                                                                </div>
+                                                            </div>
+                                                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                                                                <div>
+                                                                    <p><strong>Student Name:</strong> ${s.name}</p>
+                                                                    <p><strong>Class:</strong> ${s.class || ''} ${s.section ? ' - Sec ' + s.section : ''}</p>
+                                                                    <p><strong>Roll/ID:</strong> ${s.rollNumber || s.id || '-'}</p>
+                                                                </div>
+                                                                <div class="text-right">
+                                                                    <p><strong>Statement Date:</strong> ${formatBSDate(new Date())}</p>
+                                                                    <p><strong>Total Paid:</strong> NRs. ${totalPaid.toLocaleString()}</p>
+                                                                    <p><strong>Total Due:</strong> NRs. ${totalDue.toLocaleString()}</p>
+                                                                </div>
+                                                            </div>
+                                                            <table>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>S.N.</th>
+                                                                        <th>Month / Particulars</th>
+                                                                        <th>Paid (NRs.)</th>
+                                                                        <th>Due (NRs.)</th>
+                                                                        <th>Status</th>
+                                                                        <th>Paid Date</th>
+                                                                        <th>Breakdown</th>
+                                                                        <th>Receipt No.</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ${tableRows || '<tr><td colSpan="8" class="text-center">No records</td></tr>'}
+                                                                </tbody>
+                                                            </table>
+                                                            <div style="margin-top: 20px; text-align: right;">
+                                                                <p><strong>Total Paid:</strong> NRs. ${totalPaid.toLocaleString()}</p>
+                                                                <p><strong>Total Due:</strong> NRs. ${totalDue.toLocaleString()}</p>
+                                                            </div>
+                                                        </div>
+                                                    </body>
+                                                </html>
+                                            `);
+                                            printWindow.document.close();
+                                        }
+                                     }} className="px-2 py-0.5 bg-white border border-gray-300 rounded text-gray-700 hover:text-primary transition-colors cursor-pointer text-[10px] font-bold">Print Statement</button>
+                                 </span>
                                  <div className="max-w-xs text-right text-xs">
                                      <span className="font-bold text-emerald-600 mr-3">PAID: {(s.fees?.filter((f: any) => f.status === 'paid') || []).length} months</span>
                                      <span className="font-bold text-red-600">PENDING: {(s.fees?.filter((f: any) => f.status === 'due') || []).length} months</span>
@@ -492,30 +711,51 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
                                          <th className="py-2 px-4 font-bold">Month</th>
                                          <th className="py-2 px-4 font-bold">Total Fee</th>
                                          <th className="py-2 px-4 font-bold">Status</th>
-                                         <th className="py-2 px-4 font-bold max-w-sm truncate hidden md:table-cell">Breakdown</th>
+                                         <th className="py-2 px-4 font-bold max-w-[200px]">Breakdown</th>
                                          <th className="py-2 px-4 font-bold hidden sm:table-cell">Paid At</th>
                                          <th className="py-2 px-4 font-bold hidden sm:table-cell">Receipt</th>
                                      </tr>
                                  </thead>
                                  <tbody className="divide-y divide-gray-100">
                                      {!s.fees || s.fees.length === 0 ? (
-                                         <tr><td colSpan={6} className="py-4 px-4 text-center text-gray-400">No payment records found</td></tr>
-                                     ) : (
-                                        [...s.fees].sort((a:any, b:any) => MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month)).map((f: any, fIdx: number) => (
-                                         <tr key={f.id || `${f.month}-${fIdx}`} className="hover:bg-gray-50 transition-colors">
-                                             <td className="py-2 px-4 font-bold text-gray-700">{f.month}</td>
+                                         <tr><td colSpan={6} className="py-4 px-4 text-center text-gray-400">No payment records found</td></tr>                                      ) : (
+                                        [...s.fees]
+                                        .map(f => {
+                                            let m = f.month;
+                                            if (m === 'Baishak') m = 'Baisakh';
+                                            else if (m === 'Ashad') m = 'Asar';
+                                            else if (m === 'Ashoj') m = 'Ashwin';
+                                            return { ...f, month: m };
+                                        })
+                                        .sort((a, b) => {
+                                            if (a.status === 'paid' && b.status !== 'paid') return -1;
+                                            if (a.status !== 'paid' && b.status === 'paid') return 1;
+                                            return 0;
+                                        })
+                                        .filter((f, index, self) => index === self.findIndex(t => t.month === f.month && (t.year || t.academicYear) === (f.year || f.academicYear)))
+                                        .sort((a:any, b:any) => {
+                                           const yearA = Number(a.year || a.academicYear?.split('-')[0] || 0) || getBSYearMonthDate().year;
+                                           const yearB = Number(b.year || b.academicYear?.split('-')[0] || 0) || getBSYearMonthDate().year;
+                                           if (yearA !== yearB) return yearA - yearB;
+                                           return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
+                                        })
+                                        .map((f: any, fIdx: number) => {
+                                         const recordYear = f.year || f.academicYear?.split('-')[0] || getBSYearMonthDate().year;
+                                         return (
+                                         <tr key={f.id || `${f.month}-${recordYear}-${fIdx}`} onClick={() => setSelectedPill({ student: s, month: f.month, year: recordYear })} className="hover:bg-gray-50 transition-colors cursor-pointer" title="Click to view receipt or due details">
+                                             <td className="py-2 px-4 font-bold text-gray-700">{f.month} {recordYear}</td>
                                              <td className="py-2 px-4 font-bold text-gray-900">NRs. {Number(f.totalFee || 0).toLocaleString()}</td>
                                              <td className="py-2 px-4">
                                                  {f.status === 'paid' ? <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-widest">Paid</span> : <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-widest">Due</span>}
                                              </td>
-                                             <td className="py-2 px-4 text-gray-500 max-w-sm truncate hidden md:table-cell text-[10px]">
-                                                 {f.breakdown ? Object.entries(f.breakdown).map(([k, v]) => Number(v) > 0 ? `${k === 'other' ? 'o/transport' : k}: ${v}` : null).filter(Boolean).join(', ') : '-'}
+                                             <td className="py-2 px-4 text-gray-500 max-w-[200px] text-[10px]">
+                                                 {f.breakdown ? Object.entries(f.breakdown).map(([k, v]) => Number(v) > 0 ? `${k}: ${v}` : null).filter(Boolean).join(', ') : '-'}
                                              </td>
                                              <td className="py-2 px-4 text-gray-500 hidden sm:table-cell">{f.paidAt ? formatBSDate(new Date(f.paidAt)) : '-'}</td>
                                              <td className="py-2 px-4 font-mono text-[10px] text-gray-500 hidden sm:table-cell">{f.receiptNo || '-'}</td>
                                          </tr>
-                                        ))
-                                     )}
+                                        );})
+                                      )}
                                  </tbody>
                               </table>
                           </div>
@@ -553,73 +793,321 @@ export default function StudentLedgerTab({ studentsData, initialFilterStatus = '
            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedPill(null)}>
                <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
                     {(() => {
-                        const feeMonth = selectedPill.student.fees?.find((f: any) => f.month === selectedPill.month);
+                        const matchingFees = selectedPill.student.fees?.filter((f: any) => {
+                            let m = f.month;
+                            if (m === 'Baishak') m = 'Baisakh';
+                            else if (m === 'Ashad') m = 'Asar';
+                            else if (m === 'Ashoj') m = 'Ashwin';
+                            const fYear = Number(f.year || f.academicYear?.split('-')[0] || 0) || getBSYearMonthDate().year;
+                            return m === selectedPill.month && (selectedPill.year ? fYear === Number(selectedPill.year) : true);
+                        });
+                        const feeMonth = matchingFees && matchingFees.length > 0 ? (matchingFees.find((f:any) => f.status === 'paid') || matchingFees[0]) : undefined;
                         const isPaid = feeMonth?.status === 'paid';
                         
                         return (
-                            <div className="p-6">
-                               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isPaid ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                                  {isPaid ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                            <div className="p-0 flex flex-col relative w-full h-full max-h-[85vh] bg-[#f8fafc]">
+                               {/* Modal Header */}
+                               <div className={`p-6 pb-8 border-b ${isPaid ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100' : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-100'}`}>
+                                   <div className="flex justify-between items-start mb-4">
+                                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${isPaid ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-red-500 text-white shadow-red-500/20'}`}>
+                                         {isPaid ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                                      </div>
+                                      <button onClick={() => setSelectedPill(null)} className="p-2 bg-white/50 hover:bg-white rounded-full text-gray-500 transition-colors">
+                                         <X className="w-5 h-5"/>
+                                      </button>
+                                   </div>
+                                   <h3 className="text-2xl font-black text-gray-900 tracking-tight">{selectedPill.month} {selectedPill.year || getBSYearMonthDate().year}</h3>
+                                   <p className={`font-bold mt-1 uppercase tracking-widest text-xs ${isPaid ? 'text-emerald-600' : 'text-red-500'}`}>
+                                      {isPaid ? 'Payment Cleared' : 'Payment Due'}
+                                   </p>
                                </div>
-                               <h3 className="text-xl font-black text-gray-900 mb-1">{selectedPill.month} 2083</h3>
-                               
-                               {isPaid ? (
-                                   <>
-                                     <p className="text-gray-600 text-sm mb-4">Paid NRs. {feeMonth.paidAmount || feeMonth.totalFee} on {formatBSDate(feeMonth.paidAt ? new Date(feeMonth.paidAt) : new Date())}</p>
-                                     <div className="border-primary text-primary rounded-xl p-3 border border-gray-100 text-sm mb-5">
-                                        <div className="flex justify-between mb-1">
-                                           <span className="text-gray-500 font-medium">Method</span>
-                                           <span className="text-gray-800 font-bold">{feeMonth.paymentMethod || 'Cash'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                           <span className="text-gray-500 font-medium">Receipt</span>
-                                           <span className="text-gray-800 font-bold">{feeMonth.receiptNo || 'RCP-2083-010'}</span>
-                                        </div>
-                                     </div>
-                                       <div className="flex flex-col gap-2">
-                                         <button className="w-full bg-white border border-gray-200 text-gray-800 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:text-primary transition-colors">
+
+                               <div className="flex-1 overflow-auto p-6 space-y-6 bg-white">
+                                   {isPaid ? (
+                                       <>
+                                         <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Transaction Details</p>
+                                            <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                                               <div>
+                                                  <p className="text-xs text-gray-500 font-medium line-clamp-1">Amount Paid</p>
+                                                  <p className="font-black text-gray-900">NRs. {(feeMonth.paidAmount || feeMonth.totalFee || 0).toLocaleString()}</p>
+                                               </div>
+                                               <div>
+                                                  <p className="text-xs text-gray-500 font-medium">Date</p>
+                                                  <p className="font-bold text-gray-900">{feeMonth.paidAt ? formatBSDate(new Date(feeMonth.paidAt)) : formatBSDate(new Date())}</p>
+                                               </div>
+                                               <div>
+                                                  <p className="text-xs text-gray-500 font-medium">Method</p>
+                                                  <p className="font-bold text-gray-900">{feeMonth.paymentMethod || 'Cash'}</p>
+                                               </div>
+                                               <div>
+                                                  <p className="text-xs text-gray-500 font-medium">Receipt</p>
+                                                  <p className="font-bold text-gray-900 uppercase">{feeMonth.receiptNo || 'N/A'}</p>
+                                               </div>
+                                            </div>
+                                         </div>
+                                         
+                                         <div className="flex flex-col gap-3 mt-4">
+                                            <button onClick={() => {
+                                              const printWindow = window.open('', '_blank');
+                                              if (printWindow) {
+                                                  const studentName = selectedPill.student.name || '';
+                                                  const rollNo = selectedPill.student.rollNumber || '-';
+                                                  const className = selectedPill.student.class || '';
+                                                  const section = selectedPill.student.section || 'A';
+                                                  const receiptNo = feeMonth.receiptNo || `RCP-${getBSYearMonthDate().year}-${Math.floor(Math.random() * 10000)}`;
+                                                  const method = feeMonth.paymentMethod || 'Cash';
+                                                  const amount = feeMonth.paidAmount || feeMonth.totalFee || 0;
+                                                  
+                                                  let breakdownRows = '';
+                                                  
+                                                  let totalTuition = 0;
+                                                  let totalExam = 0;
+                                                  let totalComputer = 0;
+                                                  let totalExtra = 0;
+                                                  let totalAdmission = 0;
+                                                  let totalDiscount = 0;
+
+                                                  if (feeMonth.breakdown) {
+                                                      totalTuition = Number(feeMonth.breakdown.tuition || 0);
+                                                      totalExam = Number(feeMonth.breakdown.exam || 0);
+                                                      totalComputer = Number(feeMonth.breakdown.computer || 0);
+                                                      totalExtra = Number(feeMonth.breakdown.other || 0) + Number(feeMonth.breakdown.transport || 0);
+                                                      totalDiscount = Number(feeMonth.breakdown.scholarship || 0);
+                                                  } else {
+                                                      totalTuition = amount;
+                                                  }
+                                                  
+                                                  let srNo = 1;
+                                                  const addRow = (name: string, amt: number) => {
+                                                      if (amt > 0 || name === 'Monthly Fee' || name === 'Admission Fee') {
+                                                          breakdownRows += `
+                                                            <tr>
+                                                               <td style="border: 1px solid #000; padding: 8px; text-align: center; border-left: none;">${srNo++}</td>
+                                                               <td style="border: 1px solid #000; padding: 8px;">${name}</td>
+                                                               <td style="border: 1px solid #000; padding: 8px; text-align: right; border-right: none;">${amt > 0 ? amt.toLocaleString() : ''}</td>
+                                                            </tr>
+                                                          `;
+                                                      }
+                                                  };
+
+                                                  addRow('Admission Fee', totalAdmission);
+                                                  addRow('Monthly Fee', totalTuition);
+                                                  addRow('Exam Fee', totalExam);
+                                                  addRow('Computer Fee', totalComputer);
+                                                  addRow('Extra Fee', totalExtra);
+                                                  
+                                                  if (totalDiscount > 0) {
+                                                      breakdownRows += `
+                                                          <tr>
+                                                             <td style="border: 1px solid #000; padding: 8px; text-align: center; border-left: none;">${srNo++}</td>
+                                                             <td style="border: 1px solid #000; padding: 8px;">Discount / Scholarship</td>
+                                                             <td style="border: 1px solid #000; padding: 8px; text-align: right; border-right: none;">- ${totalDiscount.toLocaleString()}</td>
+                                                          </tr>
+                                                      `;
+                                                  }
+
+                                                  printWindow.document.write(`
+                                                      <html>
+                                                          <head>
+                                                              <title>Print Receipt</title>
+                                                              <style>
+                                                                  @page { size: auto; margin: 0; }
+                                                                  body { background-color: #fff; font-family: 'Times New Roman', serif; padding: 20px; }
+                                                                  .receipt-container { max-width: 800px; margin: 0 auto; border: 2px solid #000; background-color: #ffffe0; padding: 0; }
+                                                                  .text-center { text-align: center; }
+                                                                  .header-text { margin: 5px 0; }
+                                                                  .info-row { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 0 20px; }
+                                                                  .line-input { border-bottom: 1px dashed #000; display: inline-block; min-width: 150px; font-style: normal; }
+                                                                  table { width: 100%; border-collapse: collapse; margin-top: 10px; border-left: none; border-right: none; }
+                                                                  th, td { border: 1px solid #000; padding: 10px; }
+                                                                  th { background-color: #f0f0c9; }
+                                                                  tr td:first-child, tr th:first-child { border-left: none; }
+                                                                  tr td:last-child, tr th:last-child { border-right: none; }
+                                                              </style>
+                                                          </head>
+                                                          <body onload="window.print(); window.close();">
+                                                              <div class="receipt-container">
+                                                                  <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 15px; padding-top: 15px;">
+                                                                      <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain; margin-right: 20px; filter: grayscale(100%);" />
+                                                                      <div class="text-center">
+                                                                          <div style="font-size: 16px;">Receipt</div>
+                                                                          <h1 style="margin: 5px 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">SHIKSHANTAR ACADEMY</h1>
+                                                                          <p style="margin: 2px 0; font-size: 15px;">Bastipur-5, Siraha, Nepal</p>
+                                                                          <p style="margin: 2px 0; font-size: 15px;">Website: https://shikshantar.academy.nepalghum.xyz</p>
+                                                                          <p style="margin: 2px 0; font-size: 15px;">Contact: +977 9807790805 | Email: info@shikshantar.academy.nepalghum.xyz</p>
+                                                                      </div>
+                                                                  </div>
+                                                                  
+                                                                  <div style="padding: 20px 20px 10px 20px;">
+                                                                      <span style="font-size: 18px;">Receipt No. <strong class="line-input">${receiptNo}</strong></span>
+                                                                  </div>
+                                                                  
+                                                                  <div class="info-row">
+                                                                      <div style="flex: 1; font-size: 16px;">Name of Student: <strong class="line-input" style="min-width: 300px;">${studentName}</strong></div>
+                                                                      <div style="font-size: 16px;">Class: <strong class="line-input" style="min-width: 100px; text-align: center;">${className}</strong> 
+                                                                           Section: <strong class="line-input" style="min-width: 80px; text-align: center;">${section}</strong></div>
+                                                                  </div>
+                                                                  
+                                                                  <div class="info-row">
+                                                                      <div style="flex: 1; font-size: 16px;">Roll No: <strong class="line-input" style="min-width: 150px;">${rollNo}</strong></div>
+                                                                      <div style="font-size: 16px;">Month: <strong class="line-input" style="min-width: 150px; text-align: center;">${selectedPill.month}</strong></div>
+                                                                  </div>
+
+                                                                  <div class="info-row">
+                                                                      <div style="flex: 1; font-size: 16px;">Paid Date: <strong class="line-input" style="min-width: 150px;">${feeMonth.paidAt ? formatBSDate(feeMonth.paidAt) : '-'}</strong></div>
+                                                                  </div>
+                                                                  
+                                                                  <table>
+                                                                      <thead>
+                                                                          <tr>
+                                                                              <th style="width: 80px;">Sr. No.</th>
+                                                                              <th>Particulars</th>
+                                                                              <th style="width: 150px;">Amount</th>
+                                                                          </tr>
+                                                                      </thead>
+                                                                      <tbody>
+                                                                          ${breakdownRows}
+                                                                          <tr>
+                                                                              <td colspan="2" style="text-align: right; font-weight: bold; font-family: Arial, sans-serif; font-size: 18px;">Total</td>
+                                                                              <td style="text-align: right; font-weight: bold; font-family: Arial, sans-serif; font-size: 18px;">${amount.toLocaleString()}</td>
+                                                                          </tr>
+                                                                      </tbody>
+                                                                  </table>
+                                                                  
+                                                                  <div style="margin-top: 40px; padding: 0 20px 20px 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                                                                      <div>
+                                                                          <p style="margin-bottom: 20px; font-size: 16px;">Paid By: <strong style="border-bottom: 2px dashed #000; font-family: Arial, sans-serif;">${method}</strong></p>
+                                                                          <p style="font-size: 18px;">Signature of Centre Head</p>
+                                                                      </div>
+                                                                  </div>
+                                                                  
+                                                                  <div style="border-top: 2px solid #000; padding: 10px; text-align: center; font-size: 14px; font-weight: bold;">
+                                                                      All above mentioned Amount once paid are non refundable in any case whatsoever.
+                                                                  </div>
+                                                              </div>
+                                                          </body>
+                                                      </html>
+                                                  `);
+                                                  printWindow.document.close();
+                                              }
+                                            }} className="w-full bg-blue-50 text-blue-800 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors uppercase tracking-widest">
                                             🖨️ Print Receipt
-                                         </button>
-                                         <button onClick={async () => {
-                                            if(!window.confirm('Are you sure you want to revert this payment back to unpaid? This action cannot be undone.')) return;
-                                            try {
-                                                const feeRef = doc(db, 'studentFees', `${selectedPill.student.id}_${selectedPill.month}`);
-                                                await updateDoc(feeRef, {
-                                                    status: 'due',
-                                                    paidAmount: 0,
-                                                    dueAmount: feeMonth.totalFee || selectedPill.student.monthlyFee || 0,
-                                                });
-                                                setSelectedPill(null);
-                                                if (onRefresh) onRefresh();
-                                            } catch(e) {
-                                                console.error(e);
-                                                alert('Failed to revert payment.');
-                                            }
-                                         }} className="w-full bg-red-50 text-red-600 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
-                                            ⚠️ Revert to Unpaid
-                                         </button>
-                                       </div>
-                                   </>
-                               ) : (
-                                   <>
-                                     <p className="text-gray-600 text-sm mb-5">NRs. {feeMonth?.totalFee || selectedPill.student.monthlyFee} unpaid</p>
-                                     <div className="flex gap-3">
-                                         <button onClick={() => {
-                                             setSelectedPill(null);
-                                             onRecordPayment?.(selectedPill.student.id);
-                                         }} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-colors">
-                                            💰 Collect Now
-                                         </button>
-                                         <button onClick={() => {
-                                             toggleMonthDue(selectedPill.student, selectedPill.month);
-                                             setSelectedPill(null);
-                                         }} className="px-4 bg-white border border-gray-300 text-gray-600 rounded-xl font-bold hover:text-primary transition-colors">
-                                            Remove
-                                         </button>
-                                     </div>
-                                   </>
-                               )}
+                                            </button>
+                                            
+                                            <button onClick={async () => {
+                                             if(!window.confirm('Are you sure you want to revert this payment back to unpaid? This will mark the transaction as REFUNDED in history.')) return;
+                                             try {
+                                                 const s = selectedPill.student;
+                                                 const t = Number(s.originalTuition || 0);
+                                                 const e = Number(s.examFee || 0);
+                                                 const c = Number(s.computerFee || 0);
+                                                 const tr = Number(s.transportFee || 0);
+                                                 const o = Number(s.otherFee || 0);
+                                                 const sch = Number(s.scholarshipStatus === 'Provided' ? (s.scholarshipAmount || 0) : 0);
+                                                 const calcTotal = Math.max(0, t + e + c + tr + o - sch);
+
+                                                 if (feeMonth?.transactionId) {
+                                                     const batch = writeBatch(db);
+                                                     
+                                                     // Query all fee docs tied to this transaction
+                                                     const q = query(collection(db, 'studentFees'), where('transactionId', '==', feeMonth.transactionId));
+                                                     const snap = await getDocs(q);
+                                                     
+                                                     if (!snap.empty) {
+                                                         snap.forEach(d => {
+                                                             batch.set(d.ref, {
+                                                                 status: 'due',
+                                                                 paidAmount: 0,
+                                                                 dueAmount: d.data().totalFee || calcTotal,
+                                                                 paidAt: deleteField(),
+                                                                 receiptNo: deleteField(),
+                                                                 transactionId: deleteField(),
+                                                                 paymentMethod: deleteField(),
+                                                                 collectorId: deleteField(),
+                                                                 collectorName: deleteField()
+                                                             }, { merge: true });
+                                                         });
+                                                     } else {
+                                                         // Fallback if not found via query (e.g., missing transactionId on doc)
+                                                         const feeId = feeMonth?.id || `${selectedPill.student.id}_${selectedPill.month}`;
+                                                         const feeRef = doc(db, 'studentFees', feeId);
+                                                         batch.set(feeRef, {
+                                                             status: 'due',
+                                                             paidAmount: 0,
+                                                             dueAmount: feeMonth?.totalFee || calcTotal,
+                                                             totalFee: feeMonth?.totalFee || calcTotal,
+                                                             studentId: selectedPill.student.id,
+                                                             month: feeMonth?.month || selectedPill.month,
+                                                             paidAt: deleteField(),
+                                                             receiptNo: deleteField(),
+                                                             transactionId: deleteField(),
+                                                             paymentMethod: deleteField(),
+                                                             collectorId: deleteField(),
+                                                             collectorName: deleteField()
+                                                         }, { merge: true });
+                                                     }
+                                                     
+                                                     // Instead of deleting, mark as Refunded
+                                                     batch.set(doc(db, 'transactions', feeMonth.transactionId), { status: 'REFUNDED' }, { merge: true });
+                                                     
+                                                     await batch.commit();
+                                                 } else {
+                                                     // No transaction ID recorded, just revert this single document directly
+                                                     const feeId = feeMonth?.id || `${selectedPill.student.id}_${selectedPill.month}`;
+                                                     const feeRef = doc(db, 'studentFees', feeId);
+                                                     
+                                                     await setDoc(feeRef, {
+                                                         status: 'due',
+                                                         paidAmount: 0,
+                                                         dueAmount: feeMonth?.totalFee || calcTotal,
+                                                         totalFee: feeMonth?.totalFee || calcTotal,
+                                                         studentId: selectedPill.student.id,
+                                                         month: feeMonth?.month || selectedPill.month,
+                                                         paidAt: deleteField(),
+                                                         receiptNo: deleteField(),
+                                                         transactionId: deleteField(),
+                                                         paymentMethod: deleteField(),
+                                                         collectorId: deleteField(),
+                                                         collectorName: deleteField()
+                                                     }, { merge: true });
+                                                 }
+
+                                                 setSelectedPill(null);
+                                                 if (onRefresh) onRefresh();
+                                             } catch(e: any) {
+                                                 console.error("Revert error: ", e);
+                                                 alert(`Failed to revert payment: ${e.message || 'Unknown error'}`);
+                                             }
+                                          }} className="w-full bg-red-50 text-red-600 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-red-100 transition-colors uppercase tracking-widest border border-red-100/50">
+                                             ⚠️ Revert to Unpaid
+                                          </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                      <div className="bg-red-50 border border-red-100 rounded-2xl p-5 mb-5 flex flex-col items-center justify-center text-center">
+                                         <p className="text-xs font-black uppercase tracking-widest text-red-400 mb-1">Amount Due</p>
+                                         <p className="text-3xl font-black text-red-600">NRs. {(feeMonth?.dueAmount || feeMonth?.totalFee || selectedPill.student.monthlyFee || 0).toLocaleString()}</p>
+                                      </div>
+                                      <div className="flex flex-col gap-3">
+                                          <button onClick={() => {
+                                              setSelectedPill(null);
+                                              onRecordPayment?.(selectedPill.student.id);
+                                          }} className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-600 transition-transform hover:scale-[1.02] shadow-xl shadow-emerald-500/20 uppercase tracking-widest text-sm">
+                                             💰 Collect Now
+                                          </button>
+                                          <button onClick={() => {
+                                              toggleMonthDue(selectedPill.student, selectedPill.month);
+                                              setSelectedPill(null);
+                                          }} className="w-full py-3 bg-white border-2 border-gray-200 text-gray-500 rounded-2xl font-black hover:text-gray-900 transition-colors uppercase tracking-widest text-xs">
+                                             Remove Due
+                                          </button>
+                                      </div>
+                                    </>
+                                )}
                             </div>
+                        </div>
                         );
                     })()}
                </div>

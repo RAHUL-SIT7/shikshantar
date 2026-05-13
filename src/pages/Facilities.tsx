@@ -64,6 +64,8 @@ export default function Facilities() {
         setFacilitiesText('Our modern infrastructure is designed to provide students with the best possible environment for learning, growth, and extracurricular development.');
         setFacilitiesList(DEFAULT_FACILITIES);
       }
+    }, (error) => {
+        console.warn("Could not load facilities", error);
     });
     return () => unsub();
   }, []);

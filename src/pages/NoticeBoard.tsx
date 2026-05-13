@@ -60,7 +60,8 @@ export default function NoticeBoard() {
       }, (err: any) => {
         if (isPrivileged && err?.message?.includes('Missing or insufficient permissions')) {
           localStorage.removeItem('userRole');
-          window.location.reload();
+          // window.location.reload();
+          setLoading(false);
         } else {
           console.warn("NoticeBoard fetch error:", err.message);
           setLoading(false);

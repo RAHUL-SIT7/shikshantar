@@ -39,7 +39,7 @@ const initialFAQs = [
   {
     id: 6, category: "Fee & Payment",
     question: "What payment methods are accepted?",
-    answer: "We accept Cash (at school fee office), eSewa, and Khalti digital payments. Bank transfer to our school account is also accepted. Please bring the transaction screenshot as proof for digital payments.",
+    answer: "We only accept Cash payments at the school fee office.",
     published: true, order: 2
   },
   {

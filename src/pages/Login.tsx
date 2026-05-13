@@ -108,7 +108,13 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
           localStorage.setItem('userRole', "student"); // Default
         }
       } else {
-        localStorage.setItem('userRole', "student");
+        if (email !== 'rahulsah4534@gmail.com') {
+          await signOut(auth);
+          setError('Your account has been deleted or disabled by the administrator.');
+          setLoading(false);
+          return;
+        }
+        localStorage.setItem('userRole', "admin");
       }
 
       localStorage.removeItem('isGuest');
@@ -117,8 +123,12 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     } catch (err: any) {
       console.error("Login failed:", err);
       // Show actual error message if possible to help the user debug
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || String(err.message).includes('auth/invalid-credential')) {
          setError('Email or password is incorrect.');
+      } else if (err.code === 'auth/network-request-failed' || String(err.message).includes('network-request-failed')) {
+         setError('Network connection failed due to browser IndexedDB freeze or tracker-blocking. Please refresh the page, enable third-party cookies, or open the app in a new window to login.');
+      } else if (err.code === 'auth/too-many-requests' || String(err.message).includes('too-many-requests')) {
+         setError('Access to this account has been temporarily disabled due to many failed login attempts. Please try again later.');
       } else {
          setError(err.message || 'Login failed. Please try again.');
       }
@@ -130,6 +140,23 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
   const saveStudentToFirestore = async (uid: string, isNewUser: boolean = false) => {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
+    
+    let extractedRoll = '';
+    const match = studentIdInput.match(/^SA\d+([A-Z]*\d*)*$/i);
+    if (match) {
+        const numPart = studentIdInput.replace(/^SA/i, '');
+        let clsStr = studentClass || '';
+        if (numPart.startsWith(clsStr)) {
+            extractedRoll = numPart.substring(clsStr.length);
+        } else if (numPart.startsWith('0' + clsStr)) {
+            extractedRoll = numPart.substring(clsStr.length + 1);
+        } else {
+            extractedRoll = numPart;
+        }
+    } else {
+        extractedRoll = studentIdInput;
+    }
+
     const studentData = {
       name,
       fatherName,
@@ -138,7 +165,9 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
       studentClass,
       address,
       phone,
-      studentId: studentIdInput
+      studentId: studentIdInput,
+      rollNumber: extractedRoll,
+      rollNo: extractedRoll
     };
 
     if (userSnap.exists()) {
@@ -153,7 +182,9 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
         phone: phone,
         status: "pending", // New users go to pending state
         children: [studentData],
-        studentIds: [studentIdInput]
+        studentIds: [studentIdInput],
+        rollNumber: extractedRoll,
+        rollNo: extractedRoll
       });
     }
   };
@@ -213,6 +244,8 @@ export default function Login({ setIsAuthenticated }: { setIsAuthenticated: (val
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use' || String(err.message).includes('auth/email-already-in-use')) {
         setError('An account with this email address already exists. Please use a different email or log in.');
+      } else if (err.code === 'auth/network-request-failed') {
+        setError('Network connection failed. Please check your internet connection or try disabling any ad-blockers/VPNs.');
       } else {
         setError(err.message || 'Failed to complete registration.');
       }

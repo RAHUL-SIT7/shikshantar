@@ -80,7 +80,7 @@ export default function About() {
       <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 relative overflow-hidden mb-8 group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-50 pointer-events-none transition-opacity group-hover:opacity-100"></div>
         <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 bg-primary text-xs font-black tracking-widest mb-6 uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-black tracking-widest mb-6 uppercase shadow-sm">
             <Info className="w-3.5 h-3.5" />
             About Our Institution
           </div>

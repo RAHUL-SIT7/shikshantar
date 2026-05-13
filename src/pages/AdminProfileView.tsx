@@ -28,6 +28,7 @@ export default function AdminProfileView() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLastChanged, setPasswordLastChanged] = useState('30 days ago');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -35,11 +36,31 @@ export default function AdminProfileView() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+  const [deviceInfo, setDeviceInfo] = useState('Current Device');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Parse user agent
+    const ua = navigator.userAgent;
+    let browser = 'Unknown Browser';
+    let os = 'Unknown OS';
+
+    if (ua.includes('Chrome') && !ua.includes('Edg/')) browser = 'Chrome';
+    else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+    else if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Edg/')) browser = 'Edge';
+    else if (ua.includes('Trident/')) browser = 'Internet Explorer';
+
+    if (ua.includes('Win')) os = 'Windows';
+    else if (ua.includes('Mac')) os = 'MacOS';
+    else if (ua.includes('Linux')) os = 'Linux';
+    else if (ua.includes('Android')) os = 'Android';
+    else if (ua.includes('like Mac OS X')) os = 'iOS';
+
+    setDeviceInfo(`${browser} on ${os}`);
+
     const fetchAdminData = async () => {
       if (auth.currentUser) {
         try {
@@ -54,6 +75,13 @@ export default function AdminProfileView() {
             setAddress(data.address || '');
             setGender(data.gender || 'Male');
             setAvatarUrl(data.avatarUrl || '');
+            if (data.passwordUpdatedAt) {
+              const d = new Date(data.passwordUpdatedAt);
+              const diff = Math.floor((new Date().getTime() - d.getTime()) / (1000 * 3600 * 24));
+              setPasswordLastChanged(diff === 0 ? 'Today' : `${diff} days ago`);
+            } else {
+              setPasswordLastChanged('Unknown');
+            }
           }
         } catch (e) {
           console.error("Error fetching admin profile", e);
@@ -96,6 +124,19 @@ export default function AdminProfileView() {
       console.error("Error uploading photo", err);
       // fallback to original or show error?
       showToast('Error uploading photo');
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, { avatarUrl: null });
+      setAvatarUrl('');
+      showToast('Profile photo removed successfully');
+    } catch (err: any) {
+      console.error("Error removing photo", err);
+      showToast('Error removing photo');
     }
   };
 
@@ -152,6 +193,10 @@ export default function AdminProfileView() {
 
       await updatePassword(user, newPassword);
       
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { passwordUpdatedAt: new Date().toISOString() });
+      setPasswordLastChanged('Today');
+      
       showToast('Password updated successfully');
       setShowPasswordSection(false);
       setCurrentPassword('');
@@ -197,7 +242,7 @@ export default function AdminProfileView() {
     if (pwd.length >= 8) score++;
     if (/[A-Z]/.test(pwd)) score++;
     if (/[0-9]/.test(pwd)) score++;
-    if (/[!@#$]/.test(pwd)) score--; // user requirement: no special character
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) score++; // user requirement: special character is now required
     if (pwd.length > 12) score++;
 
     if (score <= 1) return { label: 'Weak 🔴', color: 'text-red-500' };
@@ -224,7 +269,7 @@ export default function AdminProfileView() {
       )}
 
       {/* SECTION 1 - HERO CARD */}
-      <div className="bg-gradient-to-r text-primary text-primary rounded-2xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden mb-6">
+      <div className="bg-primary bg-gradient-to-br from-primary to-[#1e243b] text-white rounded-2xl p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden mb-6">
          {/* Background decoration */}
          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-[#4f46e5]/20 rounded-full blur-3xl mb-[-100px] pointer-events-none"></div>
@@ -240,12 +285,17 @@ export default function AdminProfileView() {
            </div>
            
            <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.png,.webp" onChange={handlePhotoUpload} />
-           <button 
-             onClick={() => fileInputRef.current?.click()}
-             className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-widest border border-white/30 rounded-full px-3 py-1.5 hover:bg-white/10 transition-colors"
-           >
-              <Camera className="w-3.5 h-3.5" /> Change Photo
-           </button>
+           <div className="flex gap-2 items-center justify-center">
+               <button onClick={() => fileInputRef.current?.click()} className="bg-white text-primary text-xs font-bold px-3 py-1.5 rounded-full shadow-md border border-gray-100 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5" />
+                  {avatarUrl ? 'Change' : 'Upload Photo'}
+               </button>
+               {avatarUrl && (
+                  <button onClick={handlePhotoDelete} className="bg-white text-red-500 text-xs font-bold w-7 h-7 flex justify-center items-center rounded-full shadow-md border border-gray-100 hover:bg-red-50 transition-colors" title="Remove Photo">
+                      <X className="w-3 h-3" />
+                  </button>
+               )}
+           </div>
          </div>
 
          {/* Basic Info */}
@@ -267,22 +317,9 @@ export default function AdminProfileView() {
                  <MonitorSmartphone className="w-3.5 h-3.5 text-blue-300" /> Last Login: Today, 3:17 PM
                </div>
                <div className="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full border border-white/10">
-                 <Shield className="w-3.5 h-3.5 text-orange-300" /> Password updated 30 days ago
+                 <Shield className="w-3.5 h-3.5 text-orange-300" /> Password updated {passwordLastChanged}
                </div>
             </div>
-         </div>
-
-         {/* Profile Completion (Desktop only) */}
-         <div className="hidden lg:flex flex-col items-center justify-center p-4 bg-white/5 rounded-xl border border-white/10 relative z-10 shrink-0">
-            <div className="w-20 h-20 relative flex items-center justify-center mb-2">
-              <svg className="w-full h-full transform -rotate-90">
-                 <circle cx="40" cy="40" r="36" fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
-                 <circle cx="40" cy="40" r="36" fill="transparent" stroke="#10b981" strokeWidth="6" strokeDasharray="226" strokeDashoffset={226 - (226 * 0.75)} strokeLinecap="round" />
-              </svg>
-              <span className="absolute text-white font-black text-lg">75%</span>
-            </div>
-            <p className="text-xs text-white font-bold tracking-wide">Profile Complete</p>
-            <p className="text-[10px] text-gray-400 mt-1">Add position to complete</p>
          </div>
       </div>
 
@@ -442,7 +479,7 @@ export default function AdminProfileView() {
                    <h3 className="text-sm font-bold text-gray-900 mb-1">Account Password</h3>
                    <div className="flex items-center gap-2">
                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                     <p className="text-xs font-bold text-gray-500">Last changed: 30 days ago</p>
+                     <p className="text-xs font-bold text-gray-500">Last changed: {passwordLastChanged}</p>
                    </div>
                  </div>
 
@@ -493,7 +530,7 @@ export default function AdminProfileView() {
                              <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${newPassword.length >= 8 ? 'text-emerald-500' : 'text-gray-300'}`}/> At least 8 characters</li>
                              <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[A-Z]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains uppercase letter</li>
                              <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[0-9]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`}/> Contains number</li>
-                             <li className="flex gap-1.5"><X className={`w-3.5 h-3.5 ${/[!@#$]/.test(newPassword) ? 'text-red-500' : 'text-gray-300'}`} /> Cannot contain special character (!@#$)</li>
+                             <li className="flex gap-1.5"><Check className={`w-3.5 h-3.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(newPassword) ? 'text-emerald-500' : 'text-gray-300'}`} /> Contains special character</li>
                            </ul>
                          </div>
                       </div>
@@ -511,7 +548,7 @@ export default function AdminProfileView() {
                       </div>
                       
                       <div className="pt-2 flex gap-3">
-                         <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || /[!@#$]/.test(newPassword)} className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-primary-dark transition-colors w-full disabled:opacity-50 flex items-center justify-center gap-2">
+                         <button type="submit" disabled={pwdLoading || !newPassword || newPassword !== confirmPassword || newPassword.length < 8 || !/[0-9]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)} className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm hover:bg-primary-dark transition-colors w-full disabled:opacity-50 flex items-center justify-center gap-2">
                             {pwdLoading ? 'Updating...' : 'Update Password'}
                          </button>
                          <button type="button" onClick={() => setShowPasswordSection(false)} className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-5 py-2.5 rounded-lg hover:text-primary transition-colors">
@@ -533,10 +570,10 @@ export default function AdminProfileView() {
                        <MonitorSmartphone className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                        <div>
                           <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                            Chrome on MacOS
+                            {deviceInfo}
                             <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">This device</span>
                           </p>
-                          <p className="text-xs text-gray-500 font-medium">Siraha, Nepal • Active now</p>
+                          <p className="text-xs text-gray-500 font-medium">Active now</p>
                        </div>
                     </div>
                  </div>

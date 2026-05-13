@@ -26,14 +26,14 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
   const [examType, setExamType] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [subjectConfigs, setSubjectConfigs] = useState<Record<string, {fullMarks: number | '', passMarks: number | ''}>>({});
+  const [subjectConfigs, setSubjectConfigs] = useState<Record<string, {thFullMarks: number | '', thPassMarks: number | '', prFullMarks: number | '', prPassMarks: number | '', hasTh: boolean, hasPr: boolean}>>({});
   
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   const allowedClasses = userRole === 'admin' ? allClasses : assignedClasses;
   const dynamicSubjects = selectedClass ? (CLASS_SUBJECTS[selectedClass] || allSubjects) : [];
-  const allowedSubjects = userRole === 'admin' ? dynamicSubjects : assignedSubjects.filter((s: string) => dynamicSubjects.includes(s));
+  const allowedSubjects = dynamicSubjects;
   const allowedSubjectsWithAll = ["All Subjects", ...allowedSubjects];
 
 
@@ -73,17 +73,38 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
           
           let classStudents = usersSnap.docs.map(d => {
              const usr = d.data();
+             let fallbackRoll = '';
+             let sId = usr.studentId || '';
+             
+             if (!usr.rollNumber && !usr.rollNo && !!sId) {
+                 const match = sId.match(/^SA\d+([A-Z]*\d*)*$/i);
+                 if (match) {
+                     const numPart = sId.replace(/^SA/i, '');
+                     let clsStr = usr.class || '';
+                     if (numPart.startsWith(clsStr)) {
+                         fallbackRoll = numPart.substring(clsStr.length);
+                     } else if (numPart.startsWith('0' + clsStr)) {
+                         fallbackRoll = numPart.substring(clsStr.length + 1);
+                     } else {
+                         fallbackRoll = numPart;
+                     }
+                 } else {
+                     fallbackRoll = sId;
+                 }
+             }
+
              return {
                  studentId: d.id,
-                 studentName: usr.firstName && usr.lastName ? `${usr.firstName} ${usr.lastName}` : (usr.email || 'Unknown')
+                 schoolId: usr.rollNumber || usr.rollNo || fallbackRoll || usr.studentId || '',
+                 studentName: usr.fullName ? usr.fullName : (usr.firstName && usr.lastName ? `${usr.firstName} ${usr.lastName}` : (usr.email || 'Unknown'))
              };
           });
 
           // Fallback if no students in users col: try the current results to prefill
           if (classStudents.length === 0) {
               const classResults = (data as StudentResult[]).filter(r => String(r.class) === selectedClass);
-              const uniqueStudentsMap = new Map<string, {studentId: string, studentName: string}>();
-              classResults.forEach(r => uniqueStudentsMap.set(r.studentId, {studentId: r.studentId, studentName: r.studentName}));
+              const uniqueStudentsMap = new Map<string, {studentId: string, schoolId: string, studentName: string}>();
+              classResults.forEach(r => uniqueStudentsMap.set(r.studentId, {studentId: r.studentId, schoolId: '', studentName: r.studentName}));
               classStudents = Array.from(uniqueStudentsMap.values());
           }
           
@@ -92,34 +113,44 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
           const mapped = classStudents.map(s => {
               const existingRec = classResults.find(r => r.studentId === s.studentId && r.examType === examType);
               
-              const subjectMarks: Record<string, string> = {};
-              const subjectAbsents: Record<string, boolean> = {};
+              const subjectMarksTH: Record<string, string> = {};
+              const subjectMarksPR: Record<string, string> = {};
+              const subjectAbsentsTH: Record<string, boolean> = {};
+              const subjectAbsentsPR: Record<string, boolean> = {};
 
               dynamicSubjects.forEach((subj: string) => {
-                  const m = existingRec?.subjects?.[subj]?.obtained;
-                  if (m !== undefined) {
-                     if (m === 'AB') {
-                         subjectAbsents[subj] = true;
-                         subjectMarks[subj] = '';
-                     } else {
-                         subjectMarks[subj] = String(m);
-                         subjectAbsents[subj] = false;
-                     }
+                  const sData = existingRec?.subjects?.[subj];
+                  const thM = sData?.thMarks;
+                  const prM = sData?.prMarks;
+                  
+                  if (thM !== undefined) {
+                     if (thM === 'AB') { subjectAbsentsTH[subj] = true; subjectMarksTH[subj] = ''; } 
+                     else { subjectMarksTH[subj] = String(thM); subjectAbsentsTH[subj] = false; }
                   } else {
-                     subjectMarks[subj] = '';
-                     subjectAbsents[subj] = false;
+                     subjectMarksTH[subj] = ''; subjectAbsentsTH[subj] = false;
+                  }
+
+                  if (prM !== undefined) {
+                     if (prM === 'AB') { subjectAbsentsPR[subj] = true; subjectMarksPR[subj] = ''; } 
+                     else { subjectMarksPR[subj] = String(prM); subjectAbsentsPR[subj] = false; }
+                  } else {
+                     subjectMarksPR[subj] = ''; subjectAbsentsPR[subj] = false;
                   }
               });
 
               // for single subject
-              const existingMarks = selectedSubject !== 'All Subjects' ? existingRec?.subjects?.[selectedSubject]?.obtained : undefined;
+              const exSData = selectedSubject !== 'All Subjects' ? existingRec?.subjects?.[selectedSubject] : undefined;
               return {
                   ...s,
                   Class: selectedClass,
-                  tempMark: existingMarks !== undefined && existingMarks !== 'AB' ? String(existingMarks) : '',
-                  isAbsent: existingMarks === 'AB',
-                  subjectMarks,
-                  subjectAbsents,
+                  tempMarkTH: exSData?.thMarks !== undefined && exSData?.thMarks !== 'AB' ? String(exSData.thMarks) : '',
+                  tempMarkPR: exSData?.prMarks !== undefined && exSData?.prMarks !== 'AB' ? String(exSData.prMarks) : '',
+                  isAbsentTH: exSData?.thMarks === 'AB',
+                  isAbsentPR: exSData?.prMarks === 'AB',
+                  subjectMarksTH,
+                  subjectMarksPR,
+                  subjectAbsentsTH,
+                  subjectAbsentsPR,
               };
           });
 
@@ -134,29 +165,60 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
     loadStudents();
   }, [selectedClass, selectedSubject, examType, data]);
 
-  const handleMarkChange = (idx: number, rawVal: string, subj?: string) => {
+  const handleConfigChange = (subj: string, field: 'thFullMarks' | 'prFullMarks', val: string) => {
+      let numVal: number | '' = val === '' ? '' : Number(val);
+      setSubjectConfigs(prev => {
+          const prevConf = prev[subj] || { thFullMarks: 75, thPassMarks: 30, prFullMarks: 25, prPassMarks: 10, hasTh: true, hasPr: true };
+          const newConf = { ...prevConf, [field]: numVal };
+          if (field === 'thFullMarks' && typeof numVal === 'number') {
+              newConf.thPassMarks = Math.round(numVal * 0.4);
+          }
+          if (field === 'prFullMarks' && typeof numVal === 'number') {
+              newConf.prPassMarks = Math.round(numVal * 0.4);
+          }
+          return { ...prev, [subj]: newConf };
+      });
+  };
+
+  const handleMarkChange = (idx: number, rawVal: string, type: 'TH'|'PR', subj?: string) => {
       let val = rawVal.replace(/[^0-9.]/g, '');
       val = val.replace(/^0+(?=\d)/, '');
       
       const v = Number(val);
-      const subjConfig = subjectConfigs[subj || selectedSubject] || { fullMarks: 100, passMarks: 40 };
-      const maxMarks = subjConfig.fullMarks === '' ? Infinity : subjConfig.fullMarks;
+      const subjConfig = subjectConfigs[subj || selectedSubject] || { thFullMarks: 75, thPassMarks: 30, prFullMarks: 25, prPassMarks: 10, hasTh: true, hasPr: true };
+      
+      const maxMarks = type === 'TH' ? (subjConfig.thFullMarks === '' ? Infinity : subjConfig.thFullMarks) : (subjConfig.prFullMarks === '' ? Infinity : subjConfig.prFullMarks);
+      
       if (val !== '' && (v > maxMarks || v < 0)) return; // prevent invalid
       const newS = [...students];
       if (subj) {
-          newS[idx].subjectMarks[subj] = val;
+          if(type === 'TH') newS[idx].subjectMarksTH[subj] = val;
+          else newS[idx].subjectMarksPR[subj] = val;
       } else {
-          newS[idx].tempMark = val;
+          if(type === 'TH') newS[idx].tempMarkTH = val;
+          else newS[idx].tempMarkPR = val;
       }
       setStudents(newS);
   };
 
-  const handleAbsentChange = (idx: number, checked: boolean, subj?: string) => {
+  const handleAbsentChange = (idx: number, type: 'TH'|'PR', checked: boolean, subj?: string) => {
       const newS = [...students];
       if (subj) {
-          newS[idx].subjectAbsents[subj] = checked;
+          if(type === 'TH') {
+              newS[idx].subjectAbsentsTH[subj] = checked;
+              if (checked) newS[idx].subjectMarksTH[subj] = '';
+          } else {
+              newS[idx].subjectAbsentsPR[subj] = checked;
+              if (checked) newS[idx].subjectMarksPR[subj] = '';
+          }
       } else {
-          newS[idx].isAbsent = checked;
+          if(type === 'TH') {
+              newS[idx].isAbsentTH = checked;
+              if (checked) newS[idx].tempMarkTH = '';
+          } else {
+              newS[idx].isAbsentPR = checked;
+              if (checked) newS[idx].tempMarkPR = '';
+          }
       }
       setStudents(newS);
   };
@@ -168,29 +230,31 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
   };
 
   const addStudentRow = () => {
-      const subjectMarks: Record<string, string> = {};
-      const subjectAbsents: Record<string, boolean> = {};
-      dynamicSubjects.forEach((subj: string) => {
-          subjectMarks[subj] = '';
-          subjectAbsents[subj] = false;
-      });
-      setStudents([...students, { 
-          studentId: `S${Date.now().toString().slice(-6)}`, 
-          studentName: '', 
+      const newId = 'TEMP' + Math.floor(Math.random()*10000);
+      setStudents([...students, {
+          studentId: newId,
+          schoolId: '',
+          studentName: 'New Student',
           Class: selectedClass,
-          tempMark: '', 
-          isAbsent: false,
-          subjectMarks,
-          subjectAbsents
+          tempMarkTH: '',
+          tempMarkPR: '',
+          isAbsentTH: false,
+          isAbsentPR: false,
+          subjectMarksTH: {},
+          subjectMarksPR: {},
+          subjectAbsentsTH: {},
+          subjectAbsentsPR: {}
       }]);
   };
 
   const markAllPresent = () => {
-      const newS = students.map(s => {
-          const newSbjAbs = {...s.subjectAbsents};
-          Object.keys(newSbjAbs).forEach(k => newSbjAbs[k] = false);
-          return {...s, isAbsent: false, subjectAbsents: newSbjAbs};
-      });
+      const newS = students.map(s => ({
+          ...s,
+          isAbsentTH: false,
+          isAbsentPR: false,
+          subjectAbsentsTH: {},
+          subjectAbsentsPR: {}
+      }));
       setStudents(newS);
   };
 
@@ -217,19 +281,21 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
           let opCount = 0;
 
           for (const std of students) {
-              let finalMarksParams: Record<string, number | 'AB'> = {};
+              let finalMarksParams: Record<string, {th: number | 'AB', pr: number | 'AB'}> = {};
 
               if (selectedSubject === 'All Subjects') {
                   dynamicSubjects.forEach((subj: string) => {
-                      const smark = std.subjectAbsents[subj] ? 'AB' : (std.subjectMarks[subj] === '' ? '' : Number(std.subjectMarks[subj]));
-                      if (smark !== '') {
-                          finalMarksParams[subj] = smark;
+                      const thMark = std.subjectAbsentsTH[subj] ? 'AB' : (std.subjectMarksTH[subj] === '' ? null : Number(std.subjectMarksTH[subj]));
+                      const prMark = std.subjectAbsentsPR[subj] ? 'AB' : (std.subjectMarksPR[subj] === '' ? null : Number(std.subjectMarksPR[subj]));
+                      if (thMark !== null || prMark !== null) {
+                          finalMarksParams[subj] = { th: thMark !== null ? thMark : 0, pr: prMark !== null ? prMark : 0 };
                       }
                   });
               } else {
-                  const finalVal = std.isAbsent ? 'AB' : (std.tempMark === '' ? '' : Number(std.tempMark));
-                  if (finalVal !== '') {
-                      finalMarksParams[selectedSubject] = finalVal;
+                  const thVal = std.isAbsentTH ? 'AB' : (std.tempMarkTH === '' ? null : Number(std.tempMarkTH));
+                  const prVal = std.isAbsentPR ? 'AB' : (std.tempMarkPR === '' ? null : Number(std.tempMarkPR));
+                  if (thVal !== null || prVal !== null) {
+                      finalMarksParams[selectedSubject] = { th: thVal !== null ? thVal : 0, pr: prVal !== null ? prVal : 0 };
                   }
               }
 
@@ -242,16 +308,32 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                   let updatedSubjects = { ...rec.subjects };
                   
                   Object.entries(finalMarksParams).forEach(([subj, val]) => {
-                      const subjConfig = subjectConfigs[subj] || { fullMarks: 100, passMarks: 40 };
-                      updatedSubjects[subj] = { fullMarks: subjConfig.fullMarks, passMarks: subjConfig.passMarks, obtained: val };
+                      const subjConfig = subjectConfigs[subj] || { thFullMarks: 75, thPassMarks: 30, prFullMarks: 25, prPassMarks: 10, hasTh: true, hasPr: true };
+                      const sumObtained = (val.th === 'AB' ? 0 : val.th) + (val.pr === 'AB' ? 0 : val.pr);
+                      const isCompleteAB = val.th === 'AB' && val.pr === 'AB';
+                      const obtainedTotal = isCompleteAB ? 'AB' : sumObtained;
+                      
+                      const tFM = subjConfig.hasTh ? Number(subjConfig.thFullMarks || 0) : 0;
+                      const pFM = subjConfig.hasPr ? Number(subjConfig.prFullMarks || 0) : 0;
+                      
+                      const updateData = { 
+                          fullMarks: tFM + pFM,
+                          obtained: obtainedTotal,
+                          thMarks: val.th, prMarks: val.pr,
+                          thFull: tFM, prFull: pFM, 
+                          thPass: Number(subjConfig.thPassMarks || 0), prPass: Number(subjConfig.prPassMarks || 0)
+                      };
+                      
+                      updatedSubjects[subj] = updateData;
                       const subjectDocId = `${examId}_${std.studentId}_${subj.replace(/\s+/g, '')}`;
                       batch.set(doc(db, 'results', subjectDocId), {
                           studentId: std.studentId,
                           examId: examId,
                           subject: subj,
-                          marks: val,
-                          fullMarks: subjConfig.fullMarks,
-                          passMarks: subjConfig.passMarks
+                          marks: obtainedTotal,
+                          fullMarks: tFM + pFM,
+                          thMarks: val.th, prMarks: val.pr,
+                          thFull: tFM, prFull: pFM
                       });
                       opCount++;
                   });
@@ -269,11 +351,13 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                   rec.grade = getGrade(t, ft); // Note: Simple sum grade
                   rec.gpa = getNepalGPA(rec.percentage);
                   rec.studentName = std.studentName || rec.studentName;
+                  rec.rollNo = std.schoolId || '00';
 
                   const summaryDocId = `${examId}_${std.studentId}`;
                   batch.set(doc(db, 'resultSummary', summaryDocId), {
                       studentId: std.studentId,
                       studentName: rec.studentName,
+                      rollNo: rec.rollNo,
                       class: String(rec.class),
                       examId: examId,
                       examType: examType,
@@ -291,16 +375,30 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                   
                   let newSubjects: any = {};
                   Object.entries(finalMarksParams).forEach(([subj, val]) => {
-                      const subjConfig = subjectConfigs[subj] || { fullMarks: 100, passMarks: 40 };
-                      newSubjects[subj] = { fullMarks: subjConfig.fullMarks, passMarks: subjConfig.passMarks, obtained: val };
+                      const subjConfig = subjectConfigs[subj] || { thFullMarks: 75, thPassMarks: 30, prFullMarks: 25, prPassMarks: 10, hasTh: true, hasPr: true };
+                      const sumObtained = (val.th === 'AB' ? 0 : val.th) + (val.pr === 'AB' ? 0 : val.pr);
+                      const isCompleteAB = val.th === 'AB' && val.pr === 'AB';
+                      const obtainedTotal = isCompleteAB ? 'AB' : sumObtained;
+                      
+                      const tFM = subjConfig.hasTh ? Number(subjConfig.thFullMarks || 0) : 0;
+                      const pFM = subjConfig.hasPr ? Number(subjConfig.prFullMarks || 0) : 0;
+                      
+                      newSubjects[subj] = { 
+                          fullMarks: tFM + pFM,
+                          obtained: obtainedTotal,
+                          thMarks: val.th, prMarks: val.pr,
+                          thFull: tFM, prFull: pFM, 
+                          thPass: Number(subjConfig.thPassMarks || 0), prPass: Number(subjConfig.prPassMarks || 0)
+                      };
                       const subjectDocId = `${examId}_${std.studentId}_${subj.replace(/\s+/g, '')}`;
                       batch.set(doc(db, 'results', subjectDocId), {
                           studentId: std.studentId,
                           examId: examId,
                           subject: subj,
-                          marks: val,
-                          fullMarks: subjConfig.fullMarks,
-                          passMarks: subjConfig.passMarks
+                          marks: obtainedTotal,
+                          fullMarks: tFM + pFM,
+                          thMarks: val.th, prMarks: val.pr,
+                          thFull: tFM, prFull: pFM
                       });
                       opCount++;
                   });
@@ -316,7 +414,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                       studentId: std.studentId,
                       studentName: std.studentName,
                       class: std.Class || selectedClass,
-                      rollNo: '00',
+                      rollNo: std.schoolId || '00',
                       examType: examType,
                       subjects: newSubjects,
                       total: t,
@@ -333,6 +431,7 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                   batch.set(doc(db, 'resultSummary', summaryDocId), {
                       studentId: newRec.studentId,
                       studentName: newRec.studentName,
+                      rollNo: newRec.rollNo,
                       class: String(newRec.class),
                       examId: examId,
                       examType: examType,
@@ -423,14 +522,14 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
           if (!std.studentId?.trim() || !std.studentName?.trim()) return false;
           if (selectedSubject === 'All Subjects') {
               for (const subj of dynamicSubjects) {
-                  if (!std.subjectAbsents[subj] && (std.subjectMarks[subj] === '' || std.subjectMarks[subj] === undefined)) {
-                      return false;
-                  }
+                  const cnf = subjectConfigs[subj] || { hasTh: true, hasPr: true };
+                  if (cnf.hasTh && !std.subjectAbsentsTH?.[subj] && (std.subjectMarksTH?.[subj] === '' || std.subjectMarksTH?.[subj] === undefined)) return false;
+                  if (cnf.hasPr && !std.subjectAbsentsPR?.[subj] && (std.subjectMarksPR?.[subj] === '' || std.subjectMarksPR?.[subj] === undefined)) return false;
               }
           } else {
-              if (!std.isAbsent && (std.tempMark === '' || std.tempMark === undefined)) {
-                  return false;
-              }
+              const cnf = subjectConfigs[selectedSubject] || { hasTh: true, hasPr: true };
+              if (cnf.hasTh && !std.isAbsentTH && (std.tempMarkTH === '' || std.tempMarkTH === undefined)) return false;
+              if (cnf.hasPr && !std.isAbsentPR && (std.tempMarkPR === '' || std.tempMarkPR === undefined)) return false;
           }
       }
       return true;
@@ -441,14 +540,14 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
       for (const std of students) {
           if (selectedSubject === 'All Subjects') {
               for (const subj of dynamicSubjects) {
-                  if (std.subjectAbsents[subj] || (std.subjectMarks[subj] !== '' && std.subjectMarks[subj] !== undefined)) {
-                      return true;
-                  }
+                  const cnf = subjectConfigs[subj] || { hasTh: true, hasPr: true };
+                  if (cnf.hasTh && (std.subjectAbsentsTH?.[subj] || (std.subjectMarksTH?.[subj] !== '' && std.subjectMarksTH?.[subj] !== undefined))) return true;
+                  if (cnf.hasPr && (std.subjectAbsentsPR?.[subj] || (std.subjectMarksPR?.[subj] !== '' && std.subjectMarksPR?.[subj] !== undefined))) return true;
               }
           } else {
-              if (std.isAbsent || (std.tempMark !== '' && std.tempMark !== undefined)) {
-                  return true;
-              }
+              const cnf = subjectConfigs[selectedSubject] || { hasTh: true, hasPr: true };
+              if (cnf.hasTh && (std.isAbsentTH || (std.tempMarkTH !== '' && std.tempMarkTH !== undefined))) return true;
+              if (cnf.hasPr && (std.isAbsentPR || (std.tempMarkPR !== '' && std.tempMarkPR !== undefined))) return true;
           }
       }
       return false;
@@ -505,137 +604,147 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                    {allowedSubjectsWithAll.map((s: string) => <option key={s} value={s}>{s}</option>)}
                </select>
             </div>
-            
-            {selectedSubject === 'All Subjects' ? (
-               <div className="col-span-1 lg:col-span-4 mt-2">
-                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subject Full Marks & Pass Marks</label>
-                   <div className="grid grid-cols-2 lg:col-span-4 lg:grid-cols-6 gap-3">
-                       {dynamicSubjects.map((subj: string) => (
-                           <div key={subj} className="border-primary text-primary p-2 rounded-lg border flex flex-col gap-2">
-                               <div className="text-xs font-bold text-gray-700 truncate">{subj}</div>
-                               <div className="flex gap-2">
-                                   <div className="flex-1">
-                                       <label className="text-[10px] text-gray-400">Full</label>
-                                       <input type="number" value={subjectConfigs[subj]?.fullMarks ?? 100} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {passMarks:40}), fullMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
-                                   </div>
-                                   <div className="flex-1">
-                                       <label className="text-[10px] text-gray-400">Pass</label>
-                                       <input type="number" value={subjectConfigs[subj]?.passMarks ?? 40} onChange={e => setSubjectConfigs({...subjectConfigs, [subj]: {...(subjectConfigs[subj] || {fullMarks:100}), passMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-1 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 focus:ring-primary bg-white font-bold" />
-                                   </div>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-               </div>
-            ) : (
-                selectedSubject && (
-                   <div className="col-span-1 lg:col-span-4 flex gap-4 mt-2">
-                      <div className="flex-1">
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.fullMarks ?? 100} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {passMarks:40}), fullMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
-                      </div>
-                      <div className="flex-1">
-                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pass Marks</label>
-                         <input type="number" value={subjectConfigs[selectedSubject]?.passMarks ?? 40} onChange={e=>setSubjectConfigs({...subjectConfigs, [selectedSubject]: {...(subjectConfigs[selectedSubject] || {fullMarks:100}), passMarks: e.target.value === '' ? '' : Number(e.target.value)}})} className="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none font-bold border-primary text-primary" />
-                      </div>
-                   </div>
-                )
-            )}
         </div>
 
-        {!selectedClass || !selectedSubject ? (
-            <div className="text-center py-12 border-primary text-primary rounded-xl border border-dashed border-gray-300">
-               <AlertCircle className="mx-auto w-10 h-10 text-gray-400 mb-2" />
-               <p className="font-bold text-gray-600">Select Class and Subject to start entering marks.</p>
+        {!(selectedClass && selectedSubject && examType) ? (
+            <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-10 text-center flex flex-col items-center justify-center mb-6">
+                <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-gray-800 mb-2">Ready to Enter Marks?</h3>
+                <p className="text-sm font-medium text-gray-500 max-w-md">
+                    Please select the <span className="text-gray-800 font-bold">Exam Name</span>, <span className="text-gray-800 font-bold">Class</span>, and <span className="text-gray-800 font-bold">Subject</span> from the dropdowns above to generate the result entry sheet.
+                </p>
             </div>
         ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="bg-gray-100 p-3 px-4 border-b flex justify-between items-center whitespace-nowrap overflow-x-auto">
-                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                        Student List ({students.length})
-                        {loadingStudents && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+            <>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4 cursor-pointer flex items-center gap-2">
+                        Mark Configuration
                     </h3>
-                    <div className="flex gap-2">
-                        <button onClick={addStudentRow} className="bg-white border border-primary text-primary py-1 px-3 rounded-md font-bold text-sm border-primary text-primary hover:bg-blue-50 active:scale-95 transition-all">+ Add Student Row</button>
-                        <button onClick={markAllPresent} className="bg-white border rounded-md px-3 py-1 font-bold text-sm text-gray-600 hover:text-primary active:scale-95 transition-all">Mark All Present</button>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {selectedSubject === 'All Subjects' ? (
+                        dynamicSubjects.map((subj: string) => (
+                            <div key={subj} className="bg-white p-3 border rounded-lg shadow-sm">
+                                <p className="text-xs font-bold text-primary mb-2 truncate">{subj}</p>
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase">TH Full</label>
+                                        <input type="number" value={subjectConfigs[subj]?.thFullMarks ?? 75} onChange={e => handleConfigChange(subj, 'thFullMarks', e.target.value)} className="w-full px-2 py-1 border rounded text-sm outline-none focus:ring-1 focus:ring-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase">PR Full</label>
+                                        <input type="number" value={subjectConfigs[subj]?.prFullMarks ?? 25} onChange={e => handleConfigChange(subj, 'prFullMarks', e.target.value)} className="w-full px-2 py-1 border rounded text-sm outline-none focus:ring-1 focus:ring-primary" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="bg-white p-3 border rounded-lg shadow-sm">
+                            <p className="text-xs font-bold text-primary mb-2 truncate">{selectedSubject}</p>
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase">TH Full</label>
+                                    <input type="number" value={subjectConfigs[selectedSubject]?.thFullMarks ?? 75} onChange={e => handleConfigChange(selectedSubject, 'thFullMarks', e.target.value)} className="w-full px-2 py-1 border rounded text-sm outline-none focus:ring-1 focus:ring-primary" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase">PR Full</label>
+                                    <input type="number" value={subjectConfigs[selectedSubject]?.prFullMarks ?? 25} onChange={e => handleConfigChange(selectedSubject, 'prFullMarks', e.target.value)} className="w-full px-2 py-1 border rounded text-sm outline-none focus:ring-1 focus:ring-primary" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-                
-                {/* Desktop view */}
-                <div className="hidden md:block overflow-x-auto">
-                   <table className="w-full text-left text-sm whitespace-nowrap">
-                       <thead>
-                           <tr className="text-primary border-b">
-                               <th className="p-3">Roll / ID</th>
-                               <th className="p-3">Student Name</th>
-                               {selectedSubject === 'All Subjects' ? (
-                                   dynamicSubjects.map((subj: string) => (
-                                       <th key={subj} className="p-3 text-center">{subj}</th>
-                                   ))
-                               ) : (
-                                   <>
-                                      <th className="p-3">Absent?</th>
-                                      <th className="p-3 w-48">Marks Obtained</th>
-                                      <th className="p-3">Grade</th>
-                                   </>
-                               )}
-                           </tr>
-                       </thead>
-                       <tbody className="divide-y divide-gray-100">
-                           {students.map((std, i) => (
-                               <tr key={i} className="hover:text-primary">
-                                   <td className="p-3">
-                                       <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="w-full min-w-[80px] px-2 py-1.5 border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
-                                   </td>
-                                   <td className="p-3">
-                                       <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full min-w-[150px] px-2 py-1.5 border rounded-md font-bold text-gray-800 uppercase focus:ring-1 focus:ring-primary outline-none" placeholder="Student Name" />
-                                   </td>
-                                   {selectedSubject === 'All Subjects' ? (
-                                       dynamicSubjects.map((subj: string, sIndex: number) => (
-                                           <td key={subj} className="p-3 min-w-[130px]">
-                                               <div className="flex flex-col gap-1 items-center">
-                                                   <input type="text" inputMode="decimal" 
-                                                      value={std.subjectMarks[subj] || ''} 
-                                                      onChange={e => handleMarkChange(i, e.target.value, subj)} 
-                                                      disabled={std.subjectAbsents[subj]}
-                                                      className={`w-full px-2 py-1.5 border rounded-md font-black text-center focus:ring-2 focus:ring-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
-                                                      placeholder={`Max ${subjectConfigs[subj]?.fullMarks ?? 100}`}
-                                                      tabIndex={i * dynamicSubjects.length + sIndex + 1}
-                                                   />
-                                                   <label className="text-[10px] flex items-center gap-1 font-bold text-gray-500 cursor-pointer">
-                                                      <input type="checkbox" checked={std.subjectAbsents[subj] || false} onChange={e => handleAbsentChange(i, e.target.checked, subj)} className="w-3 h-3 text-red-600 rounded focus:ring-red-600 accent-red-600" />
-                                                      Abs
-                                                   </label>
-                                               </div>
-                                           </td>
-                                       ))
-                                   ) : (
-                                       <>
-                                           <td className="p-3">
-                                               <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-4 h-4 text-primary rounded focus:ring-primary text-primary cursor-pointer" />
-                                           </td>
-                                           <td className="p-3">
-                                               {std.isAbsent ? (
-                                                   <span className="font-bold text-red-500 flex items-center h-10">AB (Absent)</span>
-                                               ) : (
-                                                   <input type="text" inputMode="decimal" 
-                                                      value={std.tempMark} 
-                                                      onChange={e => handleMarkChange(i, e.target.value)} 
-                                                      className={`w-full px-3 py-2 border rounded-md font-black text-lg focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
-                                                      placeholder={`Max ${subjectConfigs[selectedSubject]?.fullMarks ?? 100}`}
-                                                      tabIndex={i+1}
-                                                   />
-                                               )}
-                                           </td>
-                                           <td className="p-3 font-black text-gray-600">
-                                               {std.isAbsent ? 'NG' : (std.tempMark ? getGrade(Number(std.tempMark), subjectConfigs[selectedSubject]?.fullMarks ?? 100, subjectConfigs[selectedSubject]?.passMarks ?? 40) : '-')}
-                                           </td>
-                                       </>
-                                   )}
-                               </tr>
-                           ))}
-                       </tbody>
-                   </table>
+            </div>
+
+        {students.length > 0 ? (
+            <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-100/80 text-gray-700">
+                            <tr>
+                                <th className="p-3 font-bold uppercase tracking-wider w-24">Roll/ID</th>
+                                <th className="p-3 font-bold uppercase tracking-wider">Student Name</th>
+                                {selectedSubject === 'All Subjects' ? (
+                                    dynamicSubjects.map((subj: string) => {
+                                        const cnf = subjectConfigs[subj] || { hasTh: true, hasPr: true };
+                                        return (
+                                            <th key={subj} className="p-3 font-bold uppercase tracking-wider text-center border-l border-gray-200">
+                                                <span className="block mb-1 text-primary">{subj}</span>
+                                                <div className="flex justify-center gap-2 text-[10px] text-gray-500">
+                                                    {cnf.hasTh && <span>TH</span>}
+                                                    {cnf.hasPr && <span>PR</span>}
+                                                </div>
+                                            </th>
+                                        );
+                                    })
+                                ) : (
+                                    <>
+                                        {(subjectConfigs[selectedSubject]?.hasTh ?? true) && (
+                                            <th className="p-3 font-bold uppercase tracking-wider text-center">Theory (TH) Marks<br/><span className="text-xs font-medium text-gray-500">Max: {subjectConfigs[selectedSubject]?.thFullMarks ?? 75} | Pass: {subjectConfigs[selectedSubject]?.thPassMarks ?? 30}</span></th>
+                                        )}
+                                        {(subjectConfigs[selectedSubject]?.hasPr ?? true) && (
+                                            <th className="p-3 font-bold uppercase tracking-wider text-center">Practical (PR) Marks<br/><span className="text-xs font-medium text-gray-500">Max: {subjectConfigs[selectedSubject]?.prFullMarks ?? 25} | Pass: {subjectConfigs[selectedSubject]?.prPassMarks ?? 10}</span></th>
+                                        )}
+                                    </>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {students.map((std, i) => (
+                                <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="p-3">
+                                        <input type="text" value={std.schoolId} onChange={e => handleStudentChange(i, 'schoolId', e.target.value)} className="w-full min-w-[80px] px-2 py-1.5 border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
+                                    </td>
+                                    <td className="p-3">
+                                        <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full min-w-[150px] px-2 py-1.5 border rounded-md font-bold text-gray-800 uppercase focus:ring-1 focus:ring-primary outline-none" placeholder="Student Name" />
+                                    </td>
+                                    {selectedSubject === 'All Subjects' ? (
+                                        dynamicSubjects.map((subj: string, sIndex: number) => {
+                                            const cnf = subjectConfigs[subj] || { hasTh: true, hasPr: true };
+                                            return (
+                                                <td key={subj} className="p-2 border-l border-gray-100 text-center min-w-[130px]">
+                                                    <div className="flex gap-1 justify-center relative">
+                                                        {cnf.hasTh && (
+                                                            <div className="flex flex-col items-center">
+                                                                <input type="text" value={std.subjectAbsentsTH[subj] ? 'AB' : (std.subjectMarksTH[subj] || '')} onChange={(e) => handleMarkChange(i, e.target.value, 'TH', subj)} placeholder="TH" className="w-12 text-center py-1.5 border rounded focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 font-bold transition-colors" disabled={std.subjectAbsentsTH[subj]} tabIndex={i * dynamicSubjects.length + sIndex + 1} />
+                                                                <label className="text-[10px] mt-0.5 text-gray-500 font-bold flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={std.subjectAbsentsTH[subj] || false} onChange={e => handleAbsentChange(i, 'TH', e.target.checked, subj)} className="w-3 h-3 text-red-600 rounded focus:ring-red-600 accent-red-600" /> Abs</label>
+                                                            </div>
+                                                        )}
+                                                        {cnf.hasPr && (
+                                                            <div className="flex flex-col items-center">
+                                                                <input type="text" value={std.subjectAbsentsPR[subj] ? 'AB' : (std.subjectMarksPR[subj] || '')} onChange={(e) => handleMarkChange(i, e.target.value, 'PR', subj)} placeholder="PR" className="w-12 text-center py-1.5 border rounded focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 font-bold transition-colors" disabled={std.subjectAbsentsPR[subj]} />
+                                                                <label className="text-[10px] mt-0.5 text-gray-500 font-bold flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={std.subjectAbsentsPR[subj] || false} onChange={e => handleAbsentChange(i, 'PR', e.target.checked, subj)} className="w-3 h-3 text-red-600 rounded focus:ring-red-600 accent-red-600" /> Abs</label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })
+                                    ) : (
+                                        <>
+                                            {(subjectConfigs[selectedSubject]?.hasTh ?? true) && (
+                                                <td className="p-3 text-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <input type="text" value={std.isAbsentTH ? 'AB' : std.tempMarkTH} onChange={(e) => handleMarkChange(i, e.target.value, 'TH')} placeholder="TH" className="w-20 text-center py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 font-black transition-colors text-lg" disabled={std.isAbsentTH} tabIndex={i} />
+                                                        <label className="text-xs text-gray-500 font-bold flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={std.isAbsentTH} onChange={e => handleAbsentChange(i, 'TH', e.target.checked)} className="w-4 h-4 text-red-600 rounded focus:ring-red-600 accent-red-600" /> Absent</label>
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {(subjectConfigs[selectedSubject]?.hasPr ?? true) && (
+                                                <td className="p-3 text-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <input type="text" value={std.isAbsentPR ? 'AB' : std.tempMarkPR} onChange={(e) => handleMarkChange(i, e.target.value, 'PR')} placeholder="PR" className="w-20 text-center py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none disabled:bg-gray-100 disabled:text-gray-400 font-black transition-colors text-lg" disabled={std.isAbsentPR} />
+                                                        <label className="text-xs text-gray-500 font-bold flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={std.isAbsentPR} onChange={e => handleAbsentChange(i, 'PR', e.target.checked)} className="w-4 h-4 text-red-600 rounded focus:ring-red-600 accent-red-600" /> Absent</label>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
 
                 {/* Mobile view */}
@@ -645,50 +754,97 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                           <input type="text" value={std.studentName} onChange={e => handleStudentChange(i, 'studentName', e.target.value)} className="w-full mb-2 px-2 py-1.5 border rounded-md font-bold text-gray-900 uppercase text-lg focus:ring-1 focus:ring-primary outline-none" placeholder="Student Name" />
                           <div className="flex items-center gap-2 mb-3">
                               <span className="text-xs text-gray-500">ID:</span>
-                              <input type="text" value={std.studentId} onChange={e => handleStudentChange(i, 'studentId', e.target.value)} className="flex-1 px-2 py-1 text-sm border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
+                              <input type="text" value={std.schoolId} onChange={e => handleStudentChange(i, 'schoolId', e.target.value)} className="flex-1 px-2 py-1 text-sm border rounded-md font-medium text-gray-600 focus:ring-1 focus:ring-primary outline-none" placeholder="Roll/ID" />
                           </div>
-                           {selectedSubject === 'All Subjects' ? (
-                               <div className="grid grid-cols-2 gap-3 mt-4">
-                                   {dynamicSubjects.map((subj: string) => (
-                                       <div key={subj} className="border-primary text-primary p-2 rounded-lg border">
-                                           <p className="text-xs font-bold text-gray-600 mb-1 truncate">{subj}</p>
-                                           <div className="flex items-center gap-2">
-                                              <input type="checkbox" checked={std.subjectAbsents[subj] || false} onChange={e => handleAbsentChange(i, e.target.checked, subj)} className="w-4 h-4 accent-red-600" />
-                                              <input type="text" inputMode="decimal" 
-                                                  value={std.subjectMarks[subj] || ''} 
-                                                  onChange={e => handleMarkChange(i, e.target.value, subj)} 
-                                                  disabled={std.subjectAbsents[subj]}
-                                                  className={`w-full px-2 py-1 border rounded-md font-black text-sm text-center focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100 ${std.subjectMarks[subj] !== '' && Number(std.subjectMarks[subj]) < (subjectConfigs[subj]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
-                                                  placeholder="Marks" 
-                                              />
-                                           </div>
-                                       </div>
-                                   ))}
-                               </div>
-                           ) : (
-                               <div className="flex items-center gap-4">
-                                  <div className="flex flex-col items-center gap-1">
-                                     <label className="text-[10px] font-bold uppercase text-gray-400">Absent</label>
-                                     <input type="checkbox" checked={std.isAbsent} onChange={e => handleAbsentChange(i, e.target.checked)} className="w-5 h-5 text-primary" />
-                                  </div>
-                                  <div className="flex-1">
-                                     {std.isAbsent ? (
-                                         <div className="h-12 flex items-center justify-center bg-red-50 border border-red-200 text-red-600 font-bold rounded-lg">AB (Absent)</div>
-                                     ) : (
-                                         <input type="text" inputMode="decimal" 
-                                           value={std.tempMark} 
-                                           onChange={e => handleMarkChange(i, e.target.value)} 
-                                           className={`w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-primary outline-none ${std.tempMark !== '' && Number(std.tempMark) < (subjectConfigs[selectedSubject]?.passMarks ?? 40) ? 'text-red-600 border-red-300' : ''}`}
-                                           placeholder={`/ ${subjectConfigs[selectedSubject]?.fullMarks ?? 100}`} />
-                                     )}
-                                  </div>
-                                  <div className="w-12 h-12 flex items-center justify-center font-black rounded-lg bg-gray-100 border text-lg">
-                                     {std.isAbsent ? 'NG' : (std.tempMark ? getGrade(Number(std.tempMark), subjectConfigs[selectedSubject]?.fullMarks ?? 100, subjectConfigs[selectedSubject]?.passMarks ?? 40) : '-')}
-                                  </div>
-                               </div>
-                           )}
-                      </div>
-                   ))}
+                            {selectedSubject === 'All Subjects' ? (
+                                <div className="flex flex-col gap-3 mt-4">
+                                    {dynamicSubjects.map((subj: string) => {
+                                        const cnf = subjectConfigs[subj] || { hasTh: true, hasPr: true };
+                                        return (
+                                            <div key={subj} className="border-primary text-primary p-3 rounded-lg border">
+                                                <p className="text-sm font-bold text-gray-700 mb-2">{subj}</p>
+                                                <div className="flex items-center gap-4">
+                                                    {cnf.hasTh && (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <input type="text" inputMode="decimal" 
+                                                                    value={std.subjectMarksTH[subj] || ''} 
+                                                                    onChange={e => handleMarkChange(i, e.target.value, 'TH', subj)} 
+                                                                    disabled={std.subjectAbsentsTH[subj]}
+                                                                    className="w-full px-2 py-1 border rounded-md font-black text-sm text-center focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100"
+                                                                    placeholder="TH Marks" 
+                                                                />
+                                                                <label className="text-xs font-bold text-gray-500 flex items-center gap-1">
+                                                                    <input type="checkbox" checked={std.subjectAbsentsTH[subj] || false} onChange={e => handleAbsentChange(i, 'TH', e.target.checked, subj)} className="w-4 h-4 accent-red-600" /> Abs
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {cnf.hasPr && (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <input type="text" inputMode="decimal" 
+                                                                    value={std.subjectMarksPR[subj] || ''} 
+                                                                    onChange={e => handleMarkChange(i, e.target.value, 'PR', subj)} 
+                                                                    disabled={std.subjectAbsentsPR[subj]}
+                                                                    className="w-full px-2 py-1 border rounded-md font-black text-sm text-center focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-100"
+                                                                    placeholder="PR Marks" 
+                                                                />
+                                                                <label className="text-xs font-bold text-gray-500 flex items-center gap-1">
+                                                                    <input type="checkbox" checked={std.subjectAbsentsPR[subj] || false} onChange={e => handleAbsentChange(i, 'PR', e.target.checked, subj)} className="w-4 h-4 accent-red-600" /> Abs
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-3">
+                                    {(subjectConfigs[selectedSubject]?.hasTh ?? true) && (
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <label className="text-[10px] font-bold uppercase text-gray-400">Absent (TH)</label>
+                                                <input type="checkbox" checked={std.isAbsentTH} onChange={e => handleAbsentChange(i, 'TH', e.target.checked)} className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div className="flex-1">
+                                                {std.isAbsentTH ? (
+                                                    <div className="h-12 flex items-center justify-center bg-red-50 border border-red-200 text-red-600 font-bold rounded-lg">AB (Absent)</div>
+                                                ) : (
+                                                    <input type="text" inputMode="decimal" 
+                                                        value={std.tempMarkTH} 
+                                                        onChange={e => handleMarkChange(i, e.target.value, 'TH')} 
+                                                        className="w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-primary outline-none"
+                                                        placeholder="Theory Marks" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(subjectConfigs[selectedSubject]?.hasPr ?? true) && (
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <label className="text-[10px] font-bold uppercase text-gray-400">Absent (PR)</label>
+                                                <input type="checkbox" checked={std.isAbsentPR} onChange={e => handleAbsentChange(i, 'PR', e.target.checked)} className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div className="flex-1">
+                                                {std.isAbsentPR ? (
+                                                    <div className="h-12 flex items-center justify-center bg-red-50 border border-red-200 text-red-600 font-bold rounded-lg">AB (Absent)</div>
+                                                ) : (
+                                                    <input type="text" inputMode="decimal" 
+                                                        value={std.tempMarkPR} 
+                                                        onChange={e => handleMarkChange(i, e.target.value, 'PR')} 
+                                                        className="w-full h-12 px-4 border rounded-lg font-black text-xl text-center focus:ring-2 focus:ring-primary outline-none"
+                                                        placeholder="Practical Marks" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                       </div>
+                    ))}
                 </div>
 
                 <div className="p-4 border-t text-primary flex justify-end gap-4 border-x">
@@ -705,7 +861,9 @@ export function ManualEntryTab({ EXAM_TYPES, allClasses, allSubjects, data, setS
                     )}
                 </div>
             </div>
-        )}
+        ) : null}
+      </>
+    )}
     </div>
   );
 }

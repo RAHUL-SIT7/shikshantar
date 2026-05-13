@@ -348,56 +348,218 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
        });
    };
 
-   const handleDownloadExcel = () => {
+   const handleDownloadExcel = async () => {
        if (filteredData.length === 0) return;
-       
-       const excelData = filteredData.map((std: any) => {
-           const row: any = {
-               'Roll/ID': std.studentId,
-               'Student Name': std.studentName,
-               'Class': std.class,
-               'Exam': std.examType
-           };
+       try {
+           setGenerating(true);
+           setStatus({type: 'success', message: 'Generating Excel File...'});
+           const ExcelJS = (await import('exceljs')).default;
+           const wb = new ExcelJS.Workbook();
            
-           if (std.subjects) {
-               Object.keys(std.subjects).forEach(subj => {
-                   const marks = std.subjects[subj];
-                   const fm = marks.fullMarks;
-                   const displayOm = marks.obtained;
-                   let grade = 'AB';
-                   let gpa = 0.0;
-                   if (displayOm !== 'AB') {
-                       const pct = (displayOm / fm) * 100;
-                       if (pct >= 90) { grade = 'A+'; gpa = 4.0; }
-                       else if (pct >= 80) { grade = 'A'; gpa = 3.6; }
-                       else if (pct >= 70) { grade = 'B+'; gpa = 3.2; }
-                       else if (pct >= 60) { grade = 'B'; gpa = 2.8; }
-                       else if (pct >= 50) { grade = 'C+'; gpa = 2.4; }
-                       else if (pct >= 40) { grade = 'C'; gpa = 2.0; }
-                       else if (pct >= 35) { grade = 'D'; gpa = 1.6; }
-                       else { grade = 'NG'; gpa = 0.0; }
-                   }
-
-                   row[`${subj} (Total)`] = displayOm;
-                   row[`${subj} (Grade)`] = grade;
-                   row[`${subj} (GPA)`] = gpa.toFixed(1);
+           let base64Logo: string | null = null;
+           try {
+               const logoUrl = 'https://i.postimg.cc/SxGS5WxY/logo.png';
+               const res = await fetch(logoUrl);
+               const blob = await res.blob();
+               base64Logo = await new Promise((resolve, reject) => {
+                   const reader = new FileReader();
+                   reader.onloadend = () => resolve(reader.result as string);
+                   reader.onerror = reject;
+                   reader.readAsDataURL(blob);
+               });
+           } catch(e) {
+               console.warn("Could not fetch logo for excel", e);
+           }
+           
+           let logoId = -1;
+           if (base64Logo) {
+               logoId = wb.addImage({
+                   base64: base64Logo,
+                   extension: 'png',
                });
            }
 
-           row['Total'] = std.total;
-           row['Full Total'] = std.fullTotal;
-           row['Percentage'] = parseFloat(std.percentage.toFixed(2));
-           row['Grade'] = std.grade;
-           row['GPA'] = std.gpa || '-';
-           row['Rank'] = std.rank;
-           
-           return row;
-       });
+           const uniqueClasses = Array.from(new Set(filteredData.map(d => String(d.class))));
 
-       const ws = XLSX.utils.json_to_sheet(excelData);
-       const wb = XLSX.utils.book_new();
-       XLSX.utils.book_append_sheet(wb, ws, "Results");
-       XLSX.writeFile(wb, `${getFilePrefix()}_Results.xlsx`);
+           for (const className of uniqueClasses) {
+               const ws = wb.addWorksheet(`Class ${className}`);
+               const classData = filteredData.filter((d: any) => String(d.class) === className);
+               
+               const exams = Array.from(new Set(classData.map((d: any) => d.examType)));
+               
+               let currentRow = 1;
+
+               for (const exam of exams) {
+                   const examData = classData.filter((d: any) => d.examType === exam);
+                   
+                   // School Header
+                   if (logoId !== -1) {
+                       ws.addImage(logoId, {
+                           tl: { col: 0, row: currentRow - 1 },
+                           ext: { width: 80, height: 80 }
+                       });
+                   }
+                   
+                   ws.mergeCells(`A${currentRow}:J${currentRow}`);
+                   const titleCell = ws.getCell(`A${currentRow}`);
+                   titleCell.value = "SHIKSHANTAR ACADEMY";
+                   titleCell.font = { name: 'Arial', size: 22, bold: true, color: { argb: 'FFD32F2F' } };
+                   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+                   ws.getRow(currentRow).height = 30;
+                   
+                   currentRow++;
+                   ws.mergeCells(`A${currentRow}:J${currentRow}`);
+                   const addressCell = ws.getCell(`A${currentRow}`);
+                   addressCell.value = "Siraha, Nepal | info@shikshantar.edu.np | +977-1234567890";
+                   addressCell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF1976D2' } };
+                   addressCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+                   currentRow++;
+                   ws.mergeCells(`A${currentRow}:J${currentRow}`);
+                   const examCell = ws.getCell(`A${currentRow}`);
+                   examCell.value = `Class: ${className}   |   Exam: ${exam}`;
+                   examCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF000000' } };
+                   examCell.alignment = { horizontal: 'center', vertical: 'middle' };
+                   ws.getRow(currentRow).height = 25;
+                   
+                   currentRow += 2;
+                   
+                   // Determine subjects for this exam from the examData
+                   const subjectsSet = new Set<string>();
+                   examData.forEach(std => {
+                       if (std.subjects) {
+                           Object.keys(std.subjects).forEach(s => subjectsSet.add(s));
+                       }
+                   });
+                   const subjects = Array.from(subjectsSet);
+                   
+                   // Table Header Columns
+                   const columns = [
+                       { header: 'Roll/ID', key: 'roll', width: 12 },
+                       { header: 'Student Name', key: 'name', width: 30 },
+                   ];
+                   
+                   // Vivid colors for subjects
+                   const subjectColors = ['FFef4444', 'FF3b82f6', 'FFf59e0b', 'FF10b981', 'FF8b5cf6', 'FFec4899', 'FF06b6d4'];
+                   
+                   subjects.forEach((subj, i) => {
+                       columns.push({ header: `${subj} (Marks)`, key: `${subj}_marks`, width: 14 });
+                       columns.push({ header: `${subj} (Grade)`, key: `${subj}_grade`, width: 14 });
+                       columns.push({ header: `${subj} (GPA)`, key: `${subj}_gpa`, width: 14 });
+                   });
+                   
+                   columns.push({ header: 'Total', key: 'total', width: 10 });
+                   columns.push({ header: 'Percentage', key: 'percentage', width: 15 });
+                   columns.push({ header: 'Grade', key: 'grade', width: 10 });
+                   columns.push({ header: 'GPA', key: 'gpa', width: 10 });
+                   columns.push({ header: 'Rank', key: 'rank', width: 10 });
+                   
+                   const headerRow = ws.getRow(currentRow);
+                   headerRow.height = 25;
+                   columns.forEach((col, i) => {
+                       const cell = headerRow.getCell(i + 1);
+                       cell.value = col.header;
+                       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                       cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                       ws.getColumn(i + 1).width = col.width;
+                       
+                       // apply background colors
+                       let bgColor = 'FF334155'; // default slate-700
+                       if (i >= 2 && i < 2 + subjects.length * 3) {
+                           const subIdx = Math.floor((i - 2) / 3);
+                           bgColor = subjectColors[subIdx % subjectColors.length];
+                       }
+                       
+                       cell.fill = {
+                           type: 'pattern',
+                           pattern: 'solid',
+                           fgColor: { argb: bgColor }
+                       };
+                       cell.border = {
+                         top: {style:'thin', color: {argb: 'FFCBD5E1'}},
+                         left: {style:'thin', color: {argb: 'FFCBD5E1'}},
+                         bottom: {style:'thin', color: {argb: 'FFCBD5E1'}},
+                         right: {style:'thin', color: {argb: 'FFCBD5E1'}}
+                       };
+                   });
+                   
+                   currentRow++;
+                   
+                   // Add Data
+                   examData.forEach((std: any) => {
+                       const row = ws.getRow(currentRow);
+                       row.getCell(1).value = std.rollNo && std.rollNo !== '00' ? std.rollNo : std.studentId;
+                       row.getCell(2).value = std.studentName;
+                       row.getCell(1).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                       row.getCell(2).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                       
+                       let colIdx = 3;
+                       subjects.forEach(subj => {
+                           let marks: string | number = 'AB';
+                           let grade = 'AB';
+                           let gpa = '-';
+                           
+                           if (std.subjects && std.subjects[subj]) {
+                               const fm = std.subjects[subj].fullMarks;
+                               const displayOm = std.subjects[subj].obtained;
+                               if (displayOm !== 'AB') {
+                                   marks = displayOm;
+                                   const pct = (displayOm / fm) * 100;
+                                   let gpaNum = 0.0;
+                                   if (pct >= 90) { grade = 'A+'; gpaNum = 4.0; }
+                                   else if (pct >= 80) { grade = 'A'; gpaNum = 3.6; }
+                                   else if (pct >= 70) { grade = 'B+'; gpaNum = 3.2; }
+                                   else if (pct >= 60) { grade = 'B'; gpaNum = 2.8; }
+                                   else if (pct >= 50) { grade = 'C+'; gpaNum = 2.4; }
+                                   else if (pct >= 40) { grade = 'C'; gpaNum = 2.0; }
+                                   else if (pct >= 35) { grade = 'D'; gpaNum = 1.6; }
+                                   else { grade = 'NG'; gpaNum = 0.0; }
+                                   gpa = gpaNum.toFixed(1);
+                               }
+                           }
+                           
+                           row.getCell(colIdx).value = marks;
+                           row.getCell(colIdx + 1).value = grade;
+                           row.getCell(colIdx + 2).value = gpa;
+                           
+                           row.getCell(colIdx).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                           row.getCell(colIdx+1).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                           row.getCell(colIdx+2).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                           
+                           row.getCell(colIdx).alignment = { horizontal: 'center' };
+                           row.getCell(colIdx+1).alignment = { horizontal: 'center' };
+                           row.getCell(colIdx+2).alignment = { horizontal: 'center' };
+                           
+                           colIdx += 3;
+                       });
+                       
+                       row.getCell(colIdx).value = std.total;
+                       row.getCell(colIdx+1).value = parseFloat(std.percentage.toFixed(2));
+                       row.getCell(colIdx+2).value = std.grade;
+                       row.getCell(colIdx+3).value = std.gpa || '-';
+                       row.getCell(colIdx+4).value = std.rank;
+                       
+                       for (let i = 0; i < 5; i++) {
+                           row.getCell(colIdx + i).border = { top: {style:'thin', color: {argb: 'FFCBD5E1'}}, left: {style:'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style:'thin', color: {argb: 'FFCBD5E1'}}, right: {style:'thin', color: {argb: 'FFCBD5E1'}} };
+                           row.getCell(colIdx + i).alignment = { horizontal: 'center' };
+                       }
+                       
+                       currentRow++;
+                   });
+                   
+                   currentRow += 4; // Space between exams
+               }
+           }
+           
+           const buffer = await wb.xlsx.writeBuffer();
+           saveAs(new Blob([buffer]), `${getFilePrefix()}_Results.xlsx`);
+           setGenerating(false);
+           setStatus(null);
+       } catch (err: any) {
+           console.error("Error generating Excel:", err);
+           setGenerating(false);
+           setStatus({type: 'error', message: `Failed to generate Excel: ${err.message}`});
+       }
    };
 
   // Check if all in filtered view are published
@@ -512,7 +674,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
                                         </td>
                                         <td className="p-4">
                                             <p className="font-black text-gray-900 uppercase">{std.studentName}</p>
-                                            <p className="text-xs text-gray-500 font-bold">ID: {std.studentId} | Cls: {std.class} | Exam: {std.examType}</p>
+                                            <p className="text-xs text-gray-500 font-bold">ID: {std.rollNo !== '00' && std.rollNo ? std.rollNo : std.studentId} | Cls: {std.class} | Exam: {std.examType}</p>
                                         </td>
                                         {groupSubjects.map(s => {
                                             const subject = std.subjects[s];

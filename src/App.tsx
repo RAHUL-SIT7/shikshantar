@@ -21,6 +21,8 @@ import AdminAdmissions from './pages/AdminAdmissions';
 import UserApprovals from './pages/UserApprovals';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import TeacherSalary from './pages/TeacherSalary';
+import SalaryAdmin from './pages/SalaryAdmin';
 import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -211,30 +213,41 @@ export default function App() {
       if (user) {
         // Fetch role from Firestore for security
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          // Avoid indefinite hanging if Firestore is blocked
+          const userDoc = await Promise.race([
+            getDoc(doc(db, 'users', user.uid)),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 8000))
+          ]);
           
           let roleToSet = 'student';
           
           if (user.email === 'rahulsah4534@gmail.com') {
             roleToSet = 'admin';
-            try {
-              await setDoc(doc(db, 'users', user.uid), { role: 'admin', email: user.email, activeSessions: arrayUnion(localSessionId) }, { merge: true });
-            } catch (e) {
-              console.error("Failed to persist admin role:", e);
-            }
-          } else if (userDoc.exists()) {
+            setDoc(doc(db, 'users', user.uid), { role: 'admin', email: user.email, activeSessions: arrayUnion(localSessionId) }, { merge: true })
+              .catch(e => console.error("Failed to persist admin role:", e));
+          } else if (userDoc && userDoc.exists()) {
              roleToSet = userDoc.data().role || 'student';
-             try {
-               await setDoc(doc(db, 'users', user.uid), { activeSessions: arrayUnion(localSessionId) }, { merge: true });
-             } catch(e) {}
+             setDoc(doc(db, 'users', user.uid), { activeSessions: arrayUnion(localSessionId) }, { merge: true })
+               .catch(e => console.warn("Failed to set active session:", e));
+          } else {
+             // Document doesn't exist! They might be signing up right now OR they were deleted.
+             if (window.location.pathname !== '/login') {
+                await signOut(auth);
+                setIsAuthenticated(false);
+                setLoading(false);
+                return;
+             }
           }
           
           setUserRole(roleToSet);
           localStorage.setItem('userRole', roleToSet);
           
+          let docExisted = userDoc ? userDoc.exists() : false;
+
           // Setup real-time listener for cross-device logout
           unSubDoc = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
              if (docSnap.exists()) {
+                docExisted = true;
                 const data = docSnap.data();
                 if (data.activeSessions && Array.isArray(data.activeSessions)) {
                    if (!data.activeSessions.includes(localSessionId)) {
@@ -242,7 +255,15 @@ export default function App() {
                       signOut(auth);
                    }
                 }
+             } else {
+                if (docExisted && user.email !== 'rahulsah4534@gmail.com') {
+                   // Profile deleted while actively using the app!
+                   signOut(auth);
+                   window.location.reload();
+                }
              }
+          }, (err) => {
+              console.warn("Could not load user active sessions:", err.message);
           });
         } catch (err) {
           console.error("Error fetching role:", err);
@@ -294,23 +315,31 @@ export default function App() {
           <Route path="calendar" element={<AcademicCalendar />} />
           <Route path="events" element={<Events />} />
           <Route path="admission" element={<Admission />} />
-          <Route path="scholarship" element={<Scholarship userRole={userRole} />} />
           <Route path="fee-structure" element={<FeeStructure />} />
+          <Route path="scholarship" element={<Scholarship userRole={userRole} />} />
           <Route path="notices" element={<NoticeBoard />} />
           <Route path="contact" element={<ContactUs />} />
           <Route path="faq" element={<FAQ />} />
           <Route path="alumni" element={<Alumni />} />
           <Route 
+            path="result" 
+            element={isAuthenticated ? <Result /> : <Navigate to="/login" />} 
+          />
+          <Route 
             path="account" 
-            element={isAuthenticated ? <Account /> : <Navigate to="/login" />} 
+            element={isAuthenticated && userRole === 'student' ? <Account /> : <Navigate to="/" />} 
           />
           <Route 
             path="account-admin" 
-            element={isAuthenticated && (userRole === 'admin' || userRole === 'teacher') ? <AccountAdmin /> : <Navigate to="/" />} 
+            element={isAuthenticated && userRole === 'admin' ? <AccountAdmin /> : <Navigate to="/" />} 
           />
           <Route 
-            path="result" 
-            element={isAuthenticated ? <Result /> : <Navigate to="/login" />} 
+            path="teacher-salary" 
+            element={isAuthenticated && userRole === 'teacher' ? <TeacherSalary /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="salary-admin" 
+            element={isAuthenticated && userRole === 'admin' ? <SalaryAdmin /> : <Navigate to="/" />} 
           />
           <Route 
             path="admin" 
@@ -318,11 +347,11 @@ export default function App() {
           />
           <Route 
             path="admin-admissions" 
-            element={isAuthenticated && (userRole === 'admin' || userRole === 'teacher') ? <AdminAdmissions /> : <Navigate to="/" />} 
+            element={isAuthenticated && userRole === 'admin' ? <AdminAdmissions /> : <Navigate to="/" />} 
           />
           <Route 
             path="user-approvals" 
-            element={isAuthenticated && (userRole === 'admin' || userRole === 'teacher') ? <UserApprovals /> : <Navigate to="/" />} 
+            element={isAuthenticated && userRole === 'admin' ? <UserApprovals /> : <Navigate to="/" />} 
           />
           <Route 
             path="profile" 

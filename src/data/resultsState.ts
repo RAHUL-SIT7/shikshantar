@@ -13,7 +13,16 @@ export interface StudentResult {
   examType: string;
   examId?: string;
   marks?: Record<string, string | number>;
-  subjects?: Record<string, {fullMarks: number, obtained: number | "AB"}>;
+  subjects?: Record<string, {
+    fullMarks: number, 
+    obtained: number | "AB",
+    thMarks?: number | "AB",
+    prMarks?: number | "AB",
+    thFull?: number,
+    prFull?: number,
+    thPass?: number,
+    prPass?: number
+  }>;
   highestMarks?: Record<string, number>;
   totalScore?: number;
   total?: number;

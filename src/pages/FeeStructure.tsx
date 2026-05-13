@@ -123,12 +123,19 @@ const FeeStructure = () => {
               // Match "Class 1" or "1" depending on how they saved it
               const formattedClass = ['PG', 'Nursery', 'LKG', 'UKG'].includes(rawClass) ? rawClass : `Class ${rawClass}`;
               const feeStruct = structMap.get(formattedClass) || structMap.get(rawClass);
-
               let tuitionFee = feeStruct && feeStruct.tuition ? Number(feeStruct.tuition.replace(/[^0-9.]/g, '')) : 1000;
-              let otherFee = s.otherFee ? Number(s.otherFee) : 0; // Include otherFee from student if any
-              let totalFee = tuitionFee + otherFee;
+
+              let breakdownObj: any = { tuition: tuitionFee };
+              if (s.examFee) breakdownObj.exam = Number(s.examFee);
+              if (s.computerFee) breakdownObj.computer = Number(s.computerFee);
+              if (s.transportFee) breakdownObj.transport = Number(s.transportFee);
+              if (s.otherFee) breakdownObj.other = Number(s.otherFee);
+              
+              let totalOther = (breakdownObj.exam || 0) + (breakdownObj.computer || 0) + (breakdownObj.transport || 0) + (breakdownObj.other || 0);
+              let totalFee = tuitionFee + totalOther;
 
               if (s.scholarshipStatus === 'Provided' && s.scholarshipAmount) {
+                 breakdownObj.scholarship = Number(s.scholarshipAmount);
                  totalFee = Math.max(0, totalFee - Number(s.scholarshipAmount));
               }
 
@@ -137,6 +144,7 @@ const FeeStructure = () => {
                   studentId: s.id,
                   month: selectedMonth,
                   totalFee: totalFee,
+                  breakdown: breakdownObj,
                   paidAmount: 0,
                   dueAmount: totalFee,
                   status: 'due',
@@ -429,21 +437,23 @@ const FeeStructure = () => {
             <button
                onClick={() => setShowBulkModal(true)}
                disabled={generatingFees}
+               title="Create detailed fee invoices for a specific month for all students."
                className="flex justify-center items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
             >
                <Users className="w-4 h-4" />
-               {generatingFees ? 'Calculating...' : 'Generate Due Bills'}
+               {generatingFees ? 'Calculating...' : 'Generate Bills'}
             </button>
 
             {!editMode ? (
               <div className="flex items-center gap-3">
                 <button
                   onClick={applyStructureToStudents}
+                  title="Update all students' default monthly fee based on the current structure."
                   className="flex justify-center items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
                   disabled={generatingFees}
                 >
                   <Users className="w-4 h-4" />
-                  {generatingFees ? 'Applying...' : 'Apply to Students'}
+                  {generatingFees ? 'Syncing...' : 'Sync Base Fees'}
                 </button>
                 <button
                   onClick={() => setEditMode(true)}
@@ -503,7 +513,6 @@ const FeeStructure = () => {
                 <th className="pb-4 font-semibold text-slate-700">Monthly Tuition</th>
                 <th className="pb-4 font-semibold text-slate-700">Annual Charges</th>
                 <th className="pb-4 font-semibold text-slate-700">Exam Fee</th>
-                <th className="pb-4 font-semibold text-slate-700">Computer Fee</th>
                 {editMode && <th className="pb-4 font-semibold text-slate-700 w-10"></th>}
               </tr>
             </thead>
@@ -554,15 +563,6 @@ const FeeStructure = () => {
                         setEditedData({ ...editedData, academic: newAcademic });
                       }} />
                     ) : <span className="text-slate-600">NRs. {row.exam}</span>}
-                  </td>
-                  <td className="py-3">
-                    {editMode ? (
-                      <input className="w-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none p-2 rounded" value={row.computer} onChange={(e) => {
-                        const newAcademic = [...editedData.academic];
-                        newAcademic[index].computer = e.target.value;
-                        setEditedData({ ...editedData, academic: newAcademic });
-                      }} />
-                    ) : <span className="text-slate-600">NRs. {row.computer}</span>}
                   </td>
                   {editMode && (
                     <td className="py-3 text-right">
