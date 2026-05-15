@@ -504,7 +504,7 @@ const FeeStructure = () => {
             </button>
           )}
         </div>
-        <div className="p-6 overflow-x-auto">
+        <div className="p-6 overflow-x-auto custom-scrollbar pb-2">
           <table className="w-full text-left whitespace-nowrap min-w-[700px]">
             <thead>
               <tr className="border-b border-[#e2e8f0]">
@@ -582,15 +582,17 @@ const FeeStructure = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden p-6 flex flex-col sm:flex-row justify-between items-center bg-gradient-to-r from-blue-50 to-white">
-          <div>
-              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Expected Annual Revenue</h3>
-              <p className="text-3xl font-black text-primary tracking-tight">NRs. {calculateExpectedRevenue().toLocaleString()}</p>
-          </div>
-          <div className="text-right mt-4 sm:mt-0 text-sm font-medium text-gray-500">
-             Based on current active students, applying structure and existing scholarships.
-          </div>
-      </div>
+      {isAdmin && (
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden p-6 flex flex-col sm:flex-row justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+            <div>
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Expected Annual Revenue</h3>
+                <p className="text-3xl font-black text-primary tracking-tight">NRs. {calculateExpectedRevenue().toLocaleString()}</p>
+            </div>
+            <div className="text-right mt-4 sm:mt-0 text-sm font-medium text-gray-500">
+               Based on current active students, applying structure and existing scholarships.
+            </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-8">
         {/* Transportation Fees */}
@@ -776,7 +778,7 @@ const FeeStructure = () => {
                />
             </div>
           ) : (
-             <div className="prose prose-sm max-w-none text-slate-800" 
+             <div className="prose prose-sm max-w-none text-slate-800 overflow-x-auto overflow-y-hidden custom-scrollbar pb-2" 
                   dangerouslySetInnerHTML={{ __html: data.scholarshipPolicy || defaultData.scholarshipPolicy || '' }} />
           )}
         </div>
@@ -892,8 +894,7 @@ const FeeStructure = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Value</label>
                     <input
-                      type="number"
-                      min="0"
+                      type="number" min="0" step="any" onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
                       max={valueType === 'Percentage' ? 100 : undefined}
                       value={discountValue}
                       onChange={(e) => setDiscountValue(e.target.value)}

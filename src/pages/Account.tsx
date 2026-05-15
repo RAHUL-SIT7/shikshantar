@@ -335,7 +335,7 @@ export default function Account() {
                     <div className="p-8 sm:p-10 text-gray-800">
                         <div className="text-center mb-6 border-b border-gray-200 pb-6">
                             <div className="mx-auto mb-3 flex items-center justify-center">
-                                <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
+                                <img src="/logo.png" alt="Shikshantar Academy Logo" className="w-16 h-16 object-contain" />
                             </div>
                             <h2 className="font-black text-xl text-primary uppercase tracking-widest">Shikshantar Academy</h2>
                             <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center justify-center gap-1 mt-1">Siraha, Nepal</p>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { doc, setDoc, onSnapshot, deleteDoc, collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { Save, Settings as SettingsIcon, MonitorPlay, Calendar, Plus, Trash2, RefreshCcw, History } from 'lucide-react';
+import { Save, Settings as SettingsIcon, MonitorPlay, Calendar, Plus, X } from 'lucide-react';
 
 import ThemeSettings from './ThemeSettings';
 
@@ -77,125 +77,15 @@ const DEFAULT_CONTENT = {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'content' | 'theme' | 'preview' | 'system'>('content');
-  const [previewRole, setPreviewRole] = useState<'guest'>('guest');
+  const [activeTab, setActiveTab] = useState<'content' | 'theme' | 'preview'>('content');
+  const [previewRole, setPreviewRole] = useState<'guest'|'student'|'teacher'>('guest');
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [isSaving, setIsSaving] = useState(false);
-  const [isClearing, setIsClearing] = useState<string | null>(null);
-  const [isRestoring, setIsRestoring] = useState<string | null>(null);
-  const [trashItems, setTrashItems] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<{message: string, type: 'success'|'error'} | null>(null);
 
-  useEffect(() => {
-     const unsubTrash = onSnapshot(collection(db, 'trash'), (snap) => {
-         const now = Date.now();
-         const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-         const freshItems: any[] = [];
-         
-         snap.docs.forEach((d) => {
-             const data = d.data();
-             const deletedAtTime = data.deletedAt?.toMillis ? data.deletedAt.toMillis() : now;
-             if (now - deletedAtTime > sevenDaysMs) {
-                 // Auto-delete item older than 7 days
-                 deleteDoc(doc(db, 'trash', d.id)).catch(console.error);
-             } else {
-                 freshItems.push({ id: d.id, ...data });
-             }
-         });
-         setTrashItems(freshItems);
-     }, (err) => {
-         console.warn("Could not load trash collection items: ", err.message);
-     });
-     return () => unsubTrash();
-  }, []);
-
-  const handleEmptyTrashSection = async (section: string) => {
-      const itemsToRestore = trashItems.filter(item => item.section === section);
-      if (itemsToRestore.length === 0) return;
-      if (!window.confirm(`Are you sure you want to permanently delete the ${itemsToRestore.length} trashed items for ${section}? This cannot be undone.`)) return;
-      setIsRestoring(section);
-      try {
-          for (const item of itemsToRestore) {
-              await deleteDoc(doc(db, 'trash', item.id));
-          }
-      } catch (err) {
-          console.error("Error emptying trash:", err);
-      }
-      setIsRestoring(null);
-  };
-
-  const handleRestoreSection = async (section: string) => {
-      const itemsToRestore = trashItems.filter(item => item.section === section);
-      if (itemsToRestore.length === 0) {
-          alert("No items found to restore for this section.");
-          return;
-      }
-      if (!window.confirm(`Are you sure you want to restore ${itemsToRestore.length} items from ${section}?`)) return;
-      
-      setIsRestoring(section);
-      try {
-          for (const item of itemsToRestore) {
-              const { originalCollection, originalId, data, id } = item;
-              if (originalCollection && originalId && data) {
-                  await setDoc(doc(db, originalCollection, originalId), data);
-              }
-              await deleteDoc(doc(db, 'trash', id));
-          }
-          alert(`Successfully restored ${itemsToRestore.length} items for ${section}!`);
-      } catch (err) {
-          console.error("Error restoring:", err);
-          alert(`Error restoring data: ` + (err as any).message);
-      }
-      setIsRestoring(null);
-  };
-
-  const handleClearSection = async (section: string, label: string) => {
-    if (!window.confirm(`WARNING: This will permanently delete ALL data for ${label}. Are you sure?`)) return;
-    const confirmText = window.prompt(`Type "DELETE" to confirm clearing ${label}.`);
-    if (confirmText?.toUpperCase() !== 'DELETE') return;
-
-    setIsClearing(section);
-    try {
-      let collectionsToClear: string[] = [];
-      if (section === 'admissions') collectionsToClear = ['admissions'];
-      if (section === 'fees') collectionsToClear = ['studentFees', 'transactions', 'financial_transactions'];
-      if (section === 'results') collectionsToClear = ['results', 'results_secure', 'resultSummary', 'exams'];
-
-      for (const c of collectionsToClear) {
-        const qs = await getDocs(collection(db, c));
-        for (const docSnap of qs.docs) {
-          const trashRef = doc(collection(db, 'trash'));
-          await setDoc(trashRef, {
-             originalCollection: c,
-             originalId: docSnap.id,
-             data: docSnap.data(),
-             section: section,
-             deletedAt: serverTimestamp()
-          });
-          await deleteDoc(doc(db, c, docSnap.id));
-        }
-      }
-
-      if (section === 'students') {
-          const usersQs = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
-          for (const docSnap of usersQs.docs) {
-             const trashRef = doc(collection(db, 'trash'));
-             await setDoc(trashRef, {
-                originalCollection: 'users',
-                originalId: docSnap.id,
-                data: docSnap.data(),
-                section: section,
-                deletedAt: serverTimestamp()
-             });
-             await deleteDoc(doc(db, 'users', docSnap.id));
-          }
-      }
-
-      alert(`${label} data cleared successfully!`);
-    } catch (err) {
-       console.error(`Error clearing ${section}:`, err);
-       alert(`Error clearing data: ` + (err as any).message);
-    }
-    setIsClearing(null);
+  const showFeedback = (message: string, type: 'success'|'error') => {
+      setFeedback({ message, type });
+      setTimeout(() => setFeedback(null), 5000);
   };
 
   useEffect(() => {
@@ -216,10 +106,10 @@ export default function Settings() {
     setIsSaving(true);
     try {
       await setDoc(doc(db, 'settings', 'home_content'), content);
-      alert('Settings saved successfully!');
+      showFeedback('Settings saved successfully!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Error saving settings.');
+      showFeedback('Error saving settings.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -227,6 +117,12 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
+      {feedback && (
+          <div className={`p-4 rounded-xl border font-bold flex items-center justify-between ${feedback.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+              <span>{feedback.type === 'success' ? '✅ ' : '⚠️ '}{feedback.message}</span>
+              <button type="button" onClick={() => setFeedback(null)} className="opacity-50 hover:opacity-100"><X className="w-5 h-5"/></button>
+          </div>
+      )}
       <div className="flex gap-4 border-b border-gray-200 overflow-x-auto scrollbar-hide">
          <button 
            onClick={() => setActiveTab('content')}
@@ -246,137 +142,8 @@ export default function Settings() {
          >
             <MonitorPlay className="w-4 h-4" /> Preview Dashboard
          </button>
-         <button 
-           onClick={() => setActiveTab('system')}
-           className={`px-4 py-3 font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'system' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-red-700'}`}
-         >
-            <Trash2 className="w-4 h-4" /> Reset Data
-         </button>
       </div>
 
-      {activeTab === 'system' && (
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 max-w-4xl">
-           <h2 className="text-xl font-extrabold text-red-600 mb-2 flex items-center gap-2">
-             <Trash2 className="w-6 h-6" />
-             Clear System Data
-           </h2>
-           <p className="text-sm text-gray-600 mb-6">If you want to start fresh or remove dummy data, you can clear all students, admissions, fee records, transactions, and results here. This action is IRREVERSIBLE.</p>
-           
-           <div className="space-y-4">
-               {/* Students */}
-               <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                     <h4 className="font-bold text-red-800">Clear Student Accounts</h4>
-                     <p className="text-xs text-red-600 mt-1">Deletes all student profiles and user accounts.</p>
-                     {trashItems.filter(i => i.section === 'students').length > 0 && <p className="text-xs text-emerald-600 mt-2 font-bold">{trashItems.filter(i => i.section === 'students').length} items available to restore</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                      {trashItems.filter(i => i.section === 'students').length > 0 && (
-                          <>
-                            <button onClick={() => handleRestoreSection('students')} disabled={isRestoring !== null} className="bg-emerald-100 text-emerald-800 px-4 py-2 border border-emerald-200 rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <History className="w-4 h-4" /> {isRestoring === 'students' ? 'Restoring...' : 'Restore'}
-                            </button>
-                            <button onClick={() => handleEmptyTrashSection('students')} disabled={isRestoring !== null} className="bg-gray-100 text-gray-800 px-4 py-2 border border-gray-200 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <Trash2 className="w-4 h-4" /> Empty Trash
-                            </button>
-                          </>
-                      )}
-                      <button 
-                        onClick={() => handleClearSection('students', 'Student Accounts')} 
-                        disabled={isClearing !== null}
-                        className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                         <Trash2 className="w-4 h-4" /> {isClearing === 'students' ? 'Clearing...' : 'Clear'}
-                      </button>
-                  </div>
-               </div>
-               
-               {/* Fees */}
-               <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                     <h4 className="font-bold text-red-800">Clear Fees & Transactions</h4>
-                     <p className="text-xs text-red-600 mt-1">Deletes all student fee ledgers, payments, and history.</p>
-                     {trashItems.filter(i => i.section === 'fees').length > 0 && <p className="text-xs text-emerald-600 mt-2 font-bold">{trashItems.filter(i => i.section === 'fees').length} items available to restore</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                      {trashItems.filter(i => i.section === 'fees').length > 0 && (
-                          <>
-                            <button onClick={() => handleRestoreSection('fees')} disabled={isRestoring !== null} className="bg-emerald-100 text-emerald-800 px-4 py-2 border border-emerald-200 rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <History className="w-4 h-4" /> {isRestoring === 'fees' ? 'Restoring...' : 'Restore'}
-                            </button>
-                            <button onClick={() => handleEmptyTrashSection('fees')} disabled={isRestoring !== null} className="bg-gray-100 text-gray-800 px-4 py-2 border border-gray-200 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <Trash2 className="w-4 h-4" /> Empty Trash
-                            </button>
-                          </>
-                      )}
-                      <button 
-                        onClick={() => handleClearSection('fees', 'Fees & Transactions')} 
-                        disabled={isClearing !== null}
-                        className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                         <Trash2 className="w-4 h-4" /> {isClearing === 'fees' ? 'Clearing...' : 'Clear'}
-                      </button>
-                  </div>
-               </div>
-
-               {/* Results */}
-               <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                     <h4 className="font-bold text-red-800">Clear Exams & Results</h4>
-                     <p className="text-xs text-red-600 mt-1">Deletes all entered student marks and report cards.</p>
-                     {trashItems.filter(i => i.section === 'results').length > 0 && <p className="text-xs text-emerald-600 mt-2 font-bold">{trashItems.filter(i => i.section === 'results').length} items available to restore</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                      {trashItems.filter(i => i.section === 'results').length > 0 && (
-                          <>
-                            <button onClick={() => handleRestoreSection('results')} disabled={isRestoring !== null} className="bg-emerald-100 text-emerald-800 px-4 py-2 border border-emerald-200 rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <History className="w-4 h-4" /> {isRestoring === 'results' ? 'Restoring...' : 'Restore'}
-                            </button>
-                            <button onClick={() => handleEmptyTrashSection('results')} disabled={isRestoring !== null} className="bg-gray-100 text-gray-800 px-4 py-2 border border-gray-200 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <Trash2 className="w-4 h-4" /> Empty Trash
-                            </button>
-                          </>
-                      )}
-                      <button 
-                        onClick={() => handleClearSection('results', 'Exams & Results')} 
-                        disabled={isClearing !== null}
-                        className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                         <Trash2 className="w-4 h-4" /> {isClearing === 'results' ? 'Clearing...' : 'Clear'}
-                      </button>
-                  </div>
-               </div>
-
-               {/* Admissions */}
-               <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                     <h4 className="font-bold text-red-800">Clear Admissions Data</h4>
-                     <p className="text-xs text-red-600 mt-1">Deletes all online admission requests and forms.</p>
-                     {trashItems.filter(i => i.section === 'admissions').length > 0 && <p className="text-xs text-emerald-600 mt-2 font-bold">{trashItems.filter(i => i.section === 'admissions').length} items available to restore</p>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                      {trashItems.filter(i => i.section === 'admissions').length > 0 && (
-                          <>
-                            <button onClick={() => handleRestoreSection('admissions')} disabled={isRestoring !== null} className="bg-emerald-100 text-emerald-800 px-4 py-2 border border-emerald-200 rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <History className="w-4 h-4" /> {isRestoring === 'admissions' ? 'Restoring...' : 'Restore'}
-                            </button>
-                            <button onClick={() => handleEmptyTrashSection('admissions')} disabled={isRestoring !== null} className="bg-gray-100 text-gray-800 px-4 py-2 border border-gray-200 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm">
-                               <Trash2 className="w-4 h-4" /> Empty Trash
-                            </button>
-                          </>
-                      )}
-                      <button 
-                        onClick={() => handleClearSection('admissions', 'Admissions Data')} 
-                        disabled={isClearing !== null}
-                        className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                         <Trash2 className="w-4 h-4" /> {isClearing === 'admissions' ? 'Clearing...' : 'Clear'}
-                      </button>
-                  </div>
-               </div>
-           </div>
-        </div>
-      )}
 
       {activeTab === 'content' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-4xl">
@@ -632,7 +399,7 @@ export default function Settings() {
              <div className="flex gap-2">
                 <button 
                   onClick={() => setPreviewRole('guest')} 
-                  className={`px-3 py-1.5 text-sm font-bold rounded flex items-center gap-1 border ${previewRole === 'guest' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                  className={`px-3 py-1.5 text-sm font-bold rounded flex items-center gap-1 border transition-colors ${previewRole === 'guest' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
                 >
                   <MonitorPlay className="w-4 h-4"/> Guest
                 </button>

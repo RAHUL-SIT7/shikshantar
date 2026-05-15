@@ -242,7 +242,7 @@ export default function ScholarshipTab({ studentsData, onRefresh }: { studentsDa
                  <div className="bg-purple-50 px-6 py-3 border-b border-purple-100 flex justify-between items-center">
                    <h3 className="font-black text-purple-900 uppercase tracking-wider text-sm">Class {className}</h3>
                  </div>
-                 <div className="overflow-x-auto">
+                 <div className="overflow-x-auto custom-scrollbar pb-1">
                    <table className="w-full text-left whitespace-nowrap">
                      <thead className="text-primary text-gray-500 text-xs uppercase tracking-widest font-black border-b border-gray-100">
                          <tr>

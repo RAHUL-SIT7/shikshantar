@@ -14,7 +14,7 @@ export const exportToPDF = async (
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     try {
-        const response = await fetch('https://i.postimg.cc/SxGS5WxY/logo.png');
+        const response = await fetch('/logo.png');
         const blob = await response.blob();
         const base64data = await new Promise((resolve) => {
            const reader = new FileReader();

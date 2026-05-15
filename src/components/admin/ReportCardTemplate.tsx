@@ -55,14 +55,14 @@ export const ReportCardTemplate = forwardRef<HTMLDivElement, ReportCardProps>(
                
                {/* Background Watermark Logo */}
                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                  <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.08]" />
+                  <img src="/logo.png" alt="Watermark" className="w-[450px] h-[450px] object-contain opacity-[0.08]" />
                </div>
 
                <div className="relative z-10 flex flex-col h-full p-6 flex-1 box-border">
             
             {/* Header */}
             <div className="flex flex-row justify-between items-center mb-4 pb-4 border-b-2 border-[#1a2b4c] text-primary">
-                <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-24 h-24 object-contain" />
+                <img src="/logo.png" alt="Shikshantar Academy Logo" className="w-24 h-24 object-contain" />
                 <div className="text-center flex-1 pr-10">
                    <h1 className="text-4xl font-black text-[#1a2b4c] uppercase tracking-wider mb-1">
                      Shikshantar Academy

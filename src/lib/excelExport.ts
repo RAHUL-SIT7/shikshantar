@@ -39,7 +39,7 @@ const addSchoolHeaderToSheet = async (
   // Load logo
   let logoId;
   try {
-     const response = await fetch('https://i.postimg.cc/SxGS5WxY/logo.png');
+     const response = await fetch('/logo.png');
      const arrayBuffer = await response.arrayBuffer();
      logoId = workbook.addImage({
        buffer: arrayBuffer,

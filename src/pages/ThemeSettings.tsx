@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { THEMES } from '../App';
-import { Check, Settings, Type, Palette } from 'lucide-react';
+import { Check, Settings, Type, Palette, Clock, CalendarClock, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -10,6 +10,42 @@ export default function ThemeSettings() {
   const [customAccent, setCustomAccent] = useState('#ea580c');
   const [activeFont, setActiveFont] = useState(localStorage.getItem('appFontFamily') || "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif");
   const [toast, setToast] = useState<{message: string, show: boolean}>({ message: '', show: false });
+  
+  const [livePreview, setLivePreview] = useState(false);
+  const [scheduledThemes, setScheduledThemes] = useState<{id: string, themeKey: string, activateOn: string}[]>([]);
+  const [scheduleActive, setScheduleActive] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [scheduleThemeKey, setScheduleThemeKey] = useState(Object.keys(THEMES)[0]);
+
+  const previewThemeColors = (key: string) => {
+    if (!livePreview) return;
+    const t = key === 'custom' ? { primary: customPrimary, primaryDark: customPrimary, primaryLight: customPrimary, accent: customAccent, accentHover: customAccent } : THEMES[key];
+    if (!t) return;
+    const r = document.documentElement;
+    r.style.setProperty("--primary",       t.primary);
+    r.style.setProperty("--primary-dark",  t.primaryDark);
+    r.style.setProperty("--primary-light", t.primaryLight);
+    r.style.setProperty("--accent",        t.accent);
+    r.style.setProperty("--accent-hover",  t.accentHover);
+  };
+
+  const revertThemeColors = () => {
+    if (!livePreview) return;
+    let t;
+    if (activeTheme === 'custom') {
+       t = JSON.parse(localStorage.getItem('appCustomTheme') || "{}");
+    } else {
+       t = THEMES[activeTheme];
+    }
+    if (!t) return;
+    const r = document.documentElement;
+    r.style.setProperty("--primary",       t.primary || t.primaryDark);
+    r.style.setProperty("--primary-dark",  t.primaryDark);
+    r.style.setProperty("--primary-light", t.primaryLight || t.primaryDark);
+    r.style.setProperty("--accent",        t.accent);
+    r.style.setProperty("--accent-hover",  t.accentHover);
+  };
 
   const showToast = (message: string) => {
     setToast({ message, show: true });
@@ -23,7 +59,17 @@ export default function ThemeSettings() {
     { name: 'Modern Sans (Inter)', value: "'Inter', sans-serif" },
     { name: 'Elegant Serif (Playfair)', value: "'Playfair Display', serif" },
     { name: 'Playful (Nunito)', value: "'Nunito', sans-serif" },
-    { name: 'Tech Mono (JetBrains)', value: "'JetBrains Mono', monospace" }
+    { name: 'Tech Mono (JetBrains)', value: "'JetBrains Mono', monospace" },
+    { name: 'Rounded (Quicksand)', value: "'Quicksand', sans-serif" },
+    { name: 'Geometric (Poppins)', value: "'Poppins', sans-serif" },
+    { name: 'Corporate (DM Sans)', value: "'DM Sans', sans-serif" },
+    { name: 'Editorial (Fraunces)', value: "'Fraunces', serif" },
+    { name: 'Luxury (Cormorant Garamond)', value: "'Cormorant Garamond', serif" },
+    { name: 'Executive (Libre Baskerville)', value: "'Libre Baskerville', serif" },
+    { name: 'Tech Bold (Space Grotesk)', value: "'Space Grotesk', sans-serif" },
+    { name: 'Minimal (Outfit)', value: "'Outfit', sans-serif" },
+    { name: 'Classic Newspaper', value: "'Source Serif 4', serif|'Playfair Display', serif" },
+    { name: 'Humanist (Nunito Sans)', value: "'Nunito Sans', sans-serif" }
   ];
 
   const updateGlobalSettings = async (themeKey: string, customColors: any, fontFamily: string) => {
@@ -76,12 +122,14 @@ export default function ThemeSettings() {
 
   const primarySwatches = [
     '#1a2744', '#1e3a8a', '#166534', '#7f1d1d', '#4c1d95',
-    '#0f766e', '#111827', '#991b1b', '#065f46', '#1e40af'
+    '#0f766e', '#111827', '#991b1b', '#065f46', '#1e40af',
+    '#c2410c', '#0369a1', '#9f1239', '#0f172a', '#4a044e'
   ];
 
   const accentSwatches = [
     '#ea580c', '#f59e0b', '#16a34a', '#2563eb',
-    '#dc2626', '#db2777', '#06b6d4', '#7c3aed'
+    '#dc2626', '#db2777', '#06b6d4', '#7c3aed',
+    '#eab308', '#14b8a6', '#fb7185', '#22c55e', '#8b5cf6'
   ];
 
   const handleSaveCustom = () => {
@@ -97,8 +145,55 @@ export default function ThemeSettings() {
     applyTheme('custom', customObj);
   };
 
+  const handleScheduleTheme = () => {
+     if (!scheduleThemeKey || !scheduleDate || !scheduleTime) return;
+     const dt = new Date(`${scheduleDate}T${scheduleTime}`);
+     if (dt.getTime() < Date.now()) {
+        showToast('Schedule time must be in the future.');
+        return;
+     }
+
+     const newSch = {
+        id: Math.random().toString(36).substring(2),
+        themeKey: scheduleThemeKey,
+        activateOn: dt.toISOString()
+     };
+     setScheduledThemes(prev => [...prev, newSch]);
+     showToast(`Theme scheduled for ${dt.toLocaleString()}!`);
+  };
+
+  const removeSchedule = (id: string) => {
+     setScheduledThemes(prev => prev.filter(t => t.id !== id));
+  };
+
+  useEffect(() => {
+     if (scheduledThemes.length === 0) return;
+     
+     const now = Date.now();
+     // Find the next scheduled theme
+     const nextDue = scheduledThemes.reduce((earliest, current) => {
+         const earliestTime = new Date(earliest.activateOn).getTime();
+         const currentTime = new Date(current.activateOn).getTime();
+         return currentTime < earliestTime ? current : earliest;
+     });
+
+     const delay = Math.max(0, new Date(nextDue.activateOn).getTime() - now);
+
+     const timer = setTimeout(() => {
+         applyTheme(nextDue.themeKey);
+         setScheduledThemes(prev => prev.filter(s => s.id !== nextDue.id));
+     }, delay);
+
+     return () => clearTimeout(timer);
+  }, [scheduledThemes, activeFont]);
+
   return (
     <div className="max-w-6xl mx-auto pb-12 relative animate-in fade-in zoom-in duration-300">
+       {livePreview && (
+          <div className="fixed top-0 left-0 w-full bg-blue-600 text-white text-center py-2 font-bold text-sm z-[9999] shadow-md animate-in slide-in-from-top flex items-center justify-center gap-2">
+             <span>👁</span> Live Preview Active — Hover themes to preview. Click to apply.
+          </div>
+       )}
        {toast.show && (
           <div className="fixed top-8 right-8 bg-[var(--primary)] text-white px-5 py-3 rounded-lg shadow-2xl z-[9999] font-bold text-sm flex items-center gap-2 animate-in slide-in-from-right-8 fade-in">
              {toast.message}
@@ -125,8 +220,9 @@ export default function ThemeSettings() {
                       key={font.name}
                       onClick={() => handleFontChange(font.value)}
                       className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 text-center min-h-[100px] h-auto ${isActive ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 bg-blue-50' : 'border-gray-200 hover:border-[var(--primary)]/50 hover:bg-gray-50'}`}
-                      style={{ fontFamily: font.value }}
+                      style={{ fontFamily: font.value.includes('|') ? font.value.split('|')[0] : font.value }}
                    >
+                      <span className="text-xl opacity-50 mb-1">Aa</span>
                       <span className={`text-sm md:text-base font-bold ${isActive ? 'text-[var(--primary)]' : 'text-gray-700'}`}>{font.name}</span>
                       {isActive && <span className="text-[10px] uppercase tracking-widest text-[var(--primary)] font-black mt-1">Active</span>}
                    </button>
@@ -136,20 +232,44 @@ export default function ThemeSettings() {
        </div>
 
        {/* Preset Themes Grid */}
+       <div className="mb-12 flex items-center justify-between bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+          <div>
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">🔍 Live Theme Preview</h3>
+              <p className="text-sm text-gray-500 font-medium">Hover over any theme to preview it live. Click Apply to save.</p>
+          </div>
+          <button 
+             onClick={() => setLivePreview(!livePreview)}
+             className={`w-14 h-8 rounded-full transition-colors relative shadow-inner ${livePreview ? 'bg-[var(--primary)]' : 'bg-gray-300'}`}
+          >
+             <div className={`w-6 h-6 bg-white rounded-full absolute top-1 transition-all shadow ${livePreview ? 'left-7' : 'left-1'}`}></div>
+          </button>
+       </div>
+
        <div className="mb-12">
          <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2 border-b border-gray-100 pb-2"><Palette className="w-6 h-6 text-[var(--primary)]"/> Color Themes</h2>
          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Object.keys(THEMES).map(key => {
                const t = THEMES[key];
                const isActive = activeTheme === key;
+               const isScheduled = scheduledThemes.some(s => s.themeKey === key);
                return (
-                 <div key={key} className={`bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-sm border border-gray-100 flex flex-col ${isActive ? 'ring-4 ring-[var(--primary)] scale-[1.02] shadow-xl' : 'hover:-translate-y-1 hover:shadow-lg'}`}>
-                    <div className="h-[60px] w-full relative shrink-0" style={{ backgroundColor: t.primary }}>
+                 <div 
+                    key={key} 
+                    onMouseEnter={() => previewThemeColors(key)}
+                    onMouseLeave={revertThemeColors}
+                    className={`bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-sm border border-gray-100 flex flex-col ${isActive ? 'ring-4 ring-[var(--primary)] scale-[1.02] shadow-xl' : 'hover:-translate-y-1 hover:shadow-lg'}`}
+                 >
+                    <div className="h-[60px] w-full relative shrink-0" style={{ backgroundImage: `linear-gradient(to right, ${t.primary}, ${t.primaryDark})` }}>
                         <div className="absolute top-1/2 -translate-y-1/2 right-4 w-6 h-6 rounded-full shadow-sm border-2 border-white/40" style={{ backgroundColor: t.accent }}></div>
                     </div>
-                    <div className="p-5 flex flex-col flex-1 gap-3">
+                    <div className="p-5 flex flex-col flex-1 gap-3 relative">
+                        {isScheduled && (
+                            <div className="absolute top-2 right-2 text-green-600 bg-green-50 p-1 rounded-full border border-green-200 shadow-sm" title="Scheduled to activate">
+                                <Clock className="w-4 h-4" />
+                            </div>
+                        )}
                         <div className="flex justify-between items-start">
-                           <div className="flex items-center gap-2">
+                           <div className="flex items-center gap-2 pr-6">
                               <span className="text-xl">{t.emoji}</span>
                               <h3 className="font-bold text-base leading-tight text-gray-900 truncate" title={t.name}>{t.name}</h3>
                            </div>
@@ -298,6 +418,66 @@ export default function ThemeSettings() {
              </div>
           </div>
        </div>
+
+       {/* Schedule Theme */}
+       <div className="mt-12 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button onClick={() => setScheduleActive(!scheduleActive)} className="w-full p-6 flex justify-between items-center text-left hover:bg-gray-50 transition-colors">
+              <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2"><CalendarClock className="w-6 h-6 text-[var(--primary)]"/> 📅 Schedule a Theme Change</h2>
+              <div className={`transform transition-transform ${scheduleActive ? 'rotate-180' : ''}`}>▼</div>
+          </button>
+          {scheduleActive && (
+             <div className="p-6 border-t border-gray-100 bg-gray-50/50">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mb-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Select Theme to Schedule</label>
+                        <select 
+                           value={scheduleThemeKey}
+                           onChange={e => setScheduleThemeKey(e.target.value)}
+                           className="w-full border border-gray-200 rounded-lg p-3 font-medium focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                        >
+                           {Object.keys(THEMES).map(k => (
+                              <option key={k} value={k}>{THEMES[k].name}</option>
+                           ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Activate on Date</label>
+                        <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full border border-gray-200 rounded-lg p-3 font-medium focus:ring-2 focus:ring-[var(--primary)] outline-none" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Time</label>
+                        <div className="flex gap-2">
+                           <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="flex-1 border border-gray-200 rounded-lg p-3 font-medium focus:ring-2 focus:ring-[var(--primary)] outline-none" />
+                           <button onClick={handleScheduleTheme} className="bg-[var(--primary)] text-white px-4 rounded-lg font-bold hover:bg-[var(--primary-dark)] transition-colors text-sm">Schedule</button>
+                        </div>
+                    </div>
+                 </div>
+
+                 {scheduledThemes.length > 0 && (
+                     <div className="space-y-3">
+                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Upcoming Scheduled Changes</label>
+                         <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scrollbar-hide">
+                            {scheduledThemes.map(sch => (
+                               <div key={sch.id} className="min-w-[280px] snap-center flex justify-between items-center bg-white p-4 border border-gray-200 rounded-xl shadow-sm">
+                                  <div className="flex items-center gap-3">
+                                      <Clock className="w-5 h-5 text-green-600 shrink-0" />
+                                      <div className="min-w-0">
+                                          <div className="font-bold text-gray-900 truncate">{THEMES[sch.themeKey]?.name}</div>
+                                          <div className="text-xs text-gray-500 font-medium truncate">{new Date(sch.activateOn).toLocaleString()}</div>
+                                      </div>
+                                  </div>
+                                  <button onClick={() => removeSchedule(sch.id)} className="text-red-500 hover:bg-red-50 p-2 shrink-0 rounded-lg transition-colors">
+                                      <X className="w-5 h-5" />
+                                  </button>
+                               </div>
+                            ))}
+                         </div>
+                     </div>
+                 )}
+             </div>
+          )}
+       </div>
+
     </div>
   );
 }

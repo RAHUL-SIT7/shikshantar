@@ -110,7 +110,7 @@ export default function TeacherSalary() {
               <div className="flex-1 overflow-auto bg-gray-100 p-4 sm:p-8 custom-scrollbar">
                  <div ref={slipRef} className="bg-white mx-auto shadow-md relative overflow-hidden" style={{ width: '600px', padding: '40px' }}>
                     <div className="text-center mb-8 border-b-2 border-gray-800 pb-6">
-                        <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="w-16 h-16 object-contain mx-auto mb-2" />
+                        <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain mx-auto mb-2" />
                         <h2 className="font-black text-2xl text-gray-900 uppercase tracking-widest">Shikshantar Academy</h2>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Siraha, Nepal</p>
                         <div className={`mt-4 inline-block px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selectedSlip.status === 'Unpaid' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`}>

@@ -145,7 +145,7 @@ const Scholarship = ({ userRole }: { userRole?: string }) => {
                     />
                  </div>
              ) : (
-                <div className="prose prose-blue max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: policy }} />
+                <div className="prose prose-blue max-w-none text-slate-800 overflow-x-auto overflow-y-hidden custom-scrollbar pb-2" dangerouslySetInnerHTML={{ __html: policy }} />
              )}
           </div>
         )}

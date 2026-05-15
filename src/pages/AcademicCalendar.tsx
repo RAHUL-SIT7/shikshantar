@@ -23,6 +23,54 @@ const DEFAULT_MONTHS_2083 = [
   { name: 'Chaitra', days: 30, startDay: 0, events: [{ date: 15, name: 'Ram Navami' }] },
 ];
 
+const DEFAULT_MONTHS_2084 = [
+  { name: 'Baisakh', days: 31, startDay: 3, events: [{ date: 1, name: 'New Year' }, { date: 11, name: 'Loktantra Diwas' }] }, 
+  { name: 'Jestha', days: 32, startDay: 6, events: [{ date: 15, name: 'Republic Day' }, { date: 20, name: 'Buddha Purnima' }] },
+  { name: 'Asar', days: 31, startDay: 2, events: [{ date: 15, name: 'National Paddy Day' }] },
+  { name: 'Shrawan', days: 32, startDay: 5, events: [{ date: 12, name: 'Nag Panchami' }] },
+  { name: 'Bhadra', days: 31, startDay: 1, events: [{ date: 14, name: 'Teej' }, { date: 16, name: 'Rishi Panchami' }, { date: 20, name: 'Constitution Day' }] },
+  { name: 'Ashwin', days: 31, startDay: 4, events: [{ date: 7, name: 'Ghatasthapana' }, { date: 14, name: 'Fulpati' }, { date: 15, name: 'Maha Ashtami' }, { date: 16, name: 'Maha Navami' }, { date: 17, name: 'Vijaya Dashami' }] },
+  { name: 'Kartik', days: 30, startDay: 0, events: [{ date: 4, name: 'Laxmi Puja' }, { date: 5, name: 'Mha Puja' }, { date: 6, name: 'Bhai Tika' }, { date: 11, name: 'Chhath Puja' }] },
+  { name: 'Mangsir', days: 29, startDay: 2, events: [] },
+  { name: 'Poush', days: 30, startDay: 3, events: [{ date: 15, name: 'Tamu Lhosar' }] },
+  { name: 'Magh', days: 29, startDay: 5, events: [{ date: 1, name: 'Maghi Parba' }, { date: 5, name: 'Sonam Lhosar' }] },
+  { name: 'Falgun', days: 30, startDay: 6, events: [{ date: 7, name: 'Democracy Day' }, { date: 14, name: 'Maha Shivaratri' }, { date: 24, name: 'Holi / Fagu Purnima' }, { date: 28, name: 'Gyalpo Lhosar' }] },
+  { name: 'Chaitra', days: 30, startDay: 1, events: [{ date: 15, name: 'Ram Navami' }] },
+];
+
+const CALENDAR_YEARS: Record<string, any[]> = {
+  '2083': DEFAULT_MONTHS_2083,
+  '2084': DEFAULT_MONTHS_2084,
+  '2085': [
+    { name: 'Baisakh', days: 31, startDay: 5, events: [{ date: 1, name: 'New Year' }, { date: 11, name: 'Loktantra Diwas' }] }, 
+    { name: 'Jestha', days: 32, startDay: 1, events: [{ date: 15, name: 'Republic Day' }, { date: 20, name: 'Buddha Purnima' }] },
+    { name: 'Asar', days: 31, startDay: 5, events: [{ date: 15, name: 'National Paddy Day' }] },
+    { name: 'Shrawan', days: 32, startDay: 1, events: [{ date: 12, name: 'Nag Panchami' }] },
+    { name: 'Bhadra', days: 31, startDay: 5, events: [{ date: 14, name: 'Teej' }, { date: 16, name: 'Rishi Panchami' }, { date: 20, name: 'Constitution Day' }] },
+    { name: 'Ashwin', days: 31, startDay: 1, events: [{ date: 7, name: 'Ghatasthapana' }, { date: 14, name: 'Fulpati' }, { date: 15, name: 'Maha Ashtami' }, { date: 16, name: 'Maha Navami' }, { date: 17, name: 'Vijaya Dashami' }] },
+    { name: 'Kartik', days: 30, startDay: 4, events: [{ date: 4, name: 'Laxmi Puja' }, { date: 5, name: 'Mha Puja' }, { date: 6, name: 'Bhai Tika' }, { date: 11, name: 'Chhath Puja' }] },
+    { name: 'Mangsir', days: 29, startDay: 6, events: [] },
+    { name: 'Poush', days: 30, startDay: 0, events: [{ date: 15, name: 'Tamu Lhosar' }] },
+    { name: 'Magh', days: 29, startDay: 2, events: [{ date: 1, name: 'Maghi Parba' }, { date: 5, name: 'Sonam Lhosar' }] },
+    { name: 'Falgun', days: 30, startDay: 3, events: [{ date: 7, name: 'Democracy Day' }, { date: 14, name: 'Maha Shivaratri' }, { date: 24, name: 'Holi / Fagu Purnima' }, { date: 28, name: 'Gyalpo Lhosar' }] },
+    { name: 'Chaitra', days: 30, startDay: 5, events: [{ date: 15, name: 'Ram Navami' }] },
+  ],
+  '2086': [
+    { name: 'Baisakh', days: 31, startDay: 0, events: [{ date: 1, name: 'New Year' }, { date: 11, name: 'Loktantra Diwas' }] }, 
+    { name: 'Jestha', days: 32, startDay: 3, events: [{ date: 15, name: 'Republic Day' }, { date: 20, name: 'Buddha Purnima' }] },
+    { name: 'Asar', days: 31, startDay: 0, events: [{ date: 15, name: 'National Paddy Day' }] },
+    { name: 'Shrawan', days: 32, startDay: 3, events: [{ date: 12, name: 'Nag Panchami' }] },
+    { name: 'Bhadra', days: 31, startDay: 0, events: [{ date: 14, name: 'Teej' }, { date: 16, name: 'Rishi Panchami' }, { date: 20, name: 'Constitution Day' }] },
+    { name: 'Ashwin', days: 31, startDay: 3, events: [{ date: 7, name: 'Ghatasthapana' }, { date: 14, name: 'Fulpati' }, { date: 15, name: 'Maha Ashtami' }, { date: 16, name: 'Maha Navami' }, { date: 17, name: 'Vijaya Dashami' }] },
+    { name: 'Kartik', days: 30, startDay: 6, events: [{ date: 4, name: 'Laxmi Puja' }, { date: 5, name: 'Mha Puja' }, { date: 6, name: 'Bhai Tika' }, { date: 11, name: 'Chhath Puja' }] },
+    { name: 'Mangsir', days: 29, startDay: 1, events: [] },
+    { name: 'Poush', days: 30, startDay: 2, events: [{ date: 15, name: 'Tamu Lhosar' }] },
+    { name: 'Magh', days: 29, startDay: 4, events: [{ date: 1, name: 'Maghi Parba' }, { date: 5, name: 'Sonam Lhosar' }] },
+    { name: 'Falgun', days: 30, startDay: 5, events: [{ date: 7, name: 'Democracy Day' }, { date: 14, name: 'Maha Shivaratri' }, { date: 24, name: 'Holi / Fagu Purnima' }, { date: 28, name: 'Gyalpo Lhosar' }] },
+    { name: 'Chaitra', days: 30, startDay: 0, events: [{ date: 15, name: 'Ram Navami' }] },
+  ]
+};
+
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const PageCover = React.forwardRef<HTMLDivElement, { children: React.ReactNode }>(({ children }, ref) => {
@@ -37,15 +85,15 @@ const PageCover = React.forwardRef<HTMLDivElement, { children: React.ReactNode }
   );
 });
 
-const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: number, isAdmin?: boolean, todayBsDate?: { monthIdx: number, date: number } | null, onDateClick?: (monthIndex: number, monthName: string, date: number, currentEvents: string) => void }>(({ month, monthIndex, isAdmin, todayBsDate, onDateClick }, ref) => {
+const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: number, year: string, isAdmin?: boolean, todayBsDate?: { monthIdx: number, date: number } | null, onDateClick?: (monthIndex: number, monthName: string, date: number, currentEvents: string, eventObj?: any) => void }>(({ month, monthIndex, year, isAdmin, todayBsDate, onDateClick }, ref) => {
   return (
     <div className="page bg-white shadow-[inset_0_0_5px_rgba(0,0,0,0.1)] h-full w-full relative border border-gray-300" ref={ref}>
       <div className="p-3 md:p-5 h-full flex flex-col">
         <div className="text-center mb-1 md:mb-2 border-b-2 border-primary pb-1 md:pb-2 flex-none relative">
           <div className="absolute left-0 top-1 text-gray-300 font-bold opacity-30 text-4xl md:text-5xl pointer-events-none tracking-tighter -mt-2 -ml-2">{monthIndex + 1}</div>
-          <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="hidden md:block absolute right-0 top-0 w-8 h-8 object-contain opacity-50 grayscale" />
+          <img src="/logo.png" alt="Logo" className="hidden md:block absolute right-0 top-0 w-8 h-8 object-contain opacity-50 grayscale" />
           <h2 className="text-xl lg:text-3xl font-black text-primary uppercase tracking-widest relative z-10">{month.name}</h2>
-          <p className="text-gray-500 font-bold tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-[10px] mt-0.5 md:mt-1">Shikshantar Academy | 2083 B.S.</p>
+          <p className="text-gray-500 font-bold tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-[10px] mt-0.5 md:mt-1">Shikshantar Academy | {year} B.S.</p>
         </div>
         
         <div className="flex-1 flex flex-col mb-1 relative overflow-hidden">
@@ -64,21 +112,26 @@ const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: 
               const date = i + 1;
               const globalDayIndex = (month.startDay + i) % 7;
               const isWeekend = (globalDayIndex === 0 || globalDayIndex === 6); // Sunday & Saturday
-              const dayEvents = month.events ? month.events.filter((e: any) => e.date === date) : [];
+              const dayEvents = month.events ? month.events.filter((e: any) => {
+                 if (e.endDate && e.endDate >= e.date) {
+                    return date >= e.date && date <= e.endDate;
+                 }
+                 return e.date === date;
+              }) : [];
               const isEvent = dayEvents.length > 0;
               const isToday = todayBsDate?.monthIdx === monthIndex && todayBsDate?.date === date;
               
               return (
                 <div 
                    key={date} 
-                   onClick={() => isAdmin && onDateClick && onDateClick(monthIndex, month.name, date, dayEvents.map((e: any) => e.name).join(', '))}
+                   onClick={() => isAdmin && onDateClick && onDateClick(monthIndex, month.name, dayEvents[0]?.date || date, dayEvents.map((e: any) => e.name).join(', '), dayEvents[0])}
                    className={`p-px md:p-0.5 min-h-[1.75rem] md:min-h-[30px] border shadow-[0_1px_2px_rgba(0,0,0,0.02)] border-gray-100/80 rounded-[2px] md:rounded flex flex-col items-center justify-start font-bold relative transition-colors ${isWeekend ? 'text-red-600 bg-red-50/40 border-red-100' : 'text-gray-800 bg-white hover:bg-blue-50'} ${isEvent && !isWeekend ? 'bg-blue-50/40' : ''} ${isAdmin ? 'cursor-pointer hover:ring-2 hover:ring-blue-400 z-10' : ''} ${isToday ? 'ring-2 ring-primary bg-blue-50/50 z-20 shadow-md transform scale-[1.02]' : ''}`}
                 >
                   <span className={`text-[10px] md:text-[13px] leading-tight mt-0.5 ${isToday ? 'bg-primary text-white w-5 h-5 rounded-full flex items-center justify-center -mt-0.5' : ''}`}>{date}</span>
                   {isEvent && (
                      <div className="flex flex-col gap-px w-full items-center px-px mt-px">
                        {dayEvents.map((e: any, idx: number) => (
-                         <div key={idx} className={`w-full text-[4px] md:text-[6px] leading-none text-center rounded-sm px-[1px] py-px truncate ${isWeekend ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`} title={e.name}>{e.name}</div>
+                         <div key={idx} className={`w-full text-[4px] md:text-[6px] leading-[1.1] text-center rounded-sm px-[1px] py-px whitespace-normal break-words overflow-hidden ${isWeekend ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }} title={e.name}>{e.name}</div>
                        ))}
                      </div>
                   )}
@@ -96,7 +149,7 @@ const CalendarPage = React.forwardRef<HTMLDivElement, { month: any, monthIndex: 
              </div>
              <ul className="text-gray-700 list-none pl-1 space-y-0.5 md:space-y-1">
                 {month.events.map((e: any, i: number) => (
-                   <li key={i} className="flex gap-2 items-start text-[8px] md:text-[10px]"><span className="font-bold w-3 shrink-0 text-blue-600">{e.date}</span><span className="leading-tight">{e.name}</span></li>
+                   <li key={i} className="flex gap-2 items-start text-[8px] md:text-[10px]"><span className="font-bold shrink-0 text-blue-600 w-auto min-w-[12px]">{e.date}{e.endDate && e.endDate > e.date ? `-${e.endDate}` : ''}</span><span className="leading-tight">{e.name}</span></li>
                 ))}
              </ul>
           </div>
@@ -115,19 +168,22 @@ export default function AcademicCalendar() {
   const [flipSound] = useState(new Audio('https://actions.google.com/sounds/v1/foley/book_page_turn.ogg'));
   const bookRef = useRef<any>(null);
   const [selectedMonth, setSelectedMonth] = useState('-1');
-  const [monthsData, setMonthsData] = useState<any[]>(DEFAULT_MONTHS_2083);
+  const [selectedYear, setSelectedYear] = useState('2083');
+  const [monthsData, setMonthsData] = useState<any[]>(CALENDAR_YEARS['2083']);
   const [customEventsData, setCustomEventsData] = useState<any>({});
   const [isReady, setIsReady] = useState(false);
   const [todayBsDate, setTodayBsDate] = useState<{ monthIdx: number, date: number } | null>(null);
   
   const role = auth.currentUser ? (localStorage.getItem('userRole') || 'student') : 'guest';
   const isAdmin = role === 'admin';
-  const [editModal, setEditModal] = useState<{ monthIdx: number, monthName: string, date: number, current: string } | null>(null);
+  const [editModal, setEditModal] = useState<{ monthIdx: number, monthName: string, date: number, current: string, currentEndDate?: number } | null>(null);
   const [editInput, setEditInput] = useState("");
+  const [editEndDateInput, setEditEndDateInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const [adminMonth, setAdminMonth] = useState('0');
   const [adminDate, setAdminDate] = useState('');
+  const [adminEndDate, setAdminEndDate] = useState('');
   const [adminEventName, setAdminEventName] = useState('');
 
   const handleAdminSave = async () => {
@@ -136,15 +192,21 @@ export default function AcademicCalendar() {
       const monthKey = `month_${adminMonth}`;
       if (!newCalData[monthKey]) newCalData[monthKey] = [];
       const parsedDate = parseInt(adminDate);
+      const parsedEndDate = adminEndDate ? parseInt(adminEndDate) : null;
       const existingIdx = newCalData[monthKey].findIndex((e: any) => e.date === parsedDate);
       if (existingIdx >= 0) {
          newCalData[monthKey][existingIdx].name = adminEventName;
+         if (parsedEndDate && parsedEndDate > parsedDate) newCalData[monthKey][existingIdx].endDate = parsedEndDate;
+         else delete newCalData[monthKey][existingIdx].endDate;
       } else {
-         newCalData[monthKey].push({ date: parsedDate, name: adminEventName });
+         const newEvent: any = { date: parsedDate, name: adminEventName };
+         if (parsedEndDate && parsedEndDate > parsedDate) newEvent.endDate = parsedEndDate;
+         newCalData[monthKey].push(newEvent);
       }
       try {
-         await setDoc(doc(db, 'settings', 'calendar_2083'), newCalData);
+         await setDoc(doc(db, 'settings', `calendar_${selectedYear}`), newCalData);
          setAdminDate('');
+         setAdminEndDate('');
          setAdminEventName('');
       } catch(e) {
          alert('Failed saving calendar update');
@@ -159,9 +221,18 @@ export default function AcademicCalendar() {
           newCalData[monthKey] = newCalData[monthKey].filter((e: any) => e.date !== date);
           setIsSaving(true);
           try {
-             await setDoc(doc(db, 'settings', 'calendar_2083'), newCalData);
+             await setDoc(doc(db, 'settings', `calendar_${selectedYear}`), newCalData);
           } catch(e) {}
           setIsSaving(false);
+      }
+  };
+
+  const handleYearChange = async (newYear: string) => {
+      setSelectedYear(newYear);
+      if (isAdmin) {
+          try {
+             await setDoc(doc(db, 'settings', 'calendar_meta'), { activeYear: newYear }, { merge: true });
+          } catch (e) {}
       }
   };
 
@@ -173,12 +244,27 @@ export default function AcademicCalendar() {
         setSelectedMonth(defaultMonthIdx.toString());
         setTodayBsDate({ monthIdx: currentDate.getMonth(), date: currentDate.getDate() });
      } catch (e) {}
+     
+     const unsubMeta = onSnapshot(doc(db, 'settings', 'calendar_meta'), (snap) => {
+         if (snap.exists() && snap.data()?.activeYear) {
+             setSelectedYear(snap.data().activeYear);
+         }
+     });
+     return () => unsubMeta();
+  }, []);
 
-     const unsub = onSnapshot(doc(db, 'settings', 'calendar_2083'), (snap) => {
+  useEffect(() => {
+     if (bookRef.current && bookRef.current.pageFlip()) {
+         try {
+            bookRef.current.pageFlip().turnToPage(0);
+         } catch(e) {}
+     }
+     
+     const unsub = onSnapshot(doc(db, 'settings', `calendar_${selectedYear}`), (snap) => {
         if (snap.exists()) {
            const customEvents = snap.data();
            setCustomEventsData(customEvents);
-           const newMonths = DEFAULT_MONTHS_2083.map((m, idx) => {
+           const newMonths = CALENDAR_YEARS[selectedYear].map((m, idx) => {
               const monthCustomEvents = customEvents[`month_${idx}`] || [];
               const combinedEvents = [...m.events];
               
@@ -193,6 +279,7 @@ export default function AcademicCalendar() {
            setMonthsData(newMonths);
         } else {
            setCustomEventsData({});
+           setMonthsData(CALENDAR_YEARS[selectedYear]);
         }
         setIsReady(true);
      }, () => {
@@ -200,12 +287,13 @@ export default function AcademicCalendar() {
      });
 
      return () => unsub();
-  }, []);
+  }, [selectedYear]);
 
-  const handleDateClick = (monthIdx: number, monthName: string, date: number, current: string) => {
+  const handleDateClick = (monthIdx: number, monthName: string, date: number, current: string, eventObj?: any) => {
       if (!isAdmin) return;
-      setEditModal({ monthIdx, monthName, date, current });
+      setEditModal({ monthIdx, monthName, date, current, currentEndDate: eventObj?.endDate });
       setEditInput(current);
+      setEditEndDateInput(eventObj?.endDate ? eventObj.endDate.toString() : "");
   };
 
   const saveEvent = async () => {
@@ -217,24 +305,30 @@ export default function AcademicCalendar() {
       if (!newCalData[monthKey]) newCalData[monthKey] = [];
       
       const existingIdx = newCalData[monthKey].findIndex((e: any) => e.date === editModal.date);
+      const parsedEndDate = editEndDateInput ? parseInt(editEndDateInput) : null;
       
       if (editInput.trim() === "") {
           // Add empty string to override default events (makes it disappear), or just remove if custom
           if (existingIdx >= 0) {
              newCalData[monthKey][existingIdx].name = "";
+             delete newCalData[monthKey][existingIdx].endDate;
           } else {
              newCalData[monthKey].push({ date: editModal.date, name: "" });
           }
       } else {
           if (existingIdx >= 0) {
              newCalData[monthKey][existingIdx].name = editInput;
+             if (parsedEndDate && parsedEndDate > editModal.date) newCalData[monthKey][existingIdx].endDate = parsedEndDate;
+             else delete newCalData[monthKey][existingIdx].endDate;
           } else {
-             newCalData[monthKey].push({ date: editModal.date, name: editInput });
+             const newEvent: any = { date: editModal.date, name: editInput };
+             if (parsedEndDate && parsedEndDate > editModal.date) newEvent.endDate = parsedEndDate;
+             newCalData[monthKey].push(newEvent);
           }
       }
       
       try {
-         await setDoc(doc(db, 'settings', 'calendar_2083'), newCalData);
+         await setDoc(doc(db, 'settings', `calendar_${selectedYear}`), newCalData);
          setEditModal(null);
       } catch(e) {
          alert('Failed to save update');
@@ -281,14 +375,14 @@ export default function AcademicCalendar() {
      const pageWidth = doc.internal.pageSize.getWidth();
      
      // Header
-     doc.addImage('https://i.postimg.cc/SxGS5WxY/logo.png', 'PNG', 40, 30, 50, 50);
+     doc.addImage('/logo.png', 'PNG', 40, 30, 50, 50);
      doc.setFontSize(22);
      doc.setFont('helvetica', 'bold');
      doc.setTextColor(30, 58, 138); // Primary color
      doc.text('Shikshantar Academy', 100, 50);
      doc.setFontSize(14);
      doc.setTextColor(100, 100, 100);
-     doc.text('Academic Calendar - 2083 B.S.', 100, 70);
+     doc.text(`Academic Calendar - ${selectedYear} B.S.`, 100, 70);
      
      let currentY = 100;
      
@@ -322,7 +416,7 @@ export default function AcademicCalendar() {
          currentY = (doc as any).lastAutoTable.finalY + 30;
      });
      
-     doc.save('SA2083_calendar.pdf');
+     doc.save(`SA${selectedYear}_calendar.pdf`);
   };
 
   if (!isReady) return null;
@@ -330,16 +424,31 @@ export default function AcademicCalendar() {
   return (
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8 flex flex-col items-center">
       <Helmet>
-        <title>Academic Calendar 2083 | Shikshantar Academy</title>
+        <title>Academic Calendar {selectedYear} | Shikshantar Academy</title>
       </Helmet>
       
       <div className="text-center mb-6 w-full flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-left">
-          <h1 className="text-2xl lg:text-3xl font-black text-primary uppercase tracking-wider mb-1 flex items-center gap-3">
-             <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="w-8 h-8 rounded-full shadow-sm" />
-             Academic Calendar 2083
+        <div className="text-left flex flex-col items-start">
+          <h1 className="text-2xl lg:text-3xl font-black text-primary uppercase tracking-wider mb-2 flex items-center gap-3">
+             <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full shadow-sm" />
+             Academic Calendar {selectedYear}
           </h1>
-          <p className="text-gray-500 font-medium text-sm">Interactive Flipbook Calendar</p>
+          {isAdmin ? (
+             <div className="flex items-center gap-2 mt-1">
+                <label className="text-xs font-bold text-gray-500 uppercase">Year:</label>
+                <select 
+                   value={selectedYear} 
+                   onChange={(e) => handleYearChange(e.target.value)}
+                   className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-gray-800 outline-none"
+                >
+                   {Object.keys(CALENDAR_YEARS).sort().map(y => (
+                      <option key={y} value={y}>{y}</option>
+                   ))}
+                </select>
+             </div>
+          ) : (
+             <p className="text-gray-500 font-medium text-sm">Interactive Flipbook Calendar</p>
+          )}
         </div>
         
         <div className="flex gap-3 items-center">
@@ -389,7 +498,7 @@ export default function AcademicCalendar() {
             ref={bookRef}
           >
             <PageCover>
-              <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Shikshantar Academy Logo" className="w-36 h-36 mb-6 drop-shadow-2xl bg-white/10 rounded-full p-2 border-4 border-white/20" />
+              <img src="/logo.png" alt="Shikshantar Academy Logo" className="w-36 h-36 mb-6 drop-shadow-2xl bg-white/10 rounded-full p-2 border-4 border-white/20" />
               <h1 className="text-4xl text-center font-black text-white uppercase tracking-widest leading-tight mb-2 drop-shadow-lg">Shikshantar<br/>Academy</h1>
               <p className="text-blue-200 text-sm tracking-wide font-medium">Siraha, Nepal</p>
               
@@ -399,16 +508,16 @@ export default function AcademicCalendar() {
                  <div className="h-px bg-gradient-to-r from-transparent via-white/50 to-transparent w-full"></div>
               </div>
               
-              <h2 className="text-2xl font-black tracking-[0.4em] text-amber-300 drop-shadow-[0_0_10px_rgba(252,211,77,0.5)] bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent transform">CALENDAR 2083</h2>
+              <h2 className="text-2xl font-black tracking-[0.4em] text-amber-300 drop-shadow-[0_0_10px_rgba(252,211,77,0.5)] bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent transform">CALENDAR {selectedYear}</h2>
               <p className="mt-8 text-blue-300/80 text-xs font-medium tracking-widest uppercase border border-blue-300/30 px-4 py-2 rounded-full">Swipe or click to open</p>
             </PageCover>
 
             {monthsData.map((month, index) => (
-               <CalendarPage key={month.name} month={month} monthIndex={index} isAdmin={isAdmin} onDateClick={handleDateClick} todayBsDate={todayBsDate} />
+               <CalendarPage key={month.name} month={month} monthIndex={index} year={selectedYear} isAdmin={isAdmin} onDateClick={handleDateClick} todayBsDate={todayBsDate} />
             ))}
 
             <PageCover>
-              <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="w-24 h-24 mb-6 opacity-30 grayscale p-2" />
+              <img src="/logo.png" alt="Logo" className="w-24 h-24 mb-6 opacity-30 grayscale p-2" />
               <h2 className="text-2xl font-black tracking-widest text-center text-blue-200/60 uppercase">Shikshantar Academy<br/> <span className="text-sm tracking-widest text-blue-300/50 block mt-2">End of Calendar</span></h2>
             </PageCover>
           </HTMLFlipBook>
@@ -442,7 +551,7 @@ export default function AcademicCalendar() {
                     onChange={(e) => setAdminMonth(e.target.value)}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary text-sm font-bold bg-white"
                  >
-                    {DEFAULT_MONTHS_2083.map((m, i) => (
+                    {CALENDAR_YEARS[selectedYear].map((m, i) => (
                        <option key={i} value={i}>{m.name}</option>
                     ))}
                  </select>
@@ -456,6 +565,18 @@ export default function AcademicCalendar() {
                     placeholder="e.g. 15"
                     value={adminDate}
                     onChange={(e) => setAdminDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary text-sm font-bold"
+                 />
+              </div>
+              <div className="w-full md:w-32">
+                 <label className="block text-xs font-bold text-gray-600 uppercase mb-1" title="For multi-day events, leave blank for single day">End Date</label>
+                 <input 
+                    type="number" 
+                    min="1" 
+                    max="32" 
+                    placeholder="(Opt)"
+                    value={adminEndDate}
+                    onChange={(e) => setAdminEndDate(e.target.value)}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary text-sm font-bold"
                  />
               </div>
@@ -479,7 +600,7 @@ export default function AcademicCalendar() {
            </div>
            
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {DEFAULT_MONTHS_2083.map((m, i) => {
+              {CALENDAR_YEARS[selectedYear].map((m, i) => {
                  const monthKey = `month_${i}`;
                  const customList = customEventsData[monthKey] || [];
                  if (customList.length === 0) return null;
@@ -494,7 +615,7 @@ export default function AcademicCalendar() {
                           {customList.map((ce: any, idx: number) => (
                              <li key={idx} className="flex justify-between items-center px-4 py-2.5 hover:bg-gray-50 group">
                                 <div className="flex items-center gap-3">
-                                   <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex justify-center items-center font-bold text-xs shrink-0 border border-blue-100">{ce.date}</div>
+                                   <div className="min-w-[2rem] px-2 h-8 rounded-full bg-blue-50 text-blue-600 flex justify-center items-center font-bold text-xs shrink-0 border border-blue-100">{ce.date}{ce.endDate && ce.endDate > ce.date ? `-${ce.endDate}` : ''}</div>
                                    <span className="text-sm font-bold text-gray-600 break-words">{ce.name || <em>(Removed Default)</em>}</span>
                                 </div>
                                 <button 
@@ -531,6 +652,17 @@ export default function AcademicCalendar() {
                     className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm font-bold text-gray-800 w-full mb-2"
                     placeholder="E.g. Dashain, Public Holiday"
                     autoFocus
+                 />
+
+                 <label className="text-xs font-bold text-gray-600 uppercase">End Date <span className="text-gray-400 font-medium normal-case">(Optional)</span></label>
+                 <input 
+                    type="number" 
+                    value={editEndDateInput}
+                    onChange={(e) => setEditEndDateInput(e.target.value)}
+                    className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm font-bold text-gray-800 w-full mb-2"
+                    placeholder="E.g. 15"
+                    min="1"
+                    max="32"
                  />
                  
                  <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">

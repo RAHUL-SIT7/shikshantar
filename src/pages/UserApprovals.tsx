@@ -17,6 +17,7 @@ interface UserProfile {
   id: string;
   email?: string;
   role?: 'student' | 'teacher' | 'admin';
+  adminTier?: 'primary' | 'secondary';
   fullName?: string;
   phone?: string;
   studentId?: string;
@@ -30,12 +31,17 @@ export default function UserApprovals() {
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [classFilter, setClassFilter] = useState<string>('all');
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
-  const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: string, name: string, role?: string, adminTier?: string } | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [bulkActionOpen, setBulkActionOpen] = useState(false);
+
+  const currentUserData = auth.currentUser ? usersList.find(u => u.id === auth.currentUser?.uid) : null;
+  const isPrimaryAdmin = currentUserData?.adminTier !== 'secondary'; // Default to primary if not set
 
   useEffect(() => {
     let unsubUsers = () => {};
@@ -76,6 +82,16 @@ export default function UserApprovals() {
 
     try {
       const { id, ...updateData } = editingUser;
+      
+      if (updateData.role === 'admin') {
+        if (!updateData.adminTier) updateData.adminTier = 'secondary';
+        if (!isPrimaryAdmin && updateData.adminTier === 'primary' && id !== auth.currentUser?.uid) {
+           updateData.adminTier = 'secondary'; // Prevent privilege escalation hack
+        }
+      } else {
+        updateData.adminTier = null as any;
+      }
+
       await updateDoc(doc(db, 'users', id), updateData as any);
       setStatus({ type: 'success', message: `User ${editingUser.fullName || editingUser.email} updated successfully.` });
       setEditingUser(null);
@@ -87,9 +103,28 @@ export default function UserApprovals() {
   };
 
   const setRole = async (userId: string, newRole: 'admin' | 'teacher' | 'student') => {
+    if (newRole === 'admin' && !isPrimaryAdmin) {
+      setStatus({ type: 'error', message: 'Only Primary Administrators can assign admin roles.' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+      return;
+    }
     try {
-      await updateDoc(doc(db, 'users', userId), { role: newRole });
+      if (newRole === 'admin') {
+         await updateDoc(doc(db, 'users', userId), { role: newRole, adminTier: 'secondary' });
+      } else {
+         await updateDoc(doc(db, 'users', userId), { role: newRole, adminTier: null });
+      }
       setStatus({ type: 'success', message: `Role changed to ${newRole}.` });
+    } catch (error) {
+      setStatus({ type: 'error', message: 'Update failed.' });
+    }
+    setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+  };
+
+  const setAdminTier = async (userId: string, tier: 'primary' | 'secondary') => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { adminTier: tier });
+      setStatus({ type: 'success', message: `Admin tier updated to ${tier}.` });
     } catch (error) {
       setStatus({ type: 'error', message: 'Update failed.' });
     }
@@ -98,6 +133,25 @@ export default function UserApprovals() {
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
+    
+    // Check if user is trying to delete self
+    if (auth.currentUser && userToDelete.id === auth.currentUser.uid) {
+      setStatus({ type: 'error', message: 'You cannot delete your own account.' });
+      return;
+    }
+
+    // A secondary admin cannot delete another admin
+    if (!isPrimaryAdmin && userToDelete.role === 'admin') {
+      setStatus({ type: 'error', message: 'Secondary administrators cannot delete other administrators.' });
+      return;
+    }
+
+    if (deleteConfirmationText !== 'DELETE') {
+      setStatus({ type: 'error', message: 'Please type DELETE to confirm.' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'users', userToDelete.id));
       setStatus({ type: 'success', message: 'User profile deleted successfully.' });
@@ -105,6 +159,7 @@ export default function UserApprovals() {
       setStatus({ type: 'error', message: 'Failed to delete user.' });
     }
     setUserToDelete(null);
+    setDeleteConfirmationText('');
     setTimeout(() => setStatus({ type: null, message: '' }), 6000);
   };
 
@@ -122,9 +177,21 @@ export default function UserApprovals() {
       else if (roleFilter === 'pending') matchesRole = isPending;
       else matchesRole = u.role === roleFilter && !isPending;
       
-      return matchesSearch && matchesRole;
+      let matchesClass = true;
+      if (roleFilter === 'student' && classFilter !== 'all') {
+        matchesClass = u.class === classFilter;
+      }
+      
+      return matchesSearch && matchesRole && matchesClass;
     });
   };
+
+  const availableClasses = Array.from(new Set(usersList.filter(u => u.role === 'student' && u.class).map(u => u.class))).sort((a, b) => {
+    const numA = parseInt(a as string);
+    const numB = parseInt(b as string);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return String(a).localeCompare(String(b));
+  });
 
   const toggleSelectAll = () => {
     const filteredIds = getFilteredUsers().map(u => u.id);
@@ -164,6 +231,25 @@ export default function UserApprovals() {
 
   const handleBulkDelete = async () => {
     if (!selectedUsers.length) return;
+    
+    // Validate if secondary admin is trying to delete an admin, or trying to delete self
+    const usersToDelete = usersList.filter(u => selectedUsers.includes(u.id));
+    const isDeletingSelf = usersToDelete.some(u => u.id === auth.currentUser?.uid);
+    if (isDeletingSelf) {
+      setStatus({ type: 'error', message: 'You cannot delete your own account in bulk actions.' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+      return;
+    }
+    
+    if (!isPrimaryAdmin) {
+      const isDeletingAdmin = usersToDelete.some(u => u.role === 'admin');
+      if (isDeletingAdmin) {
+        setStatus({ type: 'error', message: 'Secondary administrators cannot delete other administrators.' });
+        setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+        return;
+      }
+    }
+
     if (!window.confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) return;
     try {
       await Promise.all(selectedUsers.map(id => deleteDoc(doc(db, 'users', id))));
@@ -178,8 +264,20 @@ export default function UserApprovals() {
 
   const handleBulkSetRole = async (role: 'admin' | 'teacher' | 'student') => {
     if (!selectedUsers.length) return;
+    
+    if (role === 'admin' && !isPrimaryAdmin) {
+      setStatus({ type: 'error', message: 'Only Primary Administrators can assign admin roles.' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 3000);
+      return;
+    }
+
     try {
-      await Promise.all(selectedUsers.map(id => updateDoc(doc(db, 'users', id), { role })));
+      await Promise.all(selectedUsers.map(id => {
+        if (role === 'admin') {
+          return updateDoc(doc(db, 'users', id), { role, adminTier: 'secondary' });
+        }
+        return updateDoc(doc(db, 'users', id), { role, adminTier: null });
+      }));
       setStatus({ type: 'success', message: `Selected users role changed to ${role}.` });
       setSelectedUsers([]);
       setBulkActionOpen(false);
@@ -327,6 +425,9 @@ export default function UserApprovals() {
         active: true,
         createdAt: new Date().toISOString()
       };
+      if (newUser.role === 'admin') {
+         userProfilePayload.adminTier = 'secondary';
+      }
       if (newUser.phone) userProfilePayload.phone = `+977-${newUser.phone}`;
       if (newUser.studentId) userProfilePayload.studentId = newUser.studentId;
       if (newUser.class) userProfilePayload.class = newUser.class;
@@ -497,7 +598,10 @@ export default function UserApprovals() {
               <Filter className="w-4 h-4 text-gray-400" />
               <select 
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  if (e.target.value !== 'student') setClassFilter('all');
+                }}
                 className="text-sm font-bold text-gray-700 focus:outline-none bg-transparent appearance-none pr-4 cursor-pointer"
               >
                 <option value="all">All Roles</option>
@@ -507,6 +611,20 @@ export default function UserApprovals() {
                 <option value="student">Students</option>
               </select>
             </div>
+            {roleFilter === 'student' && availableClasses.length > 0 && (
+              <div className="flex items-center gap-2 bg-white px-4 py-3 border-none shadow-sm rounded-2xl focus-within:ring-2 focus-within:ring-emerald-500/20 animate-in fade-in slide-in-from-right-4">
+                <select 
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="text-sm font-bold text-emerald-700 focus:outline-none bg-transparent appearance-none pr-4 cursor-pointer"
+                >
+                  <option value="all">All Classes</option>
+                  {availableClasses.map(cls => (
+                    <option key={cls as string} value={cls as string}>Class {cls as string}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -638,30 +756,27 @@ export default function UserApprovals() {
                               Approve
                             </button>
                           ) : user.role === 'admin' ? (
-                            <div className="px-3 py-1 bg-gray-100 text-gray-500 font-bold text-xs rounded-lg">Admin</div>
-                          ) : (
-                            <div className="flex gap-1">
-                               <button 
-                                 onClick={() => setRole(user.id, 'admin')} 
-                                 disabled={user.role === 'admin'}
-                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'admin' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-orange-500 border-orange-200 hover:bg-orange-50'}`}
-                               >ADM</button>
-                               <button 
-                                 onClick={() => setRole(user.id, 'teacher')} 
-                                 disabled={user.role === 'teacher'}
-                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'teacher' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-blue-500 border-blue-200 hover:bg-blue-50'}`}
-                               >TCH</button>
-                               <button 
-                                 onClick={() => setRole(user.id, 'student')} 
-                                 disabled={user.role === 'student'}
-                                 className={`px-2 py-1 text-[9px] font-black rounded border transition-all ${user.role === 'student' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-emerald-500 border-emerald-200 hover:bg-emerald-50'}`}
-                               >STD</button>
+                             <div className="flex gap-1 items-center">
+                              {isPrimaryAdmin && user.id !== auth.currentUser?.uid ? (
+                                 <select 
+                                   value={user.adminTier || 'primary'}
+                                   onChange={(e) => setAdminTier(user.id, e.target.value as 'primary' | 'secondary')}
+                                   className="px-2 py-1 bg-orange-50 text-orange-700 font-bold text-[10px] uppercase rounded-lg border border-orange-200 outline-none cursor-pointer"
+                                 >
+                                   <option value="primary">1° Admin</option>
+                                   <option value="secondary">2° Admin</option>
+                                 </select>
+                              ) : (
+                                 <div className="px-3 py-1 bg-orange-50 text-orange-600 font-bold text-[10px] uppercase tracking-wider rounded-lg border border-orange-100">
+                                   {(user.adminTier || 'primary') === 'primary' ? '1° Admin' : '2° Admin'}
+                                 </div>
+                              )}
                             </div>
-                          )}
+                          ) : null}
 
-                          {user.role !== 'admin' && (
+                          { (user.role !== 'admin' || (isPrimaryAdmin && user.id !== auth.currentUser?.uid)) && (
                             <button 
-                              onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '' })}
+                              onClick={() => setUserToDelete({ id: user.id, name: user.fullName || user.email || '', role: user.role, adminTier: user.adminTier })}
                               className="p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all ml-2 shadow-sm"
                               title="Delete Account"
                             >
@@ -794,14 +909,33 @@ export default function UserApprovals() {
                   <select 
                     value={editingUser.role}
                     onChange={e => setEditingUser({...editingUser, role: e.target.value as any})}
-                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none"
+                    className="w-full text-primary border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none bg-gray-50 disabled:opacity-75"
+                    disabled={!isPrimaryAdmin && editingUser.role === 'admin'}
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
-                    <option value="admin">Administrator</option>
+                    <option value="admin" disabled={!isPrimaryAdmin && editingUser.role !== 'admin'}>Administrator</option>
                   </select>
+                  {(!isPrimaryAdmin && editingUser.role !== 'admin') && <p className="text-[9px] text-red-500 font-bold px-1 mt-1">Requires 1° Admin</p>}
                 </div>
-                <div className="space-y-1">
+                {editingUser.role === 'admin' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1 flex items-center justify-between">
+                      <span>Admin Tier</span>
+                      <span className="text-orange-500">Security</span>
+                    </label>
+                    <select 
+                      value={editingUser.adminTier || 'primary'}
+                      onChange={e => setEditingUser({...editingUser, adminTier: e.target.value as any})}
+                      disabled={!isPrimaryAdmin || editingUser.id === auth.currentUser?.uid}
+                      className="w-full text-orange-700 bg-orange-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 font-bold disabled:opacity-70 disabled:cursor-not-allowed appearance-none"
+                    >
+                      <option value="primary">Primary (1° Admin)</option>
+                      <option value="secondary">Secondary (2° Admin)</option>
+                    </select>
+                  </div>
+                )}
+                <div className={`${editingUser.role === 'admin' ? 'md:col-span-2' : ''} space-y-1`}>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Designated Class</label>
                   <input 
                     type="text" 
@@ -925,11 +1059,11 @@ export default function UserApprovals() {
                   <select 
                     value={newUser.role}
                     onChange={e => setNewUser({...newUser, role: e.target.value as any})}
-                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none"
+                    className="w-full border-primary text-primary border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all border outline-none disabled:opacity-75"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
-                    <option value="admin">Administrator</option>
+                    <option value="admin" disabled={!isPrimaryAdmin}>Administrator</option>
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -1108,19 +1242,33 @@ export default function UserApprovals() {
                 Are you sure you want to permanently delete the profile for <strong>{userToDelete.name}</strong>?
               </p>
             </div>
-            <div className="p-6 bg-red-50/30 text-xs font-bold text-red-800 text-center border-b border-red-100">
-              Note: Deleting this profile immediately revokes their access. They will be automatically blocked if they try to log in again.
+            <div className="p-6 space-y-4">
+              <div className="bg-red-50/50 p-4 rounded-xl text-xs font-bold text-red-800 text-center border border-red-100 relative">
+                 <Lock className="w-4 h-4 text-red-400 absolute top-4 left-4" />
+                 <span className="ml-4">To confirm deletion, type <strong>DELETE</strong> below.</span>
+              </div>
+              <input
+                type="text"
+                placeholder="DELETE"
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-center font-black tracking-widest text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 uppercase"
+              />
             </div>
-            <div className="p-6 flex flex-col sm:flex-row gap-3">
+            <div className="p-6 pt-0 flex flex-col sm:flex-row gap-3">
               <button 
-                onClick={() => setUserToDelete(null)}
+                onClick={() => {
+                  setUserToDelete(null);
+                  setDeleteConfirmationText('');
+                }}
                 className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmDeleteUser}
-                className="flex-1 py-3 text-sm font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-200"
+                disabled={deleteConfirmationText !== 'DELETE'}
+                className="flex-1 py-3 text-sm font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Delete Profile
               </button>

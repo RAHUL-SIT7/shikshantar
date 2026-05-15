@@ -4,15 +4,13 @@ import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
 
-import StudentLedgerTab from '../components/fee_management/StudentLedgerTab';
-import RecordPaymentTab from '../components/fee_management/RecordPaymentTab';
+import SimpleStudentLedgerTab from '../components/fee_management/SimpleStudentLedgerTab';
 import FeeStructure from './FeeStructure';
 import ReportsAnalyticsTab from '../components/fee_management/ReportsAnalyticsTab';
-import TransactionHistoryTab from '../components/fee_management/TransactionHistoryTab';
-import ScholarshipTab from '../components/fee_management/ScholarshipTab';
+import CashLedgerTab from '../components/fee_management/CashLedgerTab';
 
 export default function AccountAdmin() {
-  const [activeTab, setActiveTab] = useState('student_ledger');
+  const [activeTab, setActiveTab] = useState('simple_ledger');
   const [ledgerFilterStatus, setLedgerFilterStatus] = useState('All');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [userRole, setUserRole] = useState('teacher'); // Default restrictive
@@ -185,11 +183,9 @@ export default function AccountAdmin() {
   }, []);
 
   const ALL_TABS = [
-     { id: 'student_ledger', label: 'Student Ledger', roles: ['admin', 'teacher'] },
-     { id: 'scholarship_students', label: 'Scholarships', roles: ['admin', 'teacher'] },
-     { id: 'collect_fee', label: 'Cash Update', roles: ['admin'] },
+     { id: 'simple_ledger', label: 'Quick Pay & Ledger', roles: ['admin', 'teacher'] },
      { id: 'fee_structure', label: 'Fee Structure', roles: ['admin'] },
-     { id: 'history', label: 'Payment Records', roles: ['admin', 'teacher'] },
+     { id: 'day_book', label: 'Cash/Day Book', roles: ['admin', 'teacher'] },
      { id: 'reports', label: 'Reports & Analytics', roles: ['admin'] },
   ];
 
@@ -232,7 +228,7 @@ export default function AccountAdmin() {
         {/* Card 3 */}
         <div 
            className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm transition-transform duration-300 hover:shadow-md cursor-pointer flex flex-col justify-between"
-           onClick={() => { setActiveTab('student_ledger'); setLedgerFilterStatus('Defaulter'); }}
+           onClick={() => { setActiveTab('simple_ledger'); }}
         >
           <div className="flex justify-between items-start mb-2">
             <p className="text-xs text-gray-500 font-medium">Defaulters</p>
@@ -312,34 +308,8 @@ export default function AccountAdmin() {
              </div>
          ) : (
              <>
-                 <div className={activeTab === 'student_ledger' ? 'block' : 'hidden'}>
-                   <StudentLedgerTab 
-                     studentsData={studentsData} 
-                     initialFilterStatus={ledgerFilterStatus}
-                     onFilterStatusChange={setLedgerFilterStatus}
-                     onRefresh={fetchFeeData}
-                     onRecordPayment={(id: string) => {
-                        setTargetStudentId(id);
-                        setActiveTab('collect_fee');
-                     }} 
-                     onViewLedger={(id: string) => {
-                        setHistorySearchTerm(id);
-                        setActiveTab('history');
-                     }}
-                   />
-                 </div>
-                 
-                 <div className={activeTab === 'collect_fee' ? 'block' : 'hidden'}>
-                   {/* Pass key based on targetStudentId if needed or just let it update via props */}
-                   <RecordPaymentTab 
-                     initialStudentId={targetStudentId} 
-                     studentsData={studentsData} 
-                     onRefresh={fetchFeeData} 
-                     onBack={() => {
-                       setTargetStudentId('');
-                       setActiveTab('student_ledger');
-                     }} 
-                   />
+                 <div className={activeTab === 'simple_ledger' ? 'block' : 'hidden'}>
+                   <SimpleStudentLedgerTab students={studentsData} onRefresh={fetchFeeData} />
                  </div>
 
                  {activeTab === 'fee_structure' && (
@@ -347,17 +317,7 @@ export default function AccountAdmin() {
                        <FeeStructure />
                      </div>
                  )}
-                 {activeTab === 'scholarship_students' && <ScholarshipTab studentsData={studentsData} />}
-                 
-                 <div className={activeTab === 'history' ? 'block' : 'hidden'}>
-                    <TransactionHistoryTab 
-                      initialSearchTerm={historySearchTerm} 
-                      onSearchTermChange={setHistorySearchTerm} 
-                      transactionsData={transactionsData} 
-                      studentsData={studentsData} 
-                      onRefresh={fetchFeeData} 
-                    />
-                 </div>
+                 {activeTab === 'day_book' && <CashLedgerTab feeTransactions={transactionsData} />}
                  
                  {activeTab === 'reports' && <ReportsAnalyticsTab students={studentsData} transactions={transactionsData} />}
              </>

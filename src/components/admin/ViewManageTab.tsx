@@ -358,7 +358,7 @@ export function ViewManageTab({ EXAM_TYPES, allClasses, data, setStatus, userRol
            
            let base64Logo: string | null = null;
            try {
-               const logoUrl = 'https://i.postimg.cc/SxGS5WxY/logo.png';
+               const logoUrl = '/logo.png';
                const res = await fetch(logoUrl);
                const blob = await res.blob();
                base64Logo = await new Promise((resolve, reject) => {

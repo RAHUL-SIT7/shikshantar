@@ -5,7 +5,7 @@ import { Menu, X, Home, Building, Image, Calendar, User, FileText,   LogOut, Log
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, where, updateDoc, doc, getDoc, arrayUnion } from 'firebase/firestore';
-const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
+const logoImage = '/logo.png';
 
 interface Notice {
   id: string;
@@ -681,8 +681,9 @@ export default function Layout({
           </div>
 
           {/* Professional Footer */}
-          <footer className="bg-primary text-white py-10 shrink-0 print:hidden mt-auto border-t-[4px] bg-primary">
-            <div className="max-w-6xl mx-auto px-5 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <footer className="bg-[#0f172a] text-white py-10 shrink-0 print:hidden mt-auto border-t-[4px] border-primary relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 Mix-blend-overlay pointer-events-none"></div>
+            <div className="max-w-6xl mx-auto px-5 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
               {/* Branding Section */}
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">

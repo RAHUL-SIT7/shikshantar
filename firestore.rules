@@ -6,19 +6,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isRole(role) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.get('email', '') == 'rahulsah4534@gmail.com' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+        ('email' in request.auth.token && request.auth.token.email == 'rahulsah4534@gmail.com') ||
+        isRole('admin')
       );
     }
 
     function isTeacher() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'teacher'
-      );
+      return isSignedIn() && isRole('teacher');
     }
 
     function isOwner(studentId) {

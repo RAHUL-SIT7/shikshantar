@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import { Info, Target, Eye, Heart, History as HistoryIcon, User, Edit2, Save, X, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
-const logoImage = 'https://i.postimg.cc/SxGS5WxY/logo.png';
+const logoImage = '/logo.png';
 
 export default function About() {
   const [content, setContent] = useState({

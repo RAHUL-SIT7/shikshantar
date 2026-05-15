@@ -26,7 +26,7 @@ import {
   Save,
 } from "lucide-react";
 import { auth } from "../firebase";
-const logoImage = "https://i.postimg.cc/SxGS5WxY/logo.png";
+const logoImage = "/logo.png";
 
 export default function Admission() {
   const [formData, setFormData] = useState<Record<string, any>>({});

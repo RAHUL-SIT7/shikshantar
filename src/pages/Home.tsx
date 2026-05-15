@@ -8,8 +8,8 @@ import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { motion } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
 import { BarChart, Bar, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid, YAxis } from 'recharts';
-const logoImage = "https://i.postimg.cc/SxGS5WxY/logo.png";
-const principalImg = "https://i.postimg.cc/7LmLCgvb/606350985-1458678509597899-5556893883060728495-n-jpg-stp-dst-jpegr-tt6-nc-cat-111-ccb-1-7-nc-sid-7.jpg";
+const logoImage = "/logo.png";
+const principalImg = "/principal.jpg";
 
 interface Notice {
   id: string;
@@ -49,6 +49,7 @@ export default function Home() {
   const [todayCollections, setTodayCollections] = useState<any[]>([]);
   const [todayTotal, setTodayTotal] = useState(0);
   const [recentAdmissionsList, setRecentAdmissionsList] = useState<any[]>([]);
+  const [studentData, setStudentData] = useState<any>(null);
   
   const [isLoading, setIsLoading] = useState(true);
 
@@ -156,9 +157,25 @@ export default function Home() {
     };
     
     let cleanupAdminData = () => {};
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
         cleanupAdminData();
         cleanupAdminData = loadAdminData(user);
+        
+        if (user && userRole === 'student') {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    setStudentData(userDoc.data());
+                } else {
+                    setStudentData(null);
+                }
+            } catch (e) {
+                console.error("Could not fetch student data:", e);
+                setStudentData(null);
+            }
+        } else {
+            setStudentData(null);
+        }
     });
     
     // Simulate loading for 0.5 seconds
@@ -652,6 +669,24 @@ export default function Home() {
       {/* Hero Section Container */}
       <div className="px-4 md:px-8 w-full max-w-7xl mx-auto flex flex-col gap-12 mt-8 mb-12">
         
+        {/* STUDENT ASSIGNMENT BANNER */}
+        {userRole === 'student' && studentData && (
+           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm flex items-center justify-between mb-[-1.5rem]">
+              <div className="flex items-center gap-3">
+                 <div className="bg-blue-100 p-2 rounded-full">
+                    <UserCheck className="w-5 h-5 text-blue-600" />
+                 </div>
+                 <div>
+                    <h3 className="text-blue-900 font-bold text-sm">Welcome back, {studentData.fullName || studentData.name}!</h3>
+                    <p className="text-blue-700 text-sm">You are assigned to <strong className="font-black border-b border-blue-200">Class {studentData.class || 'N/A'}</strong>.</p>
+                 </div>
+              </div>
+              <Link to="/account" className="hidden sm:inline-flex bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-blue-700 transition duration-200 shadow-sm">
+                 View Dashboard
+              </Link>
+           </div>
+        )}
+
         {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             FIX 2 — HERO SECTION
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}

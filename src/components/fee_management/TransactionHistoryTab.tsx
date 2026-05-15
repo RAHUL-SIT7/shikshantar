@@ -164,13 +164,13 @@ export default function TransactionHistoryTab({ transactionsData, studentsData =
                  <body onload="setTimeout(() => { window.print(); window.close(); }, 500);">
                      <div class="receipt-container">
                          <div style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 15px; padding-top: 15px;">
-                             <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain; margin-right: 20px; filter: grayscale(100%);" />
+                             <img src="https://ui-avatars.com/api/?name=E+S&background=10b981&color=fff&size=100&bold=true" alt="Logo" style="width: 80px; height: 80px; border-radius: 8px; object-fit: contain; margin-right: 20px;" />
                              <div class="text-center">
                                  <div style="font-size: 16px;">Receipt</div>
                                  <h1 style="margin: 5px 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">SHIKSHANTAR ACADEMY</h1>
-                                 <p style="margin: 2px 0; font-size: 15px;">Bastipur-5, Siraha, Nepal</p>
+                                 <p style="margin: 2px 0; font-size: 15px;">Siraha, Nepal</p>
                                  <p style="margin: 2px 0; font-size: 15px;">Website: https://shikshantar.academy.nepalghum.xyz</p>
-                                 <p style="margin: 2px 0; font-size: 15px;">Contact: +977 9807790805 | Email: info@shikshantar.academy.nepalghum.xyz</p>
+                                 <p style="margin: 2px 0; font-size: 15px;">Contact: 01-1234567 Email: info@shikshantar.academy.nepalghum.xyz</p>
                              </div>
                          </div>
                          
@@ -612,9 +612,9 @@ export default function TransactionHistoryTab({ transactionsData, studentsData =
 
                        <div className="text-center mb-10">
                          <div className="mx-auto flex justify-center mb-4">
-                           <img src="https://i.postimg.cc/SxGS5WxY/logo.png" alt="Logo" className="h-20 w-auto" />
+                           <img src="https://ui-avatars.com/api/?name=E+S&background=10b981&color=fff&size=100&bold=true" alt="Logo" className="h-20 w-auto" />
                          </div>
-                         <h1 className="text-2xl sm:text-3xl font-black uppercase text-primary tracking-widest mb-1.5" style={{ letterSpacing: '0.15em' }}>Shikshantar Academy</h1>
+                         <h1 className="text-2xl sm:text-3xl font-black uppercase text-primary tracking-widest mb-1.5" style={{ letterSpacing: '0.15em' }}>SHIKSHANTAR ACADEMY</h1>
                          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Siraha, Nepal</p>
                          
                          <div className="mt-6 inline-block border text-emerald-700 border-emerald-300 bg-emerald-50 px-6 py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-widest">
@@ -765,7 +765,7 @@ export default function TransactionHistoryTab({ transactionsData, studentsData =
                   </div>
                   <div>
                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">New Amount (NRs.)</label>
-                     <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
+                     <input type="number" min="0" step="any" onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
                   </div>
                   <div>
                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Reason for edit</label>
